@@ -178,7 +178,9 @@ CREATE TABLE `report` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `report_ruangan` int(11) DEFAULT NULL,
   `report_alat` int(11) DEFAULT NULL,
+  `foto` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `report_unique` (`foto`),
   KEY `report_ruangan_FK` (`report_ruangan`),
   KEY `report_alat_FK` (`report_alat`),
   CONSTRAINT `report_alat_FK` FOREIGN KEY (`report_alat`) REFERENCES `alat` (`id`),
@@ -300,9 +302,7 @@ CREATE TABLE `tolak_reservasi` (
   `id` int(11) NOT NULL,
   `alasan_penolakan` varchar(255) NOT NULL,
   `id_reservasi` int(11) NOT NULL,
-  `foto` varchar(100) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `tolak_reservasi_unique` (`foto`),
   KEY `tolak_reservasi_reservasi_FK` (`id_reservasi`),
   CONSTRAINT `tolak_reservasi_reservasi_FK` FOREIGN KEY (`id_reservasi`) REFERENCES `reservasi` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -362,4 +362,4 @@ SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
 
--- Dump completed on 2026-09-02 13:35:31
+-- Dump completed on 2026-09-03 10:25:47
