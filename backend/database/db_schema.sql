@@ -27,8 +27,12 @@ CREATE TABLE `alat` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `nama_alat` varchar(255) NOT NULL,
   `ketersediaan_alat` int(11) NOT NULL,
+  `banyak_alat` int(11) NOT NULL,
+  `kategori` int(11) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `alat_unique` (`nama_alat`)
+  UNIQUE KEY `alat_unique` (`nama_alat`),
+  KEY `alat_kategori_FK` (`kategori`),
+  CONSTRAINT `alat_kategori_FK` FOREIGN KEY (`kategori`) REFERENCES `kategori` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -45,6 +49,37 @@ COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 
 --
+-- Table structure for table `alat_reservasi`
+--
+
+DROP TABLE IF EXISTS `alat_reservasi`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `alat_reservasi` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_alat` int(11) NOT NULL,
+  `id_reservasi` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `alat_reservasi_unique` (`id_reservasi`),
+  KEY `alat_reservasi_alat_FK` (`id_alat`),
+  CONSTRAINT `alat_reservasi_alat_FK` FOREIGN KEY (`id_alat`) REFERENCES `alat` (`id`),
+  CONSTRAINT `alat_reservasi_reservasi_FK` FOREIGN KEY (`id_reservasi`) REFERENCES `reservasi` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `alat_reservasi`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `alat_reservasi` WRITE;
+/*!40000 ALTER TABLE `alat_reservasi` DISABLE KEYS */;
+/*!40000 ALTER TABLE `alat_reservasi` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
 -- Table structure for table `dosen`
 --
 
@@ -56,9 +91,12 @@ CREATE TABLE `dosen` (
   `nidn` varchar(50) NOT NULL,
   `nama_lengkap` varchar(255) NOT NULL,
   `dosen_user` int(11) NOT NULL,
+  `prodi_dosen` int(11) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `dosen_unique` (`nidn`),
   UNIQUE KEY `dosen_unique_1` (`dosen_user`),
+  KEY `dosen_prodi_FK` (`prodi_dosen`),
+  CONSTRAINT `dosen_prodi_FK` FOREIGN KEY (`prodi_dosen`) REFERENCES `prodi` (`id`),
   CONSTRAINT `dosen_user_FK` FOREIGN KEY (`dosen_user`) REFERENCES `user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -98,6 +136,32 @@ SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `fakultas` WRITE;
 /*!40000 ALTER TABLE `fakultas` DISABLE KEYS */;
 /*!40000 ALTER TABLE `fakultas` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `kategori`
+--
+
+DROP TABLE IF EXISTS `kategori`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `kategori` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `nama_kategori` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `kategori`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `kategori` WRITE;
+/*!40000 ALTER TABLE `kategori` DISABLE KEYS */;
+/*!40000 ALTER TABLE `kategori` ENABLE KEYS */;
 UNLOCK TABLES;
 COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
@@ -176,18 +240,15 @@ DROP TABLE IF EXISTS `report`;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `report` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `report_ruangan` int(11) DEFAULT NULL,
-  `report_alat` int(11) DEFAULT NULL,
   `foto` varchar(50) DEFAULT NULL,
   `user_report` int(11) NOT NULL,
   `alasan` varchar(255) NOT NULL,
+  `status_laporan` varchar(20) NOT NULL,
+  `report_ruangan` int(11) DEFAULT NULL,
+  `report_alat` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `report_unique` (`foto`),
-  KEY `report_ruangan_FK` (`report_ruangan`),
-  KEY `report_alat_FK` (`report_alat`),
   KEY `report_user_FK` (`user_report`),
-  CONSTRAINT `report_alat_FK` FOREIGN KEY (`report_alat`) REFERENCES `alat` (`id`),
-  CONSTRAINT `report_ruangan_FK` FOREIGN KEY (`report_ruangan`) REFERENCES `ruangan` (`id`),
   CONSTRAINT `report_user_FK` FOREIGN KEY (`user_report`) REFERENCES `user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -205,6 +266,39 @@ COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 
 --
+-- Table structure for table `report_message`
+--
+
+DROP TABLE IF EXISTS `report_message`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `report_message` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_report` int(11) NOT NULL,
+  `id_user` int(11) NOT NULL,
+  `pesan` varchar(4000) NOT NULL,
+  `created_at` timestamp NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `report_message_user_FK` (`id_user`),
+  KEY `report_message_report_FK` (`id_report`),
+  CONSTRAINT `report_message_report_FK` FOREIGN KEY (`id_report`) REFERENCES `report` (`id`),
+  CONSTRAINT `report_message_user_FK` FOREIGN KEY (`id_user`) REFERENCES `user` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `report_message`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `report_message` WRITE;
+/*!40000 ALTER TABLE `report_message` DISABLE KEYS */;
+/*!40000 ALTER TABLE `report_message` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
 -- Table structure for table `reservasi`
 --
 
@@ -215,14 +309,13 @@ CREATE TABLE `reservasi` (
   `id` int(11) NOT NULL,
   `waktu_reservasi_dibuat` datetime NOT NULL,
   `ruangan_reservasi` int(11) DEFAULT NULL,
-  `alat_reservasi` int(11) DEFAULT NULL,
   `user_reservasi` int(11) NOT NULL,
   `waktu_peminjaman` datetime NOT NULL,
+  `waktu_peminjaman_selesai` datetime NOT NULL,
+  `status_reservasi` varchar(10) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `reservasi_user_FK` (`user_reservasi`),
-  KEY `reservasi_alat_FK` (`alat_reservasi`),
   KEY `reservasi_ruangan_FK` (`ruangan_reservasi`),
-  CONSTRAINT `reservasi_alat_FK` FOREIGN KEY (`alat_reservasi`) REFERENCES `alat` (`id`),
   CONSTRAINT `reservasi_ruangan_FK` FOREIGN KEY (`ruangan_reservasi`) REFERENCES `ruangan` (`id`),
   CONSTRAINT `reservasi_user_FK` FOREIGN KEY (`user_reservasi`) REFERENCES `user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -278,8 +371,13 @@ CREATE TABLE `ruangan` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `nama_ruangan` varchar(255) NOT NULL,
   `status` varchar(15) NOT NULL,
+  `kapasitas` int(11) NOT NULL,
+  `lokasi` varchar(255) NOT NULL,
+  `kategori` int(11) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `ruangan_unique` (`nama_ruangan`)
+  UNIQUE KEY `ruangan_unique` (`nama_ruangan`),
+  KEY `ruangan_kategori_FK` (`kategori`),
+  CONSTRAINT `ruangan_kategori_FK` FOREIGN KEY (`kategori`) REFERENCES `kategori` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -337,6 +435,7 @@ CREATE TABLE `user` (
   `email` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
   `user_role` int(11) NOT NULL,
+  `isVerified` tinyint(4) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_unique` (`username`),
   UNIQUE KEY `user_unique_1` (`email`),
@@ -366,4 +465,4 @@ SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
 
--- Dump completed on 2026-09-05 12:23:32
+-- Dump completed on 2026-09-05 15:21:13
