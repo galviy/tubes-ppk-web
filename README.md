@@ -2,4 +2,4 @@
 tugas besar pemrograman platform khusus website
 
 
-![Database ERD](db.png)
+![Database ERD](backend/database/db.png)
