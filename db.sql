@@ -179,12 +179,16 @@ CREATE TABLE `report` (
   `report_ruangan` int(11) DEFAULT NULL,
   `report_alat` int(11) DEFAULT NULL,
   `foto` varchar(50) DEFAULT NULL,
+  `user_report` int(11) NOT NULL,
+  `alasan` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `report_unique` (`foto`),
   KEY `report_ruangan_FK` (`report_ruangan`),
   KEY `report_alat_FK` (`report_alat`),
+  KEY `report_user_FK` (`user_report`),
   CONSTRAINT `report_alat_FK` FOREIGN KEY (`report_alat`) REFERENCES `alat` (`id`),
-  CONSTRAINT `report_ruangan_FK` FOREIGN KEY (`report_ruangan`) REFERENCES `ruangan` (`id`)
+  CONSTRAINT `report_ruangan_FK` FOREIGN KEY (`report_ruangan`) REFERENCES `ruangan` (`id`),
+  CONSTRAINT `report_user_FK` FOREIGN KEY (`user_report`) REFERENCES `user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -273,7 +277,7 @@ DROP TABLE IF EXISTS `ruangan`;
 CREATE TABLE `ruangan` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `nama_ruangan` varchar(255) NOT NULL,
-  `isAvailable` tinyint(1) NOT NULL,
+  `status` varchar(15) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `ruangan_unique` (`nama_ruangan`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -362,4 +366,4 @@ SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
 
--- Dump completed on 2026-09-03 10:25:47
+-- Dump completed on 2026-09-05 12:23:32
