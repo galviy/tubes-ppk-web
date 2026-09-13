@@ -19,7 +19,7 @@ func Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := map[string]any{"id": p.UserId, "email": p.Email}
+	user := map[string]any{"success": true, "email": p.Email}
 
 	utils.ResponseJSON(w, http.StatusOK, user)
 }

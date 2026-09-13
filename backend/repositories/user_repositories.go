@@ -2,7 +2,9 @@ package repositories
 
 import (
 	"backend-ppk/config"
+	utils "backend-ppk/utilities"
 	"database/sql"
+	"log"
 )
 
 type User struct {
@@ -12,6 +14,42 @@ type User struct {
 	Password string
 }
 
+func IsLoginCorrect(email string, password string) bool {
+	var passwordHash string
+
+	err := config.QueryRow(`
+		SELECT password
+		FROM user
+		WHERE email = ?
+	`, email).Scan(&passwordHash)
+
+	if err == sql.ErrNoRows {
+		return false
+	}
+
+	if err != nil {
+		log.Println("Terjadi error pada database:", err)
+		return false
+	}
+
+	return utils.CheckPassword(password, passwordHash)
+}
+
+func IsUserExist(email string, username string) bool {
+	var hasilAngka int
+	err := config.QueryRow(`
+		select 1 
+		from user
+		where email = ? or username = ?
+	`, email, username).Scan(&hasilAngka)
+	if err == sql.ErrNoRows {
+		return false
+	} else if err != nil {
+		log.Println("Terjadi error pada database:", err)
+		return false
+	}
+	return true
+}
 func GetUserByEmail(email string) (*User, error) {
 	var user User
 

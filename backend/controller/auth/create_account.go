@@ -33,14 +33,23 @@ func Create_Account(w http.ResponseWriter, r *http.Request) {
 	if !utils.IsEmailValid(email) {
 		utils.ResponseJSONMessage(w, "Email tidak sesuai dengan standar format email!", http.StatusUnauthorized, false)
 	}
-	errCreate := repositories.CreateUser(username, email, password)
-	if errCreate != nil {
-		log.Printf("Gagal membuat user: %v", errCreate)
-		utils.ResponseJSONMessage(w, "Internal server error", http.StatusInternalServerError, true)
+	p := repositories.IsUserExist(email, username)
+	if p {
+		utils.ResponseJSONMessage(w, "Username atau email sudah exist sebelumnya!", http.StatusUnauthorized, false)
 		return
 	}
 
-	//fmt.Println("User berhasil ditambahkan ke database!")
-	repositories.CreateUser(username, email, password)
+	passwordHash, err := utils.HashPassword(password)
+	if err != nil {
+		log.Printf("Gagal hashing password!")
+		utils.ResponseJSONMessage(w, "Internal server error", http.StatusInternalServerError, false)
+		return
+	}
+	errCreate := repositories.CreateUser(username, email, passwordHash)
+	if errCreate != nil {
+		log.Printf("Gagal membuat user: %v", errCreate)
+		utils.ResponseJSONMessage(w, "Internal server error", http.StatusInternalServerError, false)
+		return
+	}
 	utils.ResponseJSONMessage(w, "Successfully created account with username ("+username+")!", 200, true)
 }

@@ -1,8 +1,10 @@
 package auth
 
 import (
-	repositories "backend-ppk/models"
+	session "backend-ppk/models"
+	"backend-ppk/repositories"
 	utils "backend-ppk/utilities"
+
 	"net/http"
 
 	"github.com/google/uuid"
@@ -26,11 +28,23 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseJSONMessage(w, "Email and Password are required to fill!", http.StatusUnauthorized, false)
 		return
 	}
+	if !utils.IsPasswordValid(password) {
+		utils.ResponseJSONMessage(w, "Password tidak valid! Harus minimal 5 karakter, mengandung 1 huruf besar, dan 1 simbol!", http.StatusUnauthorized, false)
+		return
+	}
+	if !utils.IsEmailValid(email) {
+		utils.ResponseJSONMessage(w, "Email tidak sesuai dengan standar format email!", http.StatusUnauthorized, false)
+	}
 
-	s := repositories.NewUser(1, "galvin@gmail.com", "admin")
+	isCorrect := repositories.IsLoginCorrect(email, password)
+	if !isCorrect {
+		utils.ResponseJSONMessage(w, "Invalid username or password", http.StatusUnauthorized, false)
+		return
+	}
+	s := session.NewUser(email)
 
 	sessionID := uuid.NewString()
-	repositories.Sessions[sessionID] = s
+	session.Sessions[sessionID] = s
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_id",
