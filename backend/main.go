@@ -1,23 +1,22 @@
 package main
 
 import (
-	"backend-ppk/middleware"
+	"backend-ppk/config"
 	router "backend-ppk/routes"
 	"fmt"
 	"net/http"
 )
 
 func main() {
-	mux := http.NewServeMux()
+	config.ConnectDB()
 
-	mux.HandleFunc("/auth/login", router.Login)
-	mux.Handle("/profile", middleware.Auth(http.HandlerFunc(router.Dashboard)))
+	mux := router.SetupRoutes()
+
+	fmt.Println("Backend is starting on :8080")
 
 	err := http.ListenAndServe(":8080", mux)
-	fmt.Printf("Starting to run backend...")
+
 	if err != nil {
-		fmt.Printf("Server failed to start %v", err)
-	} else {
-		fmt.Printf("Backend Is Started to run!")
+		fmt.Printf("Server failed to start: %v\n", err)
 	}
 }
