@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"backend-ppk/auth"
+	repositories "backend-ppk/models"
 	"fmt"
 	"net/http"
 )
