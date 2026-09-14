@@ -8,7 +8,7 @@ import (
 
 func Auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("Request:", r.Method, r.URL.Path)
+		//fmt.Println("Request:", r.Method, r.URL.Path)
 		cookie, err := r.Cookie("session_id")
 		if err != nil {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)

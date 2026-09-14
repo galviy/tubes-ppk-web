@@ -19,14 +19,14 @@ func Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := map[string]any{"success": true, "email": p.Email}
+	user := map[string]any{"success": true, "Username": p.Username, "email": p.Email, "Role": p.Role}
 
 	utils.ResponseJSON(w, http.StatusOK, user)
 }
 
 /*
 type Session struct {
-	UserId      int
+	Username    string
 	Email       string
 	Role        string
 	Valid_until int64
