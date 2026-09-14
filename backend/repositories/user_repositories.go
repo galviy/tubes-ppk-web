@@ -11,17 +11,41 @@ type User struct {
 	ID       int
 	Username string
 	Email    string
+	Role     string
 	Password string
 }
 
-func IsLoginCorrect(email string, password string) bool {
-	var passwordHash string
+/*func NewUser(email, role, username string) *Session {
+ */
 
-	err := config.QueryRow(`
-		SELECT password
+/*
+	+------------+--------------+------+-----+---------+----------------+
+
+| Field      | Type         | Null | Key | Default | Extra          |
++------------+--------------+------+-----+---------+----------------+
+| id         | int(11)      | NO   | PRI | NULL    | auto_increment |
+| username   | varchar(32)  | NO   | UNI | NULL    |                |
+| email      | varchar(255) | NO   | UNI | NULL    |                |
+| password   | varchar(255) | NO   |     | NULL    |                |
+| user_role  | int(11)      | NO   | MUL | NULL    |                |
+| isVerified | tinyint(4)   | NO   |     | NULL    |                |
++------------+--------------+------+-----+---------+----------------+
+*/
+func IsLoginCorrect(email string, password string, user *User) bool {
+
+	row := config.QueryRow(`
+		SELECT id,username,email,user_role,password
 		FROM user
 		WHERE email = ?
-	`, email).Scan(&passwordHash)
+	`, email)
+
+	err := row.Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.Role,
+		&user.Password,
+	)
 
 	if err == sql.ErrNoRows {
 		return false
@@ -32,7 +56,7 @@ func IsLoginCorrect(email string, password string) bool {
 		return false
 	}
 
-	return utils.CheckPassword(password, passwordHash)
+	return utils.CheckPassword(password, user.Password)
 }
 
 func IsUserExist(email string, username string) bool {
@@ -50,33 +74,35 @@ func IsUserExist(email string, username string) bool {
 	}
 	return true
 }
-func GetUserByEmail(email string) (*User, error) {
-	var user User
 
-	row := config.QueryRow(`
-		SELECT id, username, email, password
-		FROM users
-		WHERE email = ?
-	`, email)
+/*
+	func GetUserByEmail(email string) (*User, error) {
+		var user User
 
-	err := row.Scan(
-		&user.ID,
-		&user.Username,
-		&user.Email,
-		&user.Password,
-	)
+		row := config.QueryRow(`
+			SELECT id, username, email, password
+			FROM users
+			WHERE email = ?
+		`, email)
 
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
+		err := row.Scan(
+			&user.ID,
+			&user.Username,
+			&user.Email,
+			&user.Password,
+		)
+
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, nil
+			}
+
+			return nil, err
 		}
 
-		return nil, err
+		return &user, nil
 	}
-
-	return &user, nil
-}
-
+*/
 func CreateUser(username string, email string, password string) error {
 	_, err := config.Exec(`
 		INSERT INTO user (username, email, password,user_role,isVerified)

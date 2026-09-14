@@ -6,6 +6,7 @@ import (
 	utils "backend-ppk/utilities"
 
 	"net/http"
+	"strconv"
 
 	"github.com/google/uuid"
 )
@@ -36,12 +37,21 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseJSONMessage(w, "Email tidak sesuai dengan standar format email!", http.StatusUnauthorized, false)
 	}
 
-	isCorrect := repositories.IsLoginCorrect(email, password)
+	var user_login repositories.User
+
+	isCorrect := repositories.IsLoginCorrect(email, password, &user_login)
 	if !isCorrect {
 		utils.ResponseJSONMessage(w, "Invalid username or password", http.StatusUnauthorized, false)
 		return
 	}
-	s := session.NewUser(email)
+
+	idUser := strconv.Itoa(user_login.ID)
+	if user_login.Email == "" || idUser == "" || user_login.Username == "" {
+		utils.ResponseJSONMessage(w, "Internal server error", http.StatusInternalServerError, false)
+		return
+	}
+
+	s := session.NewUser(user_login.Email, user_login.Role, user_login.Username)
 
 	sessionID := uuid.NewString()
 	session.Sessions[sessionID] = s

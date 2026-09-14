@@ -3,9 +3,9 @@ package repositories
 import "time"
 
 type Session struct {
-	//Username string
-	Email string
-	//Role        string
+	Username    string
+	Email       string
+	Role        string
 	Valid_until int64
 }
 
@@ -21,10 +21,11 @@ func Destroy_session(m map[string]*Session, key string) {
 	delete(m, key)
 }
 
-func NewUser(email string) *Session {
+func NewUser(email, role, username string) *Session {
 	return &Session{
-		//Username:    username,
+		Username:    username,
 		Email:       email,
+		Role:        role,
 		Valid_until: time.Now().Unix() + 60*60*1,
 	}
 }
