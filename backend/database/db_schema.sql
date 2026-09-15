@@ -312,16 +312,23 @@ DROP TABLE IF EXISTS `report`;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `report` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `foto` varchar(50) DEFAULT NULL,
+  `waktu_dibuat` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `foto` varchar(255) DEFAULT NULL,
   `user_report` int(11) NOT NULL,
   `alasan` varchar(255) NOT NULL,
-  `status_laporan` varchar(20) NOT NULL,
+  `kategori_laporan` varchar(50) NOT NULL,
+  `status_laporan` varchar(20) NOT NULL DEFAULT 'baru',
+  `catatan_resolusi` text DEFAULT NULL,
+  `resolved_at` datetime DEFAULT NULL,
   `report_ruangan` int(11) DEFAULT NULL,
   `report_alat` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `report_unique` (`foto`),
   KEY `report_user_FK` (`user_report`),
-  CONSTRAINT `report_user_FK` FOREIGN KEY (`user_report`) REFERENCES `user` (`id`)
+  KEY `report_ruangan_FK` (`report_ruangan`),
+  KEY `report_alat_FK` (`report_alat`),
+  CONSTRAINT `report_user_FK` FOREIGN KEY (`user_report`) REFERENCES `user` (`id`),
+  CONSTRAINT `report_ruangan_FK` FOREIGN KEY (`report_ruangan`) REFERENCES `ruangan` (`id`),
+  CONSTRAINT `report_alat_FK` FOREIGN KEY (`report_alat`) REFERENCES `alat` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
