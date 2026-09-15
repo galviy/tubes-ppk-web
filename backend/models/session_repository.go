@@ -3,6 +3,7 @@ package models
 import "time"
 
 type Session struct {
+	UserId int
 	Username    string
 	Email       string
 	Role        string
@@ -21,8 +22,9 @@ func Destroy_session(m map[string]*Session, key string) {
 	delete(m, key)
 }
 
-func NewUser(email, role, username string) *Session {
+func NewUser(userId int, email, role, username string) *Session {
 	return &Session{
+		UserId: userId,
 		Username:    username,
 		Email:       email,
 		Role:        role,

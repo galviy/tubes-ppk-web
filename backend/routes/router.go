@@ -2,6 +2,7 @@ package routes
 
 import (
 	"backend-ppk/controller/auth"
+	"backend-ppk/controller/report"
 	"backend-ppk/controller/user"
 	"backend-ppk/middleware"
 	"net/http"
@@ -17,6 +18,10 @@ func SetupRoutes() *http.ServeMux {
 	mux.Handle(
 		"/user/me",
 		middleware.Auth(http.HandlerFunc(user.Me)),
+	)
+	mux.Handle(
+		"POST /reports",
+		middleware.Auth(http.HandlerFunc(report.CreateLaporan)),
 	)
 	return mux
 }
