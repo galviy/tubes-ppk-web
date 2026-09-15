@@ -29,11 +29,6 @@ var allowedFotoExt = map[string]bool{
 }
 
 func CreateLaporan(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		utils.ResponseJSONMessage(w, "Method Not Allowed", http.StatusMethodNotAllowed, false)
-		return
-	}
-
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
 		utils.ResponseJSONMessage(w, "Unauthorized", http.StatusUnauthorized, false)
