@@ -26,7 +26,7 @@ DROP TABLE IF EXISTS `alat`;
 CREATE TABLE `alat` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `nama_alat` varchar(255) NOT NULL,
-  `ketersediaan_alat` int(11) NOT NULL,
+  `jumlah_tersedia` int(11) NOT NULL,
   `banyak_alat` int(11) NOT NULL,
   `kategori` int(11) NOT NULL,
   PRIMARY KEY (`id`),
@@ -114,6 +114,39 @@ COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 
 --
+-- Table structure for table `dosen_pending`
+--
+
+DROP TABLE IF EXISTS `dosen_pending`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `dosen_pending` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `nidn` varchar(50) NOT NULL,
+  `nama_lengkap` varchar(255) NOT NULL,
+  `dosen_user` int(11) NOT NULL,
+  `prodi_dosen` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `dosen_prodi_FK` (`prodi_dosen`),
+  KEY `idx_dosen_user` (`dosen_user`),
+  CONSTRAINT `dosen_prodi_FK_2` FOREIGN KEY (`prodi_dosen`) REFERENCES `prodi` (`id`),
+  CONSTRAINT `dosen_user_FK_2` FOREIGN KEY (`dosen_user`) REFERENCES `user` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `dosen_pending`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `dosen_pending` WRITE;
+/*!40000 ALTER TABLE `dosen_pending` DISABLE KEYS */;
+/*!40000 ALTER TABLE `dosen_pending` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
 -- Table structure for table `fakultas`
 --
 
@@ -125,7 +158,7 @@ CREATE TABLE `fakultas` (
   `nama_fakultas` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `fakultas_unique` (`nama_fakultas`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -135,6 +168,8 @@ CREATE TABLE `fakultas` (
 SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `fakultas` WRITE;
 /*!40000 ALTER TABLE `fakultas` DISABLE KEYS */;
+INSERT INTO `fakultas` VALUES
+(1,'Sekolah Teknik Elektro Komputasi (STEI-K)');
 /*!40000 ALTER TABLE `fakultas` ENABLE KEYS */;
 UNLOCK TABLES;
 COMMIT;
@@ -202,6 +237,40 @@ COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 
 --
+-- Table structure for table `mahasiswa_pending`
+--
+
+DROP TABLE IF EXISTS `mahasiswa_pending`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `mahasiswa_pending` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `nim` varchar(14) NOT NULL,
+  `angkatan` varchar(4) NOT NULL,
+  `mhs_user` int(11) NOT NULL,
+  `nama_lengkap` varchar(100) NOT NULL,
+  `prodi` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `mahasiswa_prodi_FK` (`prodi`),
+  KEY `idx_mhs_user` (`mhs_user`),
+  CONSTRAINT `mahasiswa_prodi_FK_2` FOREIGN KEY (`prodi`) REFERENCES `prodi` (`id`),
+  CONSTRAINT `mahasiswa_user_FK_2` FOREIGN KEY (`mhs_user`) REFERENCES `user` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `mahasiswa_pending`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `mahasiswa_pending` WRITE;
+/*!40000 ALTER TABLE `mahasiswa_pending` DISABLE KEYS */;
+/*!40000 ALTER TABLE `mahasiswa_pending` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
 -- Table structure for table `prodi`
 --
 
@@ -216,7 +285,7 @@ CREATE TABLE `prodi` (
   UNIQUE KEY `prodi_unique` (`nama_prodi`),
   KEY `prodi_fakultas_FK` (`fakultas_prodi`),
   CONSTRAINT `prodi_fakultas_FK` FOREIGN KEY (`fakultas_prodi`) REFERENCES `fakultas` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -226,6 +295,9 @@ CREATE TABLE `prodi` (
 SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `prodi` WRITE;
 /*!40000 ALTER TABLE `prodi` DISABLE KEYS */;
+INSERT INTO `prodi` VALUES
+(1,'Informatika',1),
+(2,'Sistem dan Teknologi Informasi (STI)',1);
 /*!40000 ALTER TABLE `prodi` ENABLE KEYS */;
 UNLOCK TABLES;
 COMMIT;
@@ -306,7 +378,7 @@ DROP TABLE IF EXISTS `reservasi`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `reservasi` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `waktu_reservasi_dibuat` datetime NOT NULL,
   `ruangan_reservasi` int(11) DEFAULT NULL,
   `user_reservasi` int(11) NOT NULL,
@@ -345,7 +417,7 @@ CREATE TABLE `role` (
   `nama_role` varchar(100) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `role_unique` (`nama_role`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -355,6 +427,10 @@ CREATE TABLE `role` (
 SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `role` WRITE;
 /*!40000 ALTER TABLE `role` DISABLE KEYS */;
+INSERT INTO `role` VALUES
+(1,'admin'),
+(3,'pengguna'),
+(2,'petugas');
 /*!40000 ALTER TABLE `role` ENABLE KEYS */;
 UNLOCK TABLES;
 COMMIT;
@@ -401,7 +477,7 @@ DROP TABLE IF EXISTS `tolak_reservasi`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `tolak_reservasi` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `alasan_penolakan` varchar(255) NOT NULL,
   `id_reservasi` int(11) NOT NULL,
   PRIMARY KEY (`id`),
@@ -436,12 +512,15 @@ CREATE TABLE `user` (
   `password` varchar(255) NOT NULL,
   `user_role` int(11) NOT NULL,
   `isVerified` tinyint(4) NOT NULL,
+  `tipe_user` int(11) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_unique` (`username`),
   UNIQUE KEY `user_unique_1` (`email`),
   KEY `user_role_FK` (`user_role`),
-  CONSTRAINT `user_role_FK` FOREIGN KEY (`user_role`) REFERENCES `role` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  KEY `user_user_tipe_FK` (`tipe_user`),
+  CONSTRAINT `user_role_FK` FOREIGN KEY (`user_role`) REFERENCES `role` (`id`),
+  CONSTRAINT `user_user_tipe_FK` FOREIGN KEY (`tipe_user`) REFERENCES `user_tipe` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -451,7 +530,42 @@ CREATE TABLE `user` (
 SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `user` WRITE;
 /*!40000 ALTER TABLE `user` DISABLE KEYS */;
+INSERT INTO `user` VALUES
+(15,'galvin2','galvindoser2@gmail.com','$2a$10$buqgyjWd4k8Am2nyMzaABeneJJD410dqwpkUQDWtolgzXgRBmiGNC',3,0,2),
+(16,'galvin','galvindoser@gmail.com','$2a$10$hrgjF5wYVjlCwpwTCBO0nOZDdtLjo4XmQ31U375jrug0twlB.YYNC',3,0,1),
+(21,'gawdalvin','galvidawndoser@gmail.com','$2a$10$SHhSkPa8ZdWSGlPcCmlc/uJkNM8dEMHzU1aS78b9pHobjWQOnY5y6',3,0,1),
+(23,'gawdalvidawn','galvidawndawdoser@gmail.com','$2a$10$rNHeXblMcdt06E4lJ4Rqp.VAXUPxzx60RHtFU6ywA54sOk0VDlrrO',3,0,1);
 /*!40000 ALTER TABLE `user` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `user_tipe`
+--
+
+DROP TABLE IF EXISTS `user_tipe`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_tipe` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `tipe` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_tipe_unique` (`tipe`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_tipe`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `user_tipe` WRITE;
+/*!40000 ALTER TABLE `user_tipe` DISABLE KEYS */;
+INSERT INTO `user_tipe` VALUES
+(2,'Dosen'),
+(1,'mhs');
+/*!40000 ALTER TABLE `user_tipe` ENABLE KEYS */;
 UNLOCK TABLES;
 COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
@@ -465,4 +579,4 @@ SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
 
--- Dump completed on 2026-09-05 15:21:13
+-- Dump completed on 2026-09-15 18:52:43

@@ -11,7 +11,8 @@ func SetupRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/auth/login", auth.Login)
-	mux.HandleFunc("/auth/create_account", auth.Create_Account)
+	mux.HandleFunc("/auth/create_account/dosen", auth.Create_Account_Dosen)
+	mux.HandleFunc("/auth/create_account/mhs", auth.Create_Account_MHS)
 
 	mux.Handle(
 		"/user/me",

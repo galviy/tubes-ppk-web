@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func Create_Account(w http.ResponseWriter, r *http.Request) {
+func Create_Account_MHS(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
 		utils.ResponseJSONMessage(w, "Method Now Allowed", http.StatusMethodNotAllowed, false)
@@ -18,10 +18,22 @@ func Create_Account(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseJSONMessage(w, "Bad Request", http.StatusBadRequest, false)
 		return
 	}
+	//curl -X POST http://localhost:8080/auth/create_account/mhs \
+	//-d "username=galvin&email=galvindoser@gmail.com&password=Test@123&nim=1921221&angkatan=2024&nama_lengkap=Galvin+Shalahudin&prodi=1"
 
 	username := r.FormValue("username")
 	email := r.FormValue("email")
 	password := r.FormValue("password")
+	nim := r.FormValue("nim")
+	angkatan := r.FormValue("angkatan")
+	nama_lengkap := r.FormValue("nama_lengkap")
+	prodi := r.FormValue("prodi")
+
+	if username == "" || email == "" || password == "" || nim == "" || angkatan == "" || nama_lengkap == "" || prodi == "" {
+		utils.ResponseJSONMessage(w, "Missing field!", http.StatusUnauthorized, false)
+		return
+	}
+
 	if len(username) < 5 {
 		utils.ResponseJSONMessage(w, "Username minimal 5 Huruf!", http.StatusUnauthorized, false)
 		return
@@ -38,6 +50,11 @@ func Create_Account(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseJSONMessage(w, "Username atau email sudah exist sebelumnya!", http.StatusUnauthorized, false)
 		return
 	}
+	CheckProdiExist := repositories.IsProdiExist(prodi)
+	if !CheckProdiExist {
+		utils.ResponseJSONMessage(w, "Tidak ditemukan prodi dengan nama tersebut!", http.StatusUnauthorized, false)
+		return
+	}
 
 	passwordHash, err := utils.HashPassword(password)
 	if err != nil {
@@ -45,11 +62,18 @@ func Create_Account(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseJSONMessage(w, "Internal server error", http.StatusInternalServerError, false)
 		return
 	}
-	errCreate := repositories.CreateUser(username, email, passwordHash)
+	CheckExist := repositories.IsMhsExist(nim)
+	if CheckExist {
+		utils.ResponseJSONMessage(w, "Sudah ada mahasiswa dengan nim ("+nim+") terdaftar di database kita!", http.StatusInternalServerError, false)
+		return
+	}
+
+	//func CreateMahasiswaPending(username string, email string, password string, tipeUser string, nim string, angkatan string, namaLengkap string, prodi int) error {
+	errCreate := repositories.CreateMahasiswaPending(username, email, passwordHash, "mhs", nim, angkatan, nama_lengkap, prodi)
 	if errCreate != nil {
 		log.Printf("Gagal membuat user: %v", errCreate)
 		utils.ResponseJSONMessage(w, "Internal server error", http.StatusInternalServerError, false)
 		return
 	}
-	utils.ResponseJSONMessage(w, "Successfully created account with username ("+username+")!", 200, true)
+	utils.ResponseJSONMessage(w, "Successfully created account with username ("+username+"), you can login when your account is verified!", 200, true)
 }
