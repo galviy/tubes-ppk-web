@@ -17,6 +17,10 @@ func IsSessionActive(sessionId *Session) bool {
 	return sessionId.Valid_until >= time.Now().Unix()
 }
 
+func IsSessionActiveAndAdmin(sessionId *Session) bool {
+	return sessionId.Valid_until >= time.Now().Unix() && sessionId.Role == "1"
+}
+
 func Destroy_session(m map[string]*Session, key string) {
 	delete(m, key)
 }

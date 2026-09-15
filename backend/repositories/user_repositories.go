@@ -282,3 +282,50 @@ func IsProdiExist(prodi string) bool {
 	}
 	return true
 }
+
+type tampung struct {
+	ID       int
+	Username string
+	Email    string
+	Role     int
+}
+
+func GetUsers(limit int) ([]tampung, error) {
+
+	rows, err := config.Query(`
+		SELECT id, username, email, user_role
+		FROM user
+		ORDER BY id, username
+		LIMIT ?
+	`, limit)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []tampung
+
+	for rows.Next() {
+		var user tampung
+
+		err := rows.Scan(
+			&user.ID,
+			&user.Username,
+			&user.Email,
+			&user.Role,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
