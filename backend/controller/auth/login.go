@@ -41,7 +41,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	isCorrect := repositories.IsLoginCorrect(email, password, &user_login)
 	if !isCorrect {
-		utils.ResponseJSONMessage(w, "Invalid username or password", http.StatusUnauthorized, false)
+		utils.ResponseJSONMessage(w, "Make sure your account has been verified or you type a invalid username or password", http.StatusUnauthorized, false)
 		return
 	}
 
