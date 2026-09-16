@@ -3,7 +3,6 @@ package admin
 import (
 	"backend-ppk/repositories"
 	utils "backend-ppk/utilities"
-	"encoding/json"
 	"net/http"
 	"strconv"
 )
@@ -48,8 +47,10 @@ func Show_user(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	json.NewEncoder(w).Encode(map[string]any{
+	data := map[string]any{
 		"success": true,
 		"data":    response,
-	})
+	}
+	utils.ResponseJSON(w, http.StatusOK, data)
+	return
 }

@@ -283,6 +283,56 @@ func IsProdiExist(prodi string) bool {
 	return true
 }
 
+type tampung_mhs_pending struct {
+	ID           int
+	Nim          string
+	Nama_lengkap string
+	Angkatan     int
+	Username     string
+}
+
+func GetMhsPending(limit int) ([]tampung_mhs_pending, error) {
+
+	rows, err := config.Query(`
+		SELECT mp.id, mp.nim, mp.nama_lengkap,mp.angkatan,u.username 
+		FROM mahasiswa_pending mp 
+		join user u on u.id = mp.mhs_user 
+		ORDER BY mp.id, u.username 
+		LIMIT ?
+	`, limit)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []tampung_mhs_pending
+
+	for rows.Next() {
+		var user tampung_mhs_pending
+
+		err := rows.Scan(
+			&user.ID,
+			&user.Nim,
+			&user.Nama_lengkap,
+			&user.Angkatan,
+			&user.Username,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
 type tampung struct {
 	ID       int
 	Username string

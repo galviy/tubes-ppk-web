@@ -5,6 +5,7 @@ import (
 	utils "backend-ppk/utilities"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 func Create_Account_MHS(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +37,11 @@ func Create_Account_MHS(w http.ResponseWriter, r *http.Request) {
 
 	if len(username) < 5 {
 		utils.ResponseJSONMessage(w, "Username minimal 5 Huruf!", http.StatusUnauthorized, false)
+		return
+	}
+	_, err_conv := strconv.Atoi(angkatan)
+	if err_conv != nil {
+		utils.ResponseJSONMessage(w, "Angkatan harus berupa angka!", http.StatusUnauthorized, false)
 		return
 	}
 	if !utils.IsPasswordValid(password) {

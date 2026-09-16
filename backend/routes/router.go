@@ -21,6 +21,10 @@ func SetupRoutes() *http.ServeMux {
 		middleware.AdminAuth(http.HandlerFunc(admin.Show_user)),
 	)
 	mux.Handle(
+		"/admin/show_mhs_pending",
+		middleware.AdminAuth(http.HandlerFunc(admin.Show_mhs_pending)),
+	)
+	mux.Handle(
 		"/user/me",
 		middleware.Auth(http.HandlerFunc(user.Me)),
 	)
