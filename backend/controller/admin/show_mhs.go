@@ -22,7 +22,7 @@ func Show_mhs(w http.ResponseWriter, r *http.Request) {
 		limit = limitParsed
 	}
 
-	users, err := repositories.GetMhsPending(limit)
+	users, err := repositories.GetMhs(limit)
 
 	if err != nil {
 		utils.ResponseJSONMessage(w, "Failed to get users", http.StatusInternalServerError, false)

@@ -472,3 +472,210 @@ func GetDosenPending(limit int) ([]dosen_p, error) {
 
 	return users, nil
 }
+
+func GetDosen(limit int) ([]dosen_p, error) {
+
+	rows, err := config.Query(`
+		SELECT id, nidn, nama_lengkap, prodi_dosen
+		FROM dosen
+		LIMIT ?
+	`, limit)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []dosen_p
+
+	for rows.Next() {
+		var user dosen_p
+
+		err := rows.Scan(
+			&user.ID,
+			&user.Nidn,
+			&user.Nama_lengkap,
+			&user.Prodi_dosen,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func IsNimExist(pendingID int) (bool, error) {
+	var exists int
+
+	err := config.DB.QueryRow(`
+		SELECT 1
+		FROM mahasiswa m
+		WHERE m.nim = (
+			SELECT mp.nim
+			FROM mahasiswa_pending mp
+			WHERE mp.id = ?
+			LIMIT 1
+		)
+		LIMIT 1
+	`, pendingID).Scan(&exists)
+
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func Verif_MHS(userID int) error {
+	tx, err := config.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+
+	var nim, angkatan, namaLengkap string
+	var mhsUser, prodi int
+
+	err = tx.QueryRow(`
+		SELECT nim, angkatan, mhs_user, nama_lengkap, prodi 
+		FROM mahasiswa_pending 
+		WHERE id = ?
+		FOR UPDATE
+	`, userID).Scan(
+		&nim,
+		&angkatan,
+		&mhsUser,
+		&namaLengkap,
+		&prodi,
+	)
+
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(`
+		UPDATE user
+		SET isVerified = 1
+		WHERE id = (select mhs_user from mahasiswa_pending where id = ?)
+	`, userID)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO mahasiswa
+			(nim, angkatan, mhs_user, nama_lengkap, prodi)
+		VALUES (?, ?, ?, ?, ?)
+	`, nim, angkatan, mhsUser, namaLengkap, prodi)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+		DELETE FROM mahasiswa_pending
+		WHERE id = ?
+	`, userID)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func IsNidnExist(pendingID int) (bool, error) {
+	var exists int
+
+	err := config.DB.QueryRow(`
+		SELECT 1
+		FROM dosen d
+		WHERE d.nidn = (
+			SELECT dp.nidn
+			FROM dosen_pending dp
+			WHERE dp.id = ?
+			LIMIT 1
+		)
+		LIMIT 1
+	`, pendingID).Scan(&exists)
+
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+func Verif_Dosen(userID int) error {
+	tx, err := config.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+
+	var nidn, nama_lengkap, dosen_user string
+	var prodi_dosen int
+
+	err = tx.QueryRow(`
+		SELECT dp.nidn, dp.nama_lengkap, dp.dosen_user, dp.prodi_dosen 
+		FROM dosen_pending dp 
+		WHERE dp.id = ?
+		FOR UPDATE
+	`, userID).Scan(
+		&nidn,
+		&nama_lengkap,
+		&dosen_user,
+		&prodi_dosen,
+	)
+
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(`
+		UPDATE user
+		SET isVerified = 1
+		WHERE id = ?
+	`, dosen_user)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO dosen
+			(nidn, nama_lengkap, dosen_user, prodi_dosen)
+		VALUES (?, ?, ?, ?)
+	`, nidn, nama_lengkap, dosen_user, prodi_dosen)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+		DELETE FROM dosen_pending
+		WHERE id = ?
+	`, userID)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}

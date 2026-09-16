@@ -50,6 +50,7 @@ func Create_Account_MHS(w http.ResponseWriter, r *http.Request) {
 	}
 	if !utils.IsEmailValid(email) {
 		utils.ResponseJSONMessage(w, "Email tidak sesuai dengan standar format email!", http.StatusUnauthorized, false)
+		return
 	}
 	p := repositories.IsUserExist(email, username)
 	if p {

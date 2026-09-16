@@ -2,6 +2,7 @@ package routes
 
 import (
 	"backend-ppk/controller/admin"
+	"backend-ppk/controller/admin/verifikasi"
 	"backend-ppk/controller/auth"
 	"backend-ppk/controller/report"
 	"backend-ppk/controller/user"
@@ -27,11 +28,25 @@ func SetupRoutes() *http.ServeMux {
 
 	mux.Handle(
 		"GET /admin/show_mhs",
-		middleware.AdminAuth(http.HandlerFunc(admin.Show_mhs_pending)),
+		middleware.AdminAuth(http.HandlerFunc(admin.Show_mhs)),
 	)
 	mux.Handle(
 		"GET /admin/show_dosen_pending",
 		middleware.AdminAuth(http.HandlerFunc(admin.Show_dosen_pending)),
+	)
+
+	mux.Handle(
+		"GET /admin/show_dosen",
+		middleware.AdminAuth(http.HandlerFunc(admin.Show_dosen)),
+	)
+
+	mux.Handle(
+		"POST /admin/verifikasi_mhs",
+		middleware.AdminAuth(http.HandlerFunc(verifikasi.Verifikasi_MHS)),
+	)
+	mux.Handle(
+		"POST /admin/verifikasi_dosen",
+		middleware.AdminAuth(http.HandlerFunc(verifikasi.Verifikasi_dosen)),
 	)
 	mux.Handle(
 		"GET /user/me",
