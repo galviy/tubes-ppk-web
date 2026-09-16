@@ -51,7 +51,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s := session.NewUser(user_login.Email, user_login.Role, user_login.Username)
+	s := session.NewUser(user_login.ID,user_login.Email, user_login.Role, user_login.Username)
 
 	sessionID := uuid.NewString()
 	session.Sessions[sessionID] = s
