@@ -8,12 +8,6 @@ import (
 )
 
 func Show_mhs_pending(w http.ResponseWriter, r *http.Request) {
-
-	if r.Method != http.MethodGet {
-		utils.ResponseJSONMessage(w, "Method Not Allowed", http.StatusMethodNotAllowed, false)
-		return
-	}
-
 	limit := 10
 
 	if value := r.URL.Query().Get("limit"); value != "" {
@@ -65,5 +59,5 @@ func Show_mhs_pending(w http.ResponseWriter, r *http.Request) {
 		"data":    response,
 	}
 	utils.ResponseJSON(w, http.StatusOK, data)
-	return
+
 }

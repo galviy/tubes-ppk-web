@@ -291,6 +291,53 @@ type tampung_mhs_pending struct {
 	Username     string
 }
 
+func GetMhs(limit int) ([]tampung_mhs_pending, error) {
+
+	rows, err := config.Query(`
+		SELECT
+			m.id,
+			m.nim,
+			m.nama_lengkap,
+			m.angkatan,
+			u.username
+		FROM mahasiswa m
+		JOIN user u ON m.mhs_user = u.id
+		order by m.id,u.username
+		limit ?
+	`, limit)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []tampung_mhs_pending
+
+	for rows.Next() {
+		var user tampung_mhs_pending
+
+		err := rows.Scan(
+			&user.ID,
+			&user.Nim,
+			&user.Nama_lengkap,
+			&user.Angkatan,
+			&user.Username,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
 func GetMhsPending(limit int) ([]tampung_mhs_pending, error) {
 
 	rows, err := config.Query(`
@@ -364,6 +411,52 @@ func GetUsers(limit int) ([]tampung, error) {
 			&user.Username,
 			&user.Email,
 			&user.Role,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+type dosen_p struct {
+	ID           int
+	Nidn         string
+	Nama_lengkap string
+	Prodi_dosen  int
+}
+
+func GetDosenPending(limit int) ([]dosen_p, error) {
+
+	rows, err := config.Query(`
+		SELECT id, nidn, nama_lengkap, prodi_dosen
+		FROM dosen_pending
+		LIMIT ?
+	`, limit)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []dosen_p
+
+	for rows.Next() {
+		var user dosen_p
+
+		err := rows.Scan(
+			&user.ID,
+			&user.Nidn,
+			&user.Nama_lengkap,
+			&user.Prodi_dosen,
 		)
 
 		if err != nil {
