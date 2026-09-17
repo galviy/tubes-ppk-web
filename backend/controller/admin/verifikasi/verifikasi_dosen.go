@@ -24,13 +24,13 @@ func Verifikasi_dosen(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseJSONMessage(w, "You have to input a integer boskuh!", http.StatusBadRequest, false)
 		return
 	}
-	cek_exist, err := repositories.IsNimExist(id_dosen_convert)
+	cek_exist, err := repositories.IsNidnExist(id_dosen_convert)
 	if err != nil {
-		utils.ResponseJSONMessage(w, "You need id_mhs to peform this action!", http.StatusForbidden, false)
+		utils.ResponseJSONMessage(w, "You need id_dosen to peform this action!", http.StatusForbidden, false)
 		return
 	}
 	if cek_exist {
-		utils.ResponseJSONMessage(w, "Nim tersebut sudah pernah terverifikasi!", http.StatusForbidden, false)
+		utils.ResponseJSONMessage(w, "nidn tersebut sudah pernah terverifikasi!", http.StatusForbidden, false)
 		return
 	}
 	err_verif := repositories.Verif_Dosen(id_dosen_convert)
