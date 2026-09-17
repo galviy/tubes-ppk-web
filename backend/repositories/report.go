@@ -5,6 +5,7 @@ import (
 	"backend-ppk/models"
 	"database/sql"
 	"log"
+	"time"
 )
 
 func InsertReport(r models.Report) error {
@@ -119,6 +120,79 @@ func GetReportByID(id, userId int) (*models.ReportDetail, error) {
 		return nil, err
 	}
 	return &d, nil
+}
+
+func GetReportByIDForPetugas(id int) (*models.ReportDetail, error) {
+	d, err := scanReportDetail(config.DB.QueryRow(
+		`SELECT r.id, r.waktu_dibuat, r.foto, r.user_report, r.alasan,
+			r.kategori_laporan, r.status_laporan, r.catatan_resolusi, r.resolved_at,
+			r.report_ruangan, r.report_alat, ru.nama_ruangan, a.nama_alat
+		FROM report r
+		LEFT JOIN ruangan ru ON ru.id = r.report_ruangan
+		LEFT JOIN alat a ON a.id = r.report_alat
+		WHERE r.id = ?`, id))
+	if err != nil {
+		return nil, err
+	}
+	return &d, nil
+}
+
+func ListAllReports() ([]models.ReportDetail, error) {
+	rows, err := config.DB.Query(
+		`SELECT r.id, r.waktu_dibuat, r.foto, r.user_report, r.alasan,
+			r.kategori_laporan, r.status_laporan, r.catatan_resolusi, r.resolved_at,
+			r.report_ruangan, r.report_alat, ru.nama_ruangan, a.nama_alat
+		FROM report r
+		LEFT JOIN ruangan ru ON ru.id = r.report_ruangan
+		LEFT JOIN alat a ON a.id = r.report_alat
+		ORDER BY r.waktu_dibuat DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	list := make([]models.ReportDetail, 0)
+	for rows.Next() {
+		d, err := scanReportDetail(rows)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, d)
+	}
+	return list, rows.Err()
+}
+
+func UpdateReportStatus(id int, status string, catatan sql.NullString, resolved bool) error {
+	var resolvedAt any
+	if resolved {
+		resolvedAt = time.Now()
+	}
+	_, err := config.DB.Exec(
+		`UPDATE report SET status_laporan = ?, catatan_resolusi = ?, resolved_at = ? WHERE id = ?`,
+		status, catatan, resolvedAt, id)
+	return err
+}
+
+func UpdateRuanganStatus(id int, status string) error {
+	_, err := config.DB.Exec(
+		`UPDATE ruangan SET status = ? WHERE id = ?`, status, id)
+	return err
+}
+
+
+func GetAlatBanyak(id int) (total int, ok bool) {
+	err := config.QueryRow(
+		`SELECT banyak_alat FROM alat WHERE id = ?`, id).Scan(&total)
+	if err != nil {
+		return 0, false
+	}
+	return total, true
+}
+
+func UpdateAlatTersedia(id, jumlah int) error {
+	_, err := config.DB.Exec(
+		`UPDATE alat SET jumlah_tersedia = ? WHERE id = ?`, jumlah, id)
+	return err
 }
 
 func CheckAlatById(id int) bool {

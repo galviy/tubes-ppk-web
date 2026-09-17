@@ -55,7 +55,7 @@ func CreateLaporan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	kategori := r.FormValue("kategori")
+	kategori := strings.TrimSpace(r.FormValue("kategori"))
 	switch kategori {
 	case models.Kebersihan, models.Pendingin, models.Elektronik, models.Lainnya:
 	default:
