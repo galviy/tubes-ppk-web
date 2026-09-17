@@ -91,6 +91,7 @@ func IsDosenExist(nidn string) bool {
 	}
 	return true
 }
+
 func IsMhsExist(nim string) bool {
 	var hasilAngka int
 	err := config.QueryRow(`
@@ -98,6 +99,21 @@ func IsMhsExist(nim string) bool {
 		from mahasiswa m
 		where m.nim = ? 
 	`, nim).Scan(&hasilAngka)
+	if err == sql.ErrNoRows {
+		return false
+	} else if err != nil {
+		log.Println("Terjadi error pada database:", err)
+		return false
+	}
+	return true
+}
+func IsStaffExist(nidn string) bool {
+	var hasilAngka int
+	err := config.QueryRow(`
+		select 1 
+		from staff s
+		where s.nip = ? 
+	`, nidn).Scan(&hasilAngka)
 	if err == sql.ErrNoRows {
 		return false
 	} else if err != nil {
@@ -135,6 +151,124 @@ func IsMhsExist(nim string) bool {
 		return &user, nil
 	}
 */
+
+func CreateMHSLangsung(username string, email string, password string, tipeUser string, nim string, angkatan string, namaLengkap string, prodi string) error {
+
+	tx, err := config.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Kalau ada error sebelum Commit(),
+	// semua perubahan di transaction dibatalkan.
+	defer tx.Rollback()
+
+	result, err := tx.Exec(`
+		INSERT INTO user (
+			username,
+			email,
+			password,
+			user_role,
+			isVerified,
+			tipe_user
+		)
+		VALUES (?, ?, ?, 3, 1, (
+			SELECT id
+			FROM user_tipe
+			WHERE tipe = ?
+		))
+	`, username, email, password, tipeUser)
+
+	if err != nil {
+		return err
+	}
+
+	// Ambil ID user yang baru dibuat
+	userID, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO mahasiswa (
+			nim,
+			angkatan,
+			mhs_user,
+			nama_lengkap,
+			prodi
+		)
+		VALUES (?, ?, ?, ?, (
+			SELECT id
+			FROM prodi
+			WHERE nama_prodi = ?
+		))
+	`, nim, angkatan, userID, namaLengkap, prodi)
+
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func CreateSTAFF(username string, email string, password string, tipeUser string, nip string, namaLengkap string) error {
+
+	tx, err := config.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Kalau ada error sebelum Commit(),
+	// semua perubahan di transaction dibatalkan.
+	defer tx.Rollback()
+
+	result, err := tx.Exec(`
+		INSERT INTO user (
+			username,
+			email,
+			password,
+			user_role,
+			isVerified,
+			tipe_user
+		)
+		VALUES (?, ?, ?, 3, 1, (
+			SELECT id
+			FROM user_tipe
+			WHERE tipe = ?
+		))
+	`, username, email, password, tipeUser)
+
+	if err != nil {
+		return err
+	}
+
+	// Ambil ID user yang baru dibuat
+	userID, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO staff (
+			nip,
+			nama_lengkap,
+			user_staff
+		)
+		VALUES (?, ?, ?)
+	`, nip, namaLengkap, userID)
+
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
 func CreateMahasiswaPending(username string, email string, password string, tipeUser string, nim string, angkatan string, namaLengkap string, prodi string) error {
 
 	tx, err := config.DB.Begin()
@@ -258,6 +392,66 @@ func CreateDosenPending(username string, email string, password string, tipeUser
 	return nil
 }
 
+func CreateDosenLangsung(username string, email string, password string, tipeUser string, nidn string, namaLengkap string, prodi string) error {
+
+	tx, err := config.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Kalau ada error sebelum Commit(),
+	// semua perubahan di transaction dibatalkan.
+	defer tx.Rollback()
+
+	result, err := tx.Exec(`
+		INSERT INTO user (
+			username,
+			email,
+			password,
+			user_role,
+			isVerified,
+			tipe_user
+		)
+		VALUES (?, ?, ?, 3, 1, (
+			SELECT id
+			FROM user_tipe
+			WHERE tipe = ?
+		))
+	`, username, email, password, tipeUser)
+
+	if err != nil {
+		return err
+	}
+
+	// Ambil ID user yang baru dibuat
+	userID, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO dosen (
+			nidn,
+			nama_lengkap,
+			dosen_user,
+			prodi_dosen
+		)
+		VALUES (?, ?, ?, (
+			SELECT id
+			FROM prodi
+			WHERE nama_prodi = ?
+		))
+	`, nidn, namaLengkap, userID, prodi)
+
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
 func DeleteUser(id int) error {
 	_, err := config.Exec(`
 		DELETE FROM users
@@ -289,6 +483,7 @@ type tampung_mhs_pending struct {
 	Nama_lengkap string
 	Angkatan     int
 	Username     string
+	Prodi        int
 }
 
 func GetMhs(limit int) ([]tampung_mhs_pending, error) {
@@ -299,7 +494,7 @@ func GetMhs(limit int) ([]tampung_mhs_pending, error) {
 			m.nim,
 			m.nama_lengkap,
 			m.angkatan,
-			u.username
+			u.username,m.prodi
 		FROM mahasiswa m
 		JOIN user u ON m.mhs_user = u.id
 		order by m.id,u.username
@@ -322,6 +517,7 @@ func GetMhs(limit int) ([]tampung_mhs_pending, error) {
 			&user.Nama_lengkap,
 			&user.Angkatan,
 			&user.Username,
+			&user.Prodi,
 		)
 
 		if err != nil {
@@ -341,7 +537,7 @@ func GetMhs(limit int) ([]tampung_mhs_pending, error) {
 func GetMhsPending(limit int) ([]tampung_mhs_pending, error) {
 
 	rows, err := config.Query(`
-		SELECT mp.id, mp.nim, mp.nama_lengkap,mp.angkatan,u.username 
+		SELECT mp.id, mp.nim, mp.nama_lengkap,mp.angkatan,u.username,mp.prodi 
 		FROM mahasiswa_pending mp 
 		join user u on u.id = mp.mhs_user 
 		ORDER BY mp.id, u.username 
@@ -364,6 +560,7 @@ func GetMhsPending(limit int) ([]tampung_mhs_pending, error) {
 			&user.Nama_lengkap,
 			&user.Angkatan,
 			&user.Username,
+			&user.Prodi,
 		)
 
 		if err != nil {

@@ -44,6 +44,7 @@ func Show_mhs(w http.ResponseWriter, r *http.Request) {
 			"nama_lengkap": user.Nama_lengkap,
 			"angkatan":     user.Angkatan,
 			"username":     user.Username,
+			"prodi":        user.Prodi,
 		})
 	}
 	/*

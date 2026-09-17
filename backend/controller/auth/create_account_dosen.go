@@ -30,8 +30,23 @@ func Create_Account_Dosen(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(username) < 5 {
-		utils.ResponseJSONMessage(w, "Username minimal 5 Huruf!", http.StatusUnauthorized, false)
+	if len(username) < 5 || len(username) > 30 {
+		utils.ResponseJSONMessage(w, "Username must be between 3 and 30 characters", http.StatusUnauthorized, false)
+		return
+	}
+
+	if len(password) < 8 || len(password) > 100 {
+		utils.ResponseJSONMessage(w, "Password must be between 8 and 100 characters", http.StatusBadRequest, false)
+		return
+	}
+
+	if len(nidn) != 10 {
+		utils.ResponseJSONMessage(w, "NIDN must be exactly 10 characters", http.StatusBadRequest, false)
+		return
+	}
+
+	if len(nama_lengap) < 3 || len(nama_lengap) > 100 {
+		utils.ResponseJSONMessage(w, "Full name must be between 3 and 100 characters", http.StatusBadRequest, false)
 		return
 	}
 	if !utils.IsPasswordValid(password) {
