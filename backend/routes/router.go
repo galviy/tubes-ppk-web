@@ -19,9 +19,18 @@ func SetupRoutes() *http.ServeMux {
 		"/user/me",
 		middleware.Auth(http.HandlerFunc(user.Me)),
 	)
+	
 	mux.Handle(
 		"POST /reports",
 		middleware.Auth(http.HandlerFunc(report.CreateLaporan)),
+	)
+	mux.Handle(
+		"GET /reports",
+		middleware.Auth(http.HandlerFunc(report.ListLaporan)),
+	)
+	mux.Handle(
+		"GET /reports/{id}",
+		middleware.Auth(http.HandlerFunc(report.DetailLaporan)),
 	)
 	return mux
 }
