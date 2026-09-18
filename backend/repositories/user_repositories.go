@@ -91,6 +91,7 @@ func IsDosenExist(nidn string) bool {
 	}
 	return true
 }
+
 func IsMhsExist(nim string) bool {
 	var hasilAngka int
 	err := config.QueryRow(`
@@ -98,6 +99,21 @@ func IsMhsExist(nim string) bool {
 		from mahasiswa m
 		where m.nim = ? 
 	`, nim).Scan(&hasilAngka)
+	if err == sql.ErrNoRows {
+		return false
+	} else if err != nil {
+		log.Println("Terjadi error pada database:", err)
+		return false
+	}
+	return true
+}
+func IsStaffExist(nidn string) bool {
+	var hasilAngka int
+	err := config.QueryRow(`
+		select 1 
+		from staff s
+		where s.nip = ? 
+	`, nidn).Scan(&hasilAngka)
 	if err == sql.ErrNoRows {
 		return false
 	} else if err != nil {
@@ -135,6 +151,124 @@ func IsMhsExist(nim string) bool {
 		return &user, nil
 	}
 */
+
+func CreateMHSLangsung(username string, email string, password string, tipeUser string, nim string, angkatan string, namaLengkap string, prodi string) error {
+
+	tx, err := config.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Kalau ada error sebelum Commit(),
+	// semua perubahan di transaction dibatalkan.
+	defer tx.Rollback()
+
+	result, err := tx.Exec(`
+		INSERT INTO user (
+			username,
+			email,
+			password,
+			user_role,
+			isVerified,
+			tipe_user
+		)
+		VALUES (?, ?, ?, 3, 1, (
+			SELECT id
+			FROM user_tipe
+			WHERE tipe = ?
+		))
+	`, username, email, password, tipeUser)
+
+	if err != nil {
+		return err
+	}
+
+	// Ambil ID user yang baru dibuat
+	userID, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO mahasiswa (
+			nim,
+			angkatan,
+			mhs_user,
+			nama_lengkap,
+			prodi
+		)
+		VALUES (?, ?, ?, ?, (
+			SELECT id
+			FROM prodi
+			WHERE nama_prodi = ?
+		))
+	`, nim, angkatan, userID, namaLengkap, prodi)
+
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func CreateSTAFF(username string, email string, password string, tipeUser string, nip string, namaLengkap string) error {
+
+	tx, err := config.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Kalau ada error sebelum Commit(),
+	// semua perubahan di transaction dibatalkan.
+	defer tx.Rollback()
+
+	result, err := tx.Exec(`
+		INSERT INTO user (
+			username,
+			email,
+			password,
+			user_role,
+			isVerified,
+			tipe_user
+		)
+		VALUES (?, ?, ?, 3, 1, (
+			SELECT id
+			FROM user_tipe
+			WHERE tipe = ?
+		))
+	`, username, email, password, tipeUser)
+
+	if err != nil {
+		return err
+	}
+
+	// Ambil ID user yang baru dibuat
+	userID, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO staff (
+			nip,
+			nama_lengkap,
+			user_staff
+		)
+		VALUES (?, ?, ?)
+	`, nip, namaLengkap, userID)
+
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
 func CreateMahasiswaPending(username string, email string, password string, tipeUser string, nim string, angkatan string, namaLengkap string, prodi string) error {
 
 	tx, err := config.DB.Begin()
@@ -258,6 +392,66 @@ func CreateDosenPending(username string, email string, password string, tipeUser
 	return nil
 }
 
+func CreateDosenLangsung(username string, email string, password string, tipeUser string, nidn string, namaLengkap string, prodi string) error {
+
+	tx, err := config.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Kalau ada error sebelum Commit(),
+	// semua perubahan di transaction dibatalkan.
+	defer tx.Rollback()
+
+	result, err := tx.Exec(`
+		INSERT INTO user (
+			username,
+			email,
+			password,
+			user_role,
+			isVerified,
+			tipe_user
+		)
+		VALUES (?, ?, ?, 3, 1, (
+			SELECT id
+			FROM user_tipe
+			WHERE tipe = ?
+		))
+	`, username, email, password, tipeUser)
+
+	if err != nil {
+		return err
+	}
+
+	// Ambil ID user yang baru dibuat
+	userID, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO dosen (
+			nidn,
+			nama_lengkap,
+			dosen_user,
+			prodi_dosen
+		)
+		VALUES (?, ?, ?, (
+			SELECT id
+			FROM prodi
+			WHERE nama_prodi = ?
+		))
+	`, nidn, namaLengkap, userID, prodi)
+
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
 func DeleteUser(id int) error {
 	_, err := config.Exec(`
 		DELETE FROM users
@@ -281,6 +475,106 @@ func IsProdiExist(prodi string) bool {
 		return false
 	}
 	return true
+}
+
+type tampung_mhs_pending struct {
+	ID           int
+	Nim          string
+	Nama_lengkap string
+	Angkatan     int
+	Username     string
+	Prodi        int
+}
+
+func GetMhs(limit int) ([]tampung_mhs_pending, error) {
+
+	rows, err := config.Query(`
+		SELECT
+			m.id,
+			m.nim,
+			m.nama_lengkap,
+			m.angkatan,
+			u.username,m.prodi
+		FROM mahasiswa m
+		JOIN user u ON m.mhs_user = u.id
+		order by m.id,u.username
+		limit ?
+	`, limit)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []tampung_mhs_pending
+
+	for rows.Next() {
+		var user tampung_mhs_pending
+
+		err := rows.Scan(
+			&user.ID,
+			&user.Nim,
+			&user.Nama_lengkap,
+			&user.Angkatan,
+			&user.Username,
+			&user.Prodi,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func GetMhsPending(limit int) ([]tampung_mhs_pending, error) {
+
+	rows, err := config.Query(`
+		SELECT mp.id, mp.nim, mp.nama_lengkap,mp.angkatan,u.username,mp.prodi 
+		FROM mahasiswa_pending mp 
+		join user u on u.id = mp.mhs_user 
+		ORDER BY mp.id, u.username 
+		LIMIT ?
+	`, limit)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []tampung_mhs_pending
+
+	for rows.Next() {
+		var user tampung_mhs_pending
+
+		err := rows.Scan(
+			&user.ID,
+			&user.Nim,
+			&user.Nama_lengkap,
+			&user.Angkatan,
+			&user.Username,
+			&user.Prodi,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }
 
 type tampung struct {
@@ -328,4 +622,257 @@ func GetUsers(limit int) ([]tampung, error) {
 	}
 
 	return users, nil
+}
+
+type dosen_p struct {
+	ID           int
+	Nidn         string
+	Nama_lengkap string
+	Prodi_dosen  int
+}
+
+func GetDosenPending(limit int) ([]dosen_p, error) {
+
+	rows, err := config.Query(`
+		SELECT id, nidn, nama_lengkap, prodi_dosen
+		FROM dosen_pending
+		LIMIT ?
+	`, limit)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []dosen_p
+
+	for rows.Next() {
+		var user dosen_p
+
+		err := rows.Scan(
+			&user.ID,
+			&user.Nidn,
+			&user.Nama_lengkap,
+			&user.Prodi_dosen,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func GetDosen(limit int) ([]dosen_p, error) {
+
+	rows, err := config.Query(`
+		SELECT id, nidn, nama_lengkap, prodi_dosen
+		FROM dosen
+		LIMIT ?
+	`, limit)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []dosen_p
+
+	for rows.Next() {
+		var user dosen_p
+
+		err := rows.Scan(
+			&user.ID,
+			&user.Nidn,
+			&user.Nama_lengkap,
+			&user.Prodi_dosen,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func IsNimExist(pendingID int) (bool, error) {
+	var exists int
+
+	err := config.DB.QueryRow(`
+		SELECT 1
+		FROM mahasiswa m
+		WHERE m.nim = (
+			SELECT mp.nim
+			FROM mahasiswa_pending mp
+			WHERE mp.id = ?
+			LIMIT 1
+		)
+		LIMIT 1
+	`, pendingID).Scan(&exists)
+
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func Verif_MHS(userID int) error {
+	tx, err := config.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+
+	var nim, angkatan, namaLengkap string
+	var mhsUser, prodi int
+
+	err = tx.QueryRow(`
+		SELECT nim, angkatan, mhs_user, nama_lengkap, prodi 
+		FROM mahasiswa_pending 
+		WHERE id = ?
+		FOR UPDATE
+	`, userID).Scan(
+		&nim,
+		&angkatan,
+		&mhsUser,
+		&namaLengkap,
+		&prodi,
+	)
+
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(`
+		UPDATE user
+		SET isVerified = 1
+		WHERE id = (select mhs_user from mahasiswa_pending where id = ?)
+	`, userID)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO mahasiswa
+			(nim, angkatan, mhs_user, nama_lengkap, prodi)
+		VALUES (?, ?, ?, ?, ?)
+	`, nim, angkatan, mhsUser, namaLengkap, prodi)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+		DELETE FROM mahasiswa_pending
+		WHERE id = ?
+	`, userID)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func IsNidnExist(pendingID int) (bool, error) {
+	var exists int
+
+	err := config.DB.QueryRow(`
+		SELECT 1
+		FROM dosen d
+		WHERE d.nidn = (
+			SELECT dp.nidn
+			FROM dosen_pending dp
+			WHERE dp.id = ?
+			LIMIT 1
+		)
+		LIMIT 1
+	`, pendingID).Scan(&exists)
+
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+func Verif_Dosen(userID int) error {
+	tx, err := config.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+
+	var nidn, nama_lengkap, dosen_user string
+	var prodi_dosen int
+
+	err = tx.QueryRow(`
+		SELECT dp.nidn, dp.nama_lengkap, dp.dosen_user, dp.prodi_dosen 
+		FROM dosen_pending dp 
+		WHERE dp.id = ?
+		FOR UPDATE
+	`, userID).Scan(
+		&nidn,
+		&nama_lengkap,
+		&dosen_user,
+		&prodi_dosen,
+	)
+
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(`
+		UPDATE user
+		SET isVerified = 1
+		WHERE id = ?
+	`, dosen_user)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO dosen
+			(nidn, nama_lengkap, dosen_user, prodi_dosen)
+		VALUES (?, ?, ?, ?)
+	`, nidn, nama_lengkap, dosen_user, prodi_dosen)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+		DELETE FROM dosen_pending
+		WHERE id = ?
+	`, userID)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }

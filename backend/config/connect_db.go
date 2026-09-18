@@ -19,7 +19,7 @@ func ConnectDB() {
 	password := os.Getenv("DB_PASSWORD")
 	dbName := os.Getenv("DB_NAME")
 
-	dsn := dbUser + ":" + password + "@tcp(127.0.0.1:3306)/" + dbName
+	dsn := dbUser + ":" + password + "@tcp(127.0.0.1:3306)/" + dbName + "?parseTime=true"
 
 	DB, err = sql.Open("mysql", dsn)
 	if err != nil {
