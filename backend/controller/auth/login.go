@@ -35,6 +35,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 	if !utils.IsEmailValid(email) {
 		utils.ResponseJSONMessage(w, "Email tidak sesuai dengan standar format email!", http.StatusUnauthorized, false)
+		return
 	}
 
 	var user_login repositories.User
@@ -51,7 +52,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s := session.NewUser(user_login.ID,user_login.Email, user_login.Role, user_login.Username)
+	s := session.NewUser(user_login.ID, user_login.Email, user_login.Role, user_login.Username)
 
 	sessionID := uuid.NewString()
 	session.Sessions[sessionID] = s

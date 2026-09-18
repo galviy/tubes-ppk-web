@@ -5,6 +5,7 @@ import (
 	utils "backend-ppk/utilities"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 func Create_Account_MHS(w http.ResponseWriter, r *http.Request) {
@@ -34,8 +35,17 @@ func Create_Account_MHS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(username) < 5 {
-		utils.ResponseJSONMessage(w, "Username minimal 5 Huruf!", http.StatusUnauthorized, false)
+	if len(username) < 5 || len(username) > 100 {
+		utils.ResponseJSONMessage(w, "Password must be between 8 and 100 characters", http.StatusBadRequest, false)
+		return
+	}
+	_, err_conv := strconv.Atoi(angkatan)
+	if err_conv != nil {
+		utils.ResponseJSONMessage(w, "Angkatan harus berupa angka!", http.StatusUnauthorized, false)
+		return
+	}
+	if len(nama_lengkap) < 3 || len(nama_lengkap) > 100 {
+		utils.ResponseJSONMessage(w, "Full name must be between 3 and 100 characters", http.StatusBadRequest, false)
 		return
 	}
 	if !utils.IsPasswordValid(password) {
@@ -44,6 +54,7 @@ func Create_Account_MHS(w http.ResponseWriter, r *http.Request) {
 	}
 	if !utils.IsEmailValid(email) {
 		utils.ResponseJSONMessage(w, "Email tidak sesuai dengan standar format email!", http.StatusUnauthorized, false)
+		return
 	}
 	p := repositories.IsUserExist(email, username)
 	if p {

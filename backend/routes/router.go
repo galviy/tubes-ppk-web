@@ -1,6 +1,9 @@
 package routes
 
 import (
+	"backend-ppk/controller/admin"
+	createuser "backend-ppk/controller/admin/create_user"
+	"backend-ppk/controller/admin/verifikasi"
 	"backend-ppk/controller/auth"
 	"backend-ppk/controller/facility"
 	"backend-ppk/controller/report"
@@ -17,7 +20,54 @@ func SetupRoutes() *http.ServeMux {
 	mux.HandleFunc("/auth/create_account/mhs", auth.Create_Account_MHS)
 
 	mux.Handle(
-		"/user/me",
+		"GET /admin/show_user",
+		middleware.AdminAuth(http.HandlerFunc(admin.Show_user)),
+	)
+	mux.Handle(
+		"GET /admin/show_mhs_pending",
+		middleware.AdminAuth(http.HandlerFunc(admin.Show_mhs_pending)),
+	)
+
+	mux.Handle(
+		"GET /admin/show_mhs",
+		middleware.AdminAuth(http.HandlerFunc(admin.Show_mhs)),
+	)
+	mux.Handle(
+		"GET /admin/show_dosen_pending",
+		middleware.AdminAuth(http.HandlerFunc(admin.Show_dosen_pending)),
+	)
+
+	mux.Handle(
+		"GET /admin/show_dosen",
+		middleware.AdminAuth(http.HandlerFunc(admin.Show_dosen)),
+	)
+
+	mux.Handle(
+		"POST /admin/verifikasi_mhs",
+		middleware.AdminAuth(http.HandlerFunc(verifikasi.Verifikasi_MHS)),
+	)
+	mux.Handle(
+		"POST /admin/verifikasi_dosen",
+		middleware.AdminAuth(http.HandlerFunc(verifikasi.Verifikasi_dosen)),
+	)
+
+	mux.Handle(
+		"POST /admin/create_user/mhs",
+		middleware.AdminAuth(http.HandlerFunc(createuser.Create_MHS)),
+	)
+
+	mux.Handle(
+		"POST /admin/create_user/dosen",
+		middleware.AdminAuth(http.HandlerFunc(createuser.Create_Dosen)),
+	)
+
+	mux.Handle(
+		"POST /admin/create_user/staff",
+		middleware.AdminAuth(http.HandlerFunc(createuser.Create_staff)),
+	)
+
+	mux.Handle(
+		"GET /user/me",
 		middleware.Auth(http.HandlerFunc(user.Me)),
 	)
 

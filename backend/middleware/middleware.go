@@ -2,6 +2,7 @@ package middleware
 
 import (
 	repositories "backend-ppk/models"
+	utils "backend-ppk/utilities"
 	"fmt"
 	"net/http"
 )
@@ -11,6 +12,31 @@ const (
 	RolePetugas  = "2"
 	RolePengguna = "3"
 )
+func AdminAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		//fmt.Println("Request:", r.Method, r.URL.Path)
+		cookie, err := r.Cookie("session_id")
+		if err != nil {
+			utils.ResponseJSONMessage(w, "you are not authorized to access this content", http.StatusUnauthorized, false)
+			return
+		}
+
+		sess, ok := repositories.Sessions[cookie.Value]
+		if !ok {
+			utils.ResponseJSONMessage(w, "you are not authorized to access this content", http.StatusUnauthorized, false)
+			return
+		}
+		if !repositories.IsSessionActiveAndAdmin(sess) {
+			delete(repositories.Sessions, cookie.Value)
+			utils.ResponseJSONMessage(w, "you are not authorized to access this content", http.StatusUnauthorized, false)
+			/*Semua response baik nya sama untuk mencegah information gathering*/
+			return
+		}
+		next.ServeHTTP(w, r)
+
+		fmt.Println("Request selesai")
+	})
+}
 
 func Auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
