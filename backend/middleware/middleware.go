@@ -7,6 +7,11 @@ import (
 	"net/http"
 )
 
+const (
+	RoleAdmin    = "1"
+	RolePetugas  = "2"
+	RolePengguna = "3"
+)
 func AdminAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		//fmt.Println("Request:", r.Method, r.URL.Path)
@@ -56,6 +61,29 @@ func Auth(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 
 		fmt.Println("Request selesai")
+	})
+}
+
+
+func RequireRole(next http.Handler, allowedRoles ...string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie("session_id")
+		if err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		sess, ok := repositories.Sessions[cookie.Value]
+		if !ok || !repositories.IsSessionActive(sess) {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		for _, role := range allowedRoles {
+			if sess.Role == role {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+		http.Error(w, "Forbidden", http.StatusForbidden)
 	})
 }
 
