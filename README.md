@@ -2,4 +2,7 @@
 tugas besar pemrograman platform khusus website
 
 
-![Database ERD](backend/database/db.png)
+![Database ERD](db.png)
+
+
+![routing design](api-design.md)

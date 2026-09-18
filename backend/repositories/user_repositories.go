@@ -60,6 +60,53 @@ func IsLoginCorrect(email string, password string, user *User) bool {
 	return utils.CheckPassword(password, user.Password)
 }
 
+func IsNamaAlatExist(kategori string) bool {
+	var hasilAngka int
+	err := config.QueryRow(`
+		select 1 
+		from alat
+		where nama_alat = ?
+	`, kategori).Scan(&hasilAngka)
+	if err == sql.ErrNoRows {
+		return false
+	} else if err != nil {
+		log.Println("Terjadi error pada database:", err)
+		return false
+	}
+	return true
+}
+
+func IsNamaRuanganExist(kategori string) bool {
+	var hasilAngka int
+	err := config.QueryRow(`
+		select 1 
+		from ruangan
+		where nama_ruangan = ?
+	`, kategori).Scan(&hasilAngka)
+	if err == sql.ErrNoRows {
+		return false
+	} else if err != nil {
+		log.Println("Terjadi error pada database:", err)
+		return false
+	}
+	return true
+}
+func IsKategoriExist(kategori string) bool {
+	var hasilAngka int
+	err := config.QueryRow(`
+		select 1 
+		from kategori
+		where nama_kategori = ?
+	`, kategori).Scan(&hasilAngka)
+	if err == sql.ErrNoRows {
+		return false
+	} else if err != nil {
+		log.Println("Terjadi error pada database:", err)
+		return false
+	}
+	return true
+}
+
 func IsUserExist(email string, username string) bool {
 	var hasilAngka int
 	err := config.QueryRow(`
@@ -389,6 +436,103 @@ func CreateDosenPending(username string, email string, password string, tipeUser
 	if err := tx.Commit(); err != nil {
 		return err
 	}
+	return nil
+}
+
+func CreateKategori(kategori string) error {
+
+	tx, err := config.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+
+	result, err := tx.Exec(`
+		INSERT INTO kategori (
+			nama_kategori
+		)
+		VALUES (?)
+	`, kategori)
+
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	log.Printf("Successfully updated %d rows.\n", rows)
+	return nil
+}
+func CreateAlat(nama_alat string, jumlah_tersedia int, banyak_alat int, kategori string, status int) error {
+	tx, err := config.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	result, err := tx.Exec(`
+		INSERT INTO alat ( 
+			nama_alat, jumlah_tersedia, banyak_alat, kategori, status 
+		) 
+		VALUES (?, ?, ?, (
+			SELECT id  
+			FROM kategori  
+			where nama_kategori = ? 
+		),?)
+	`, nama_alat, jumlah_tersedia, banyak_alat, kategori, status)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+func CreateRuangan(nama_ruangan string, status int, kapasitas int, lokasi string, kategori string) error {
+	tx, err := config.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	result, err := tx.Exec(`
+		INSERT INTO ruangan ( 
+			nama_ruangan, status, kapasitas, lokasi, kategori 
+		) 
+		VALUES (?, ?, ?, ?, ( 
+			SELECT id  
+			FROM kategori  
+			where nama_kategori = ? 
+		)) 
+	`, nama_ruangan, status, kapasitas, lokasi, kategori)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
 	return nil
 }
 

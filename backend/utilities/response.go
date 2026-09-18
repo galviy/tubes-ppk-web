@@ -22,3 +22,5 @@ func ResponseJSONMessage(w http.ResponseWriter, message string, status int, succ
 	json.NewEncoder(w).Encode(data)
 
 }
+
+
