@@ -3,7 +3,7 @@ import './globals.css';
 import { AppDataProvider } from '@/context/AppDataContext';
 
 export const metadata: Metadata = {
-  title: 'SiPinjam — Reservasi & Pelaporan Fasilitas Kampus',
+  title: 'SiPinjam',
   description:
     'Sistem Reservasi & Pelaporan Fasilitas Kampus — temukan fasilitas, cek ketersediaan jadwal, dan ajukan reservasi.',
 };

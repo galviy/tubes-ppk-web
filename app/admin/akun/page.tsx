@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
+import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
 
 export default function KelolaAkunPage() {
   const { pendingAccounts, registerAccountDirectly, verifyPendingAccount } = useAppData();
@@ -11,15 +12,41 @@ export default function KelolaAkunPage() {
   const [email, setEmail] = useState('');
   const [peran, setPeran] = useState('Petugas');
 
+  const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
+    isOpen: false,
+    title: '',
+    onConfirm: () => {},
+  });
+
   function handleDaftar() {
     if (!nama.trim() || !email.trim()) {
-      alert('Lengkapi nama dan email.');
+      setModalConfig({
+        isOpen: true,
+        title: 'Data Belum Lengkap',
+        subtitle: 'Silakan lengkapi nama dan email akun yang ingin didaftarkan.',
+        confirmText: 'Lengkapi',
+        confirmVariant: 'warning',
+        showInput: false,
+        onConfirm: () => {},
+      });
       return;
     }
     registerAccountDirectly(nama.trim(), email.trim(), peran);
-    alert(`Akun ${peran} untuk ${nama} (${email}) berhasil didaftarkan langsung — tanpa proses registrasi mandiri.`);
+    const regNama = nama;
+    const regEmail = email;
+    const regPeran = peran;
     setNama('');
     setEmail('');
+
+    setModalConfig({
+      isOpen: true,
+      title: 'Akun Berhasil Didaftarkan',
+      subtitle: `Akun ${regPeran} untuk ${regNama} (${regEmail}) berhasil didaftarkan langsung ke sistem aktif sarpras.`,
+      confirmText: 'Selesai',
+      confirmVariant: 'primary',
+      showInput: false,
+      onConfirm: () => {},
+    });
   }
 
   return (
@@ -113,6 +140,11 @@ export default function KelolaAkunPage() {
           </table>
         </div>
       )}
+
+      <ActionPromptModal
+        config={modalConfig}
+        onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

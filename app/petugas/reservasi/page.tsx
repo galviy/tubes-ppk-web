@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { ReservationStatus } from '@/models/reservation';
+import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
 
 const STATUS_CONFIG: Record<ReservationStatus, { pillClass: string; label: string }> = {
   menunggu: { pillClass: 'busy', label: 'Menunggu' },
@@ -22,22 +23,59 @@ export default function PetugasReservasiPage() {
   } = useAppData();
 
   const [filterStatus, setFilterStatus] = useState<string>('semua');
+  const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
+    isOpen: false,
+    title: '',
+    onConfirm: () => {},
+  });
 
   function handleApprove(id: number) {
     const result = approveReservation(id);
-    if (!result.ok) alert(result.message);
+    if (!result.ok) {
+      setModalConfig({
+        isOpen: true,
+        title: 'Jadwal Bentrok',
+        subtitle: result.message || 'Jadwal yang diajukan bertabrakan dengan reservasi lain yang telah disetujui.',
+        confirmText: 'Mengerti',
+        confirmVariant: 'warning',
+        showInput: false,
+        onConfirm: () => {},
+      });
+    }
   }
 
   function handleReject(id: number) {
-    const alasan = prompt('Alasan penolakan permohonan reservasi:');
-    if (alasan === null) return;
-    rejectReservation(id);
+    setModalConfig({
+      isOpen: true,
+      title: 'Tolak Permohonan Reservasi',
+      subtitle: 'Masukkan alasan penolakan permohonan reservasi. Catatan ini akan dicatat dalam riwayat pemohon.',
+      label: 'Alasan Penolakan',
+      placeholder: 'Contoh: Fasilitas sedang dalam pemeliharaan berkala atau ada kegiatan dinas prioritas.',
+      confirmText: 'Tolak Reservasi',
+      confirmVariant: 'danger',
+      showInput: true,
+      requireInput: true,
+      onConfirm: (alasan) => {
+        rejectReservation(id);
+      },
+    });
   }
 
   function handleCancelApproved(id: number) {
-    const alasan = prompt('Alasan pembatalan mendesak permohonan reservasi:');
-    if (alasan === null) return;
-    cancelApprovedReservation(id, alasan);
+    setModalConfig({
+      isOpen: true,
+      title: 'Pembatalan Mendesak Reservasi',
+      subtitle: 'Reservasi ini telah disetujui sebelumnya. Masukkan alasan pembatalan mendesak.',
+      label: 'Alasan Pembatalan Mendesak',
+      placeholder: 'Contoh: Terjadi kendala teknis darurat pada fasilitas.',
+      confirmText: 'Batalkan Reservasi',
+      confirmVariant: 'danger',
+      showInput: true,
+      requireInput: true,
+      onConfirm: (alasan) => {
+        cancelApprovedReservation(id, alasan);
+      },
+    });
   }
 
   // Sort: 'menunggu' first, then 'disetujui', then others
@@ -203,6 +241,11 @@ export default function PetugasReservasiPage() {
           </tbody>
         </table>
       </div>
+
+      <ActionPromptModal
+        config={modalConfig}
+        onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

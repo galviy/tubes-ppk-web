@@ -3,6 +3,7 @@
 import { Suspense, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
+import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
 
 const KATEGORI_OPTIONS = ['Kelistrikan', 'Pendingin ruangan (AC)', 'Furnitur', 'Perangkat keras', 'Kebersihan', 'Lainnya'];
 
@@ -19,20 +20,52 @@ function LaporKerusakanContent() {
   const [deskripsi, setDeskripsi] = useState('');
   const [fileName, setFileName] = useState('');
 
+  const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
+    isOpen: false,
+    title: '',
+    onConfirm: () => {},
+  });
+
   function handleSubmit() {
     if (!kategori) {
-      alert('Pilih kategori kerusakan.');
+      setModalConfig({
+        isOpen: true,
+        title: 'Pilih Kategori Kerusakan',
+        subtitle: 'Silakan tentukan jenis atau kategori kerusakan yang dialami fasilitas.',
+        confirmText: 'Mengerti',
+        confirmVariant: 'warning',
+        showInput: false,
+        onConfirm: () => {},
+      });
       return;
     }
     if (!deskripsi.trim()) {
-      alert('Isi deskripsi kerusakan.');
+      setModalConfig({
+        isOpen: true,
+        title: 'Deskripsi Kerusakan Belum Diisi',
+        subtitle: 'Jelaskan secara detail kendala atau kerusakan yang Anda temukan agar petugas dapat menindaklanjuti.',
+        confirmText: 'Lengkapi Data',
+        confirmVariant: 'warning',
+        showInput: false,
+        onConfirm: () => {},
+      });
       return;
     }
+
     submitReport({ facilityId, kategori, deskripsi: deskripsi.trim(), foto: fileName || undefined });
     setDeskripsi('');
     setKategori('');
     setFileName('');
-    alert('Laporan kerusakan terkirim ke petugas.');
+
+    setModalConfig({
+      isOpen: true,
+      title: 'Laporan Kerusakan Terkirim',
+      subtitle: 'Terima kasih atas laporan Anda. Laporan kerusakan telah masuk ke sistem dan akan segera ditindaklanjuti oleh petugas sarpras.',
+      confirmText: 'Selesai',
+      confirmVariant: 'primary',
+      showInput: false,
+      onConfirm: () => {},
+    });
   }
 
   return (
@@ -95,6 +128,11 @@ function LaporKerusakanContent() {
           </button>
         </div>
       </div>
+
+      <ActionPromptModal
+        config={modalConfig}
+        onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

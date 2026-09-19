@@ -1,128 +1,122 @@
-# SiPinjam — Sistem Reservasi & Pelaporan Fasilitas Kampus
+# SiPinjam — Sistem Reservasi & Pelaporan Fasilitas Kampus Universitas Diponegoro
 
-Proyek Next.js (App Router) dengan output static export — hasil `npm run build`
-adalah folder `/out` berisi HTML/CSS/JS murni per halaman, siap di-hosting di
-static hosting mana pun tanpa Node.js server berjalan terus.
+Sistem informasi berbasis web modern untuk pengelolaan izin reservasi dan pelaporan kendala sarana prasarana akademik di lingkungan Universitas Diponegoro. Dibangun menggunakan Next.js (App Router), TypeScript, dan Vanilla CSS dengan design system elegan bertema arsitektural kampus.
 
-## Menjalankan
+---
+
+## 🚀 Menjalankan Aplikasi
 
 ```bash
 npm install
-npm run dev      # buka http://localhost:3000
-npm run build    # hasil statis ada di folder out/
-npx serve out    # coba hasil build statis secara lokal
+npm run dev      # Jalankan development server di http://localhost:3000
+npm run build    # Produksi static export (folder out/)
+npx serve out    # Pratinjau hasil build statis lokal
 ```
 
-## Struktur folder
+---
+
+## 🏛️ Fitur & Arsitektur Sistem
+
+1. **Autentikasi Terpadu di Hero Landing Page (`/#auth`)**
+   - Halaman split terpisah `/login` dan `/register` telah diintegrasikan langsung ke kartu mengambang di hero beranda.
+   - Memiliki dua tab: **Masuk** (login dengan kredensial & quick demo button 1-klik) dan **Daftar Akun** (registrasi mandiri civitas akademika).
+   - Menampilkan status sesi aktif langsung pada kartu jika pengguna telah login (disertai tombol akses dashboard per peran dan logout).
+
+2. **Dialog & Penolakan Berbasis Modal UI/UX (`ActionPromptModal`)**
+   - Seluruh interaksi penting (alasan penolakan reservasi, pembatalan darurat, penolakan laporan kerusakan, catatan resolusi perbaikan, konfirmasi kapasitas lebih, serta notifikasi bentrok jadwal) **tidak lagi menggunakan dialog bawaan browser** (`prompt()`, `alert()`, `confirm()`).
+   - Digantikan dengan dialog modal kustom yang terintegrasi penuh dengan tema visual aplikasi (mendukung validasi input, shortcut keyboard `Esc` dan `Ctrl+Enter`, serta badge penanda status).
+
+3. **Manajemen Jadwal 30 Menit (07.00 – 20.00 WIB)**
+   - 26 slot waktu modular 30 menit dengan pembagian periode (Pagi, Siang, Sore, Malam).
+   - Pencegahan bentrok peminjaman otomatis secara real-time.
+
+4. **17 User Stories Lengkap & Berperan Ganda**
+   - **Pengunjung / Publik**: Eksplorasi katalog fasilitas, filter kategori, denah lantai (floor plans), dan cek matriks ketersediaan tanpa perlu login.
+   - **Pengguna (Mahasiswa/Dosen/Staf)**: Pengajuan izin peminjaman ruangan/alat, pemantauan riwayat reservasi, pembatalan mandiri, pelaporan kerusakan fasilitas berlampirkan bukti, dan pengecekan status penanganan.
+   - **Petugas Sarpras**: Validasi permohonan reservasi (setujui / tolak berargumen), pembatalan darurat berargumen, tindak lanjut laporan kerusakan (proses / selesaikan dengan catatan resolusi / tolak), serta kontrol status operasional fasilitas (Aktif / Perbaikan).
+   - **Admin Sarpras**: Dashboard rekapitulasi, pengelolaan master data fasilitas, pendaftaran akun langsung, verifikasi registrasi mandiri, serta ekspor laporan rekap (CSV, Excel, PDF).
+
+---
+
+## 📁 Struktur Folder
 
 ```
 app/
-  layout.tsx                Root layout — font, metadata, membungkus AppDataProvider
-  globals.css                Seluruh design token & style (halaman publik + dashboard)
-  page.tsx                   Beranda — hero saja, halaman singkat
-  fasilitas/page.tsx          Route /fasilitas — filter lengkap + katalog fasilitas
-  jadwal/page.tsx             Route /jadwal — pratinjau ketersediaan (slot 30 menit)
-  panduan/page.tsx            Route /panduan — alur 3 langkah
-  login/page.tsx              Route /login
-  register/page.tsx           Route /register
+  layout.tsx                Root layout (font Jost, metadata, AppDataProvider)
+  globals.css               Design token & stylesheet sistem (publik & dashboard)
+  page.tsx                  Landing page (Navbar, Hero Auth Card, Floor Plans, Features, Footer)
+  fasilitas/page.tsx        Katalog fasilitas kampus lengkap dengan filter multi-kategori
+  jadwal/page.tsx           Matriks jadwal ketersediaan slot 30 menit (07.00–20.00)
 
   pengguna/
-    layout.tsx                 Sidebar khusus Pengguna (dipakai semua halaman di bawahnya)
-    page.tsx                   Menu ringkas /pengguna
-    reservasi/page.tsx          Ajukan Reservasi
-    riwayat/page.tsx            Riwayat Reservasi (+ batalkan)
-    lapor/page.tsx              Lapor Kerusakan Fasilitas
-    status-laporan/page.tsx     Status Laporan Saya
+    layout.tsx              Layout dashboard pengguna
+    page.tsx                Menu ringkasan & quick navigation pengguna
+    reservasi/page.tsx       Form pengajuan reservasi dengan deteksi bentrok & modal konfirmasi
+    riwayat/page.tsx         Riwayat reservasi pengguna (+ pembatalan mandiri)
+    lapor/page.tsx           Form pelaporan kerusakan sarpras (+ unggah bukti foto/video)
+    status-laporan/page.tsx  Timeline progres tindak lanjut perbaikan laporan
 
   petugas/
-    layout.tsx                 Sidebar khusus Petugas
-    page.tsx                   Menu ringkas /petugas
-    dashboard/page.tsx          Ringkasan antrian
-    reservasi/page.tsx          Antrian Reservasi (approve/reject + deteksi bentrok)
-    laporan/page.tsx            Antrian Laporan (ubah status + tandai fasilitas perbaikan)
+    layout.tsx              Layout dashboard petugas
+    page.tsx                Menu ringkasan petugas
+    dashboard/page.tsx       Statistik antrean reservasi & kerusakan
+    reservasi/page.tsx       Antrian reservasi (setujui/tolak dengan modal alasan)
+    laporan/page.tsx         Antrian laporan (tindak lanjut/resolusi/tolak dengan modal)
 
   admin/
-    layout.tsx                 Sidebar khusus Admin
-    page.tsx                   Menu ringkas /admin
-    dashboard/page.tsx          Rekap ringkas
-    fasilitas/page.tsx          Kelola data fasilitas (tambah/nonaktifkan)
-    akun/page.tsx               Daftarkan akun langsung + verifikasi registrasi mandiri
-    rekap/page.tsx              Rekap okupansi & kerusakan + ekspor CSV/Excel/PDF
+    layout.tsx              Layout dashboard admin
+    page.tsx                Menu ringkasan admin
+    dashboard/page.tsx       Metrik fasilitas, okupansi, dan pengguna
+    fasilitas/page.tsx       Kelola data master fasilitas (tambah, edit, ubah status)
+    akun/page.tsx            Daftarkan akun langsung & verifikasi registrasi mandiri
+    rekap/page.tsx           Rekap okupansi & kerusakan sarpras (ekspor CSV/Excel/PDF)
 
-components/                  Komponen tampilan (view) halaman publik
-  Navbar.tsx, Hero.tsx, CampusMapArt.tsx, SearchWidget.tsx,
-  CategorySidebar.tsx, FacilityCard.tsx, FacilityGrid.tsx,
-  SchedulePreview.tsx, Flow.tsx, Footer.tsx
-  dashboard/DashboardShell.tsx   Topbar + sidebar dipakai ulang oleh 3 layout di atas
+components/
+  Navbar.tsx                Header adaptif publik & dashboard dengan navigasi terpusat
+  Hero.tsx                  Hero section + Unified Auth Card (Masuk & Daftar Akun)
+  FacilityTabs.tsx          Visual denah lantai (floor plans) & spesifikasi ruang
+  BuildingFeatures.tsx      Daftar keunggulan sarana prasarana kampus
+  Footer.tsx                Footer navigasi kampus & aksesibilitas
+  ActionPromptModal.tsx     Komponen modal dialog kustom pengganti prompt/alert/confirm
+  FacilityDetailModal.tsx   Modal rincian fasilitas & spesifikasi kapasitas
+  ReservationDetailModal.tsx Modal rincian reservasi peminjam
+  ReportDetailModal.tsx     Modal detail kerusakan & foto bukti laporan
+  dashboard/DashboardShell.tsx Shell dashboard bersama (topbar, navigasi, guard izin akses)
 
 context/
-  AppDataContext.tsx          "Database" sementara sisi client (React Context)
-                               — state facilities/reservations/reports/pendingAccounts
-                               beserta semua fungsi mutasinya (approve, reject, dst),
-                               plus state auth (currentUser, login, logout). Ganti isi
-                               provider ini dengan pemanggilan API asli tanpa perlu
-                               mengubah satu pun komponen tampilan.
+  AppDataContext.tsx        State management terpusat di sisi client (React Context)
 
-mock/                        Data & "API" PALSU — sengaja dipisah dari kode utama.
-  fake-users-db.ts             Daftar akun demo (email/password/role) — ganti/hapus
-                                begitu ada database pengguna sungguhan.
-  auth-api.ts                  Fungsi login()/registerSelf() berbentuk async, meniru
-                                pemanggilan API sungguhan. Untuk hubungkan ke backend
-                                asli: ganti isi dua fungsi ini jadi fetch() ke endpoint
-                                kalian — AppDataContext dan halaman login/register
-                                TIDAK perlu diubah sama sekali.
+lib/
+  slots.ts                  Logika pembuatan & kalkulasi bentrok slot waktu 30 menit
+  filter-facilities.ts       Helper penyaringan fasilitas kampus
 
-models/                      "Model" — definisi tipe data & data awal (seed)
-  facility.ts                  Tipe: Facility, FacilityStatus, SlotState, dst.
-  reservation.ts                Tipe: Reservation, ReservationStatus
-  report.ts                     Tipe: Report, ReportStatus, PendingAccount
-  facilities-data.ts            Data awal (mock) — fasilitas, reservasi, laporan, akun
+mock/
+  fake-users-db.ts          Database akun demo civitas akademika
+  auth-api.ts               Lapisan simulasi async API autentikasi
 
-lib/                         Logika bisnis murni, terpisah dari UI
-  slots.ts                     Generate 26 slot 30 menit, tentukan status tiap slot
-  filter-facilities.ts          Filter kategori/lokasi/kapasitas/status
+models/
+  facility.ts               Definisi tipe data fasilitas, tipe, dan slot
+  reservation.ts            Definisi tipe data peminjaman/reservasi
+  report.ts                 Definisi tipe data laporan kerusakan & akun tertunda
 ```
 
-## Peta halaman per aktor (sesuai user story)
+---
 
-| Aktor       | Route                                            |
-|-------------|---------------------------------------------------|
-| Pengunjung  | `/` (hero) · `/fasilitas` · `/jadwal` · `/panduan` — semua tanpa login |
-| Pengguna    | `/pengguna/reservasi`, `/riwayat`, `/lapor`, `/status-laporan` |
-| Petugas     | `/petugas/dashboard`, `/reservasi`, `/laporan`    |
-| Admin       | `/admin/dashboard`, `/fasilitas`, `/akun`, `/rekap` |
+## 👥 Akun Demo untuk Pengujian Cepat
 
-## Akun demo untuk login
+Pada kartu autentikasi di landing page (`/#auth`), terdapat tombol **"Isi otomatis"** untuk mengisi email dan kata sandi secara instan:
 
-Halaman `/login` menampilkan daftar ini juga (tombol "Isi otomatis"):
+| Role      | Email                      | Kata Sandi  | Akses Halaman |
+|-----------|----------------------------|-------------|---------------|
+| **Admin** | `admin@sipinjam.ac.id`     | `admin123`  | `/admin/*`    |
+| **Petugas**| `petugas@sipinjam.ac.id`  | `petugas123`| `/petugas/*`  |
+| **Mahasiswa** | `mahasiswa@sipinjam.ac.id` | `mhs12345`  | `/pengguna/*` |
+| **Dosen** | `dosen@sipinjam.ac.id`     | `dosen123`  | `/pengguna/*` |
 
-| Role     | Email                        | Password    |
-|----------|-------------------------------|-------------|
-| Admin    | admin@sipinjam.ac.id          | admin123    |
-| Petugas  | petugas@sipinjam.ac.id        | petugas123  |
-| Pengguna | mahasiswa@sipinjam.ac.id      | mhs12345    |
-| Pengguna | dosen@sipinjam.ac.id          | dosen123    |
+---
 
-Login sungguhan divalidasi terhadap `mock/fake-users-db.ts` (lihat bagian
-`mock/` di atas). Dashboard `/pengguna`, `/petugas`, `/admin` terkunci —
-kalau belum login dengan role yang sesuai, halaman menampilkan ajakan ke
-`/login`, bukan langsung menampilkan isinya.
+## ⚙️ Catatan Integrasi Backend
 
-## Catatan implementasi
-
-- **Autentikasi masih palsu** (lihat folder `mock/`), tapi alurnya sudah
-  seperti login sungguhan: validasi email/password, redirect sesuai role,
-  dan dashboard terkunci untuk role yang salah/belum login. Untuk backend
-  asli, cukup ganti isi `mock/auth-api.ts` — tidak perlu menyentuh halaman
-  login/register atau AppDataContext.
-- **Registrasi mandiri** mengisi antrean "Verifikasi Registrasi Mandiri" di
-  `/admin/akun`, tapi akun itu belum bisa dipakai login sungguhan di demo ini
-  (password registrasi tidak disimpan ke `fake-users-db.ts`) — pada backend
-  asli, verifikasi admin akan mengaktifkan baris pengguna di database.
-- **Data transaksi masih in-memory** lewat `context/AppDataContext.tsx`
-  (hilang saat refresh). Ganti fungsi-fungsi di provider ini
-  (submitReservation, approveReservation, dst.) dengan pemanggilan API ke
-  backend + database asli.
-- Validasi slot 30 menit & deteksi bentrok jadwal saat ini berjalan di
-  browser (`lib/slots.ts`) — sesuai ketentuan soal, validasi ini **wajib**
-  diulang di sisi server pada implementasi akhir, bukan hanya di client.
+1. **Autentikasi**: Untuk beralih ke backend sungguhan, fungsi di `mock/auth-api.ts` dapat langsung diarahkan ke endpoint REST/GraphQL backend tanpa perlu mengubah antarmuka komponen tampilan.
+2. **State & Database**: `context/AppDataContext.tsx` bertindak sebagai lapisan abstraksi data. Fungsi-fungsi mutasi (`submitReservation`, `approveReservation`, `updateReportStatus`, dll.) siap dihubungkan ke panggilan HTTP API.
+3. **Validasi Server-Side**: Logika slot waktu dan bentrok jadwal di `lib/slots.ts` disarankan diimplementasikan ulang pada backend database transaksi untuk menjamin integritas data (ACID / locking).

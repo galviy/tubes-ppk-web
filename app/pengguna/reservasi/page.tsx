@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
 import { generateTimeSlots, currentHHMM } from '@/lib/slots';
 import { TimeSlot } from '@/models/facility';
+import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
 
 const SLOTS = generateTimeSlots();
 const START_OPTIONS = SLOTS.map((s) => s.start); // '07:00' to '19:30'
@@ -29,6 +30,12 @@ function AjukanReservasiContent() {
       availableFacilities[0]?.id ||
       ''
   );
+
+  const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
+    isOpen: false,
+    title: '',
+    onConfirm: () => {},
+  });
   const [tanggal, setTanggal] = useState('2026-09-18');
   const [tujuan, setTujuan] = useState('');
   const [peserta, setPeserta] = useState('');
@@ -130,24 +137,8 @@ function AjukanReservasiContent() {
   const pesertaNum = parseInt(peserta, 10) || 0;
   const overCapacity = !!facility && pesertaNum > facility.cap;
 
-  function handleSubmit() {
+  function doSubmit() {
     if (!facility) return;
-    if (!startTime || !endTime || pickedSlots.length === 0) {
-      alert('Silakan pilih jam mulai dan jam selesai (minimal 1 slot 30 menit).');
-      return;
-    }
-    if (hasConflict) {
-      alert('Rentang jam yang dipilih bentrok dengan jadwal lain yang sudah terpakai. Silakan pilih rentang yang tersedia.');
-      return;
-    }
-    if (!tujuan.trim()) {
-      alert('Silakan isi tujuan penggunaan fasilitas.');
-      return;
-    }
-    if (overCapacity && !confirm(`Estimasi peserta (${pesertaNum}) melebihi kapasitas fasilitas (${facility.cap} orang). Tetap ajukan?`)) {
-      return;
-    }
-
     submitReservation({
       facilityId: facility.id,
       tanggal,
@@ -157,11 +148,80 @@ function AjukanReservasiContent() {
       peserta: pesertaNum || undefined,
     });
 
+    const bookedFacilityName = facility.name;
+    const bookedTime = `${tanggal}, ${startTime}–${endTime} WIB`;
+
     setStartTime('');
     setEndTime('');
     setTujuan('');
     setPeserta('');
-    alert(`Reservasi berhasil diajukan untuk ${facility.name} (${tanggal}, ${startTime}–${endTime} WIB). Menunggu persetujuan petugas sarpras.`);
+
+    setModalConfig({
+      isOpen: true,
+      title: 'Permohonan Berhasil Diajukan',
+      subtitle: `Reservasi berhasil diajukan untuk ${bookedFacilityName} (${bookedTime}). Permohonan Anda telah masuk ke antrean persetujuan petugas sarpras.`,
+      confirmText: 'Selesai',
+      confirmVariant: 'primary',
+      showInput: false,
+      onConfirm: () => {},
+    });
+  }
+
+  function handleSubmit() {
+    if (!facility) return;
+    if (!startTime || !endTime || pickedSlots.length === 0) {
+      setModalConfig({
+        isOpen: true,
+        title: 'Pilih Rentang Waktu',
+        subtitle: 'Silakan pilih jam mulai dan jam selesai peminjaman fasilitas (minimal 1 slot 30 menit).',
+        confirmText: 'Mengerti',
+        confirmVariant: 'warning',
+        showInput: false,
+        onConfirm: () => {},
+      });
+      return;
+    }
+    if (hasConflict) {
+      setModalConfig({
+        isOpen: true,
+        title: 'Rentang Jadwal Bentrok',
+        subtitle: 'Rentang jam yang dipilih bentrok dengan jadwal reservasi lain yang sudah terpakai. Silakan pilih rentang yang berstatus tersedia.',
+        confirmText: 'Pilih Jam Lain',
+        confirmVariant: 'danger',
+        showInput: false,
+        onConfirm: () => {},
+      });
+      return;
+    }
+    if (!tujuan.trim()) {
+      setModalConfig({
+        isOpen: true,
+        title: 'Tujuan Penggunaan Belum Diisi',
+        subtitle: 'Silakan isi tujuan penggunaan fasilitas untuk keperluan evaluasi petugas sarpras.',
+        confirmText: 'Lengkapi Data',
+        confirmVariant: 'warning',
+        showInput: false,
+        onConfirm: () => {},
+      });
+      return;
+    }
+    if (overCapacity) {
+      setModalConfig({
+        isOpen: true,
+        title: 'Kapasitas Melebihi Standar',
+        subtitle: `Estimasi peserta (${pesertaNum} orang) melebihi kapasitas standar fasilitas (${facility.cap} orang). Apakah Anda ingin tetap melanjutkan pengajuan?`,
+        confirmText: 'Tetap Ajukan',
+        cancelText: 'Sesuaikan Data',
+        confirmVariant: 'warning',
+        showInput: false,
+        onConfirm: () => {
+          doSubmit();
+        },
+      });
+      return;
+    }
+
+    doSubmit();
   }
 
   return (
@@ -409,6 +469,11 @@ function AjukanReservasiContent() {
           </button>
         </div>
       </div>
+
+      <ActionPromptModal
+        config={modalConfig}
+        onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

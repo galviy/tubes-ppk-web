@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { Facility, FacilityType } from '@/models/facility';
+import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
 
 const TYPE_OPTIONS: FacilityType[] = ['Ruang Kelas', 'Aula', 'Laboratorium', 'Lapangan', 'Alat'];
 
@@ -13,6 +14,12 @@ export default function KelolaFasilitasPage() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(BLANK_FORM);
+
+  const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
+    isOpen: false,
+    title: '',
+    onConfirm: () => {},
+  });
 
   function startEdit(f: Facility) {
     setEditingId(f.id);
@@ -27,7 +34,15 @@ export default function KelolaFasilitasPage() {
 
   function handleSubmit() {
     if (!form.nama.trim() || !form.lokasi.trim()) {
-      alert('Lengkapi nama dan lokasi fasilitas.');
+      setModalConfig({
+        isOpen: true,
+        title: 'Lengkapi Data Fasilitas',
+        subtitle: 'Nama dan lokasi fasilitas wajib diisi sebelum menyimpan data.',
+        confirmText: 'Lengkapi',
+        confirmVariant: 'warning',
+        showInput: false,
+        onConfirm: () => {},
+      });
       return;
     }
     const payload = {
@@ -146,6 +161,11 @@ export default function KelolaFasilitasPage() {
           </tbody>
         </table>
       </div>
+
+      <ActionPromptModal
+        config={modalConfig}
+        onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

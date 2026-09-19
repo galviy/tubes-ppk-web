@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { ReportStatus } from '@/models/report';
+import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
 
 const STATUS_CONFIG: Record<ReportStatus, { pillClass: string; label: string }> = {
   baru: { pillClass: 'busy', label: 'Baru' },
@@ -14,21 +15,49 @@ const STATUS_CONFIG: Record<ReportStatus, { pillClass: string; label: string }> 
 export default function PetugasLaporanPage() {
   const { reports, facilityById, updateReportStatus, setFacilityStatus } = useAppData();
   const [filterStatus, setFilterStatus] = useState<string>('semua');
+  const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
+    isOpen: false,
+    title: '',
+    onConfirm: () => {},
+  });
 
   function handleProses(id: number) {
     updateReportStatus(id, 'diproses');
   }
 
   function handleSelesai(id: number) {
-    const catatan = prompt('Catatan resolusi perbaikan:', 'Kerusakan telah diperbaiki.');
-    if (catatan === null) return;
-    updateReportStatus(id, 'selesai', catatan);
+    setModalConfig({
+      isOpen: true,
+      title: 'Selesaikan Laporan Kerusakan',
+      subtitle: 'Catat tindakan perbaikan atau solusi yang telah dilakukan petugas sebelum menandai selesai.',
+      label: 'Catatan Resolusi Perbaikan',
+      defaultValue: 'Kerusakan telah diperbaiki.',
+      placeholder: 'Contoh: Teknisi telah melakukan perbaikan kabel dan pengecekan kelistrikan normal.',
+      confirmText: 'Simpan & Selesaikan',
+      confirmVariant: 'primary',
+      showInput: true,
+      requireInput: true,
+      onConfirm: (catatan) => {
+        updateReportStatus(id, 'selesai', catatan);
+      },
+    });
   }
 
   function handleTolak(id: number) {
-    const catatan = prompt('Alasan penolakan laporan kerusakan:');
-    if (catatan === null) return;
-    updateReportStatus(id, 'ditolak', catatan);
+    setModalConfig({
+      isOpen: true,
+      title: 'Tolak Laporan Kerusakan',
+      subtitle: 'Tindakan ini akan menolak laporan kerusakan. Berikan alasan penolakan secara jelas.',
+      label: 'Alasan Penolakan Laporan',
+      placeholder: 'Contoh: Fasilitas telah dicek dan berfungsi normal / bukan merupakan aset sarpras.',
+      confirmText: 'Tolak Laporan',
+      confirmVariant: 'danger',
+      showInput: true,
+      requireInput: true,
+      onConfirm: (catatan) => {
+        updateReportStatus(id, 'ditolak', catatan);
+      },
+    });
   }
 
   function handleToggleRepair(facilityId: string, currentStatus: string | undefined) {
@@ -216,6 +245,11 @@ export default function PetugasLaporanPage() {
           </tbody>
         </table>
       </div>
+
+      <ActionPromptModal
+        config={modalConfig}
+        onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }
