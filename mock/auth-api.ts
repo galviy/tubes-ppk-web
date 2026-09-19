@@ -40,7 +40,7 @@ export async function login(email: string, password: string): Promise<AuthResult
 export interface SelfRegisterInput {
   nama: string;
   email: string;
-  peran: string; // "Mahasiswa" | "Dosen" | "Staf" — ditampilkan apa adanya, bukan role sistem
+  peran: string; // "Mahasiswa" | "Dosen" — ditampilkan apa adanya, bukan role sistem
 }
 
 export interface SelfRegisterResult {

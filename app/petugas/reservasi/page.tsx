@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { ReservationStatus } from '@/models/reservation';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
+import { hasRangeConflict } from '@/lib/slots';
 
 const STATUS_CONFIG: Record<ReservationStatus, { pillClass: string; label: string }> = {
   menunggu: { pillClass: 'busy', label: 'Menunggu' },
@@ -147,7 +148,9 @@ export default function PetugasReservasiPage() {
             ) : (
               filtered.map((r) => {
                 const fac = facilityById(r.facilityId);
-                const conflict = r.status === 'menunggu' && isSlotTaken(r.facilityId, r.start, r.id);
+                const conflict =
+                  r.status === 'menunggu' &&
+                  !!hasRangeConflict(reservations, r.facilityId, r.tanggal, r.start, r.end, r.id);
                 const cfg = STATUS_CONFIG[r.status] || { pillClass: 'neutral', label: r.status };
 
                 return (

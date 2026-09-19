@@ -261,7 +261,7 @@ export default function Hero() {
 
                   {/* Quick Demo Credentials Box */}
                   <div className="ochoco-demo-box">
-                    <div className="ochoco-demo-title">KREDENSIAL DEMO (KLIK UNTUK MENGISI)</div>
+                    <div className="ochoco-demo-title">AKUN DEMO</div>
                     <div className="ochoco-demo-list">
                       {FAKE_USERS_DB.map((u) => (
                         <button
@@ -370,7 +370,6 @@ export default function Hero() {
                           >
                             <option value="Mahasiswa">Mahasiswa</option>
                             <option value="Dosen">Dosen</option>
-                            <option value="Staf">Staf</option>
                           </select>
                         </div>
 

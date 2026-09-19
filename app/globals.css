@@ -1303,6 +1303,17 @@ button.slot-lg:disabled {
   opacity: 0.75;
 }
 
+.ochoco-header-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
 .ochoco-brand-logo {
   display: flex;
   flex-direction: column;

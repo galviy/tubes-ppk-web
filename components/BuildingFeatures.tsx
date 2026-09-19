@@ -21,7 +21,7 @@ const SLIDES: FeatureSlide[] = [
     title: 'BUILDING FEATURES',
     subtitle: 'PELAPORAN KERUSAKAN DENGAN FOTO BUKTI',
     description:
-      'Mahasiswa, dosen, dan staf dapat melaporkan kendala pada fasilitas kampus dengan memilih kategori kerusakan, menuliskan deskripsi masalah, serta mengunggah foto bukti. Setiap laporan terpantau statusnya mulai dari baru, diproses, hingga selesai.',
+      'Mahasiswa dan dosen dapat melaporkan kendala pada fasilitas kampus dengan memilih kategori kerusakan, menuliskan deskripsi masalah, serta mengunggah foto bukti. Setiap laporan terpantau statusnya mulai dari baru, diproses, hingga selesai.',
     image: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?auto=format&fit=crop&w=1600&q=85',
   },
   {

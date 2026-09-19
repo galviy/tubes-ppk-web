@@ -79,8 +79,9 @@ export default function KelolaAkunPage() {
             <div className="fgroup">
               <label>Peran</label>
               <select value={peran} onChange={(e) => setPeran(e.target.value)}>
-                <option>Petugas</option>
-                <option>Pengguna (Mahasiswa/Dosen/Staf)</option>
+                <option value="Petugas">Petugas</option>
+                <option value="Mahasiswa">Mahasiswa</option>
+                <option value="Dosen">Dosen</option>
               </select>
             </div>
           </div>

@@ -32,7 +32,7 @@ npx serve out    # Pratinjau hasil build statis lokal
 
 4. **17 User Stories Lengkap & Berperan Ganda**
    - **Pengunjung / Publik**: Eksplorasi katalog fasilitas, filter kategori, denah lantai (floor plans), dan cek matriks ketersediaan tanpa perlu login.
-   - **Pengguna (Mahasiswa/Dosen/Staf)**: Pengajuan izin peminjaman ruangan/alat, pemantauan riwayat reservasi, pembatalan mandiri, pelaporan kerusakan fasilitas berlampirkan bukti, dan pengecekan status penanganan.
+   - **Pengguna (Mahasiswa/Dosen)**: Pengajuan izin peminjaman ruangan/alat, pemantauan riwayat reservasi, pembatalan mandiri, pelaporan kerusakan fasilitas berlampirkan bukti, dan pengecekan status penanganan.
    - **Petugas Sarpras**: Validasi permohonan reservasi (setujui / tolak berargumen), pembatalan darurat berargumen, tindak lanjut laporan kerusakan (proses / selesaikan dengan catatan resolusi / tolak), serta kontrol status operasional fasilitas (Aktif / Perbaikan).
    - **Admin Sarpras**: Dashboard rekapitulasi, pengelolaan master data fasilitas, pendaftaran akun langsung, verifikasi registrasi mandiri, serta ekspor laporan rekap (CSV, Excel, PDF).
 

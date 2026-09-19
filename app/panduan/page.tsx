@@ -79,7 +79,7 @@ export default function PanduanPage() {
             Tata Cara Reservasi & Pelaporan Fasilitas Kampus
           </h1>
           <p style={{ fontFamily: 'var(--font)', fontSize: 15, color: '#6B7280', lineHeight: 1.7, margin: 0 }}>
-            Panduan lengkap alur 3 langkah bagi mahasiswa, dosen, dan staf Universitas Diponegoro untuk mengajukan izin peminjaman ruangan atau peralatan akademik serta prosedur pelaporan kendala sarpras secara transparan.
+            Panduan lengkap alur 3 langkah bagi mahasiswa dan dosen Universitas Diponegoro untuk mengajukan izin peminjaman ruangan atau peralatan akademik serta prosedur pelaporan kendala sarpras secara transparan.
           </p>
         </div>
 

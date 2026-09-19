@@ -46,6 +46,29 @@ export function isSlotBooked(
   );
 }
 
+/**
+ * Cek apakah rentang waktu [start, end) pada fasilitas dan tanggal tertentu
+ * bertabrakan dengan reservasi lain yang sudah berstatus "disetujui".
+ */
+export function hasRangeConflict(
+  reservations: Reservation[],
+  facilityId: string,
+  tanggal: string,
+  start: string,
+  end: string,
+  excludeId?: number
+): Reservation | undefined {
+  return reservations.find(
+    (r) =>
+      r.facilityId === facilityId &&
+      r.tanggal === tanggal &&
+      r.status === 'disetujui' &&
+      r.id !== excludeId &&
+      start < r.end &&
+      end > r.start
+  );
+}
+
 /** Tentukan status visual satu slot untuk sebuah fasilitas. */
 export function getSlotState(
   facility: Facility,

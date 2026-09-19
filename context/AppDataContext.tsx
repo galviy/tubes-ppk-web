@@ -10,7 +10,7 @@ import {
   SEED_REPORTS,
   SEED_PENDING_ACCOUNTS,
 } from '@/models/facilities-data';
-import { isSlotBooked } from '@/lib/slots';
+import { isSlotBooked, hasRangeConflict } from '@/lib/slots';
 import { login as apiLogin, registerSelf as apiRegisterSelf, AuthResult } from '@/mock/auth-api';
 import { UserRole } from '@/mock/fake-users-db';
 
@@ -128,8 +128,19 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       approveReservation: (id) => {
         const target = reservations.find((r) => r.id === id);
         if (!target) return { ok: false, message: 'Reservasi tidak ditemukan.' };
-        if (isSlotBooked(reservations, target.facilityId, target.start, target.id)) {
-          return { ok: false, message: 'Bentrok dengan reservasi lain yang sudah disetujui pada slot ini.' };
+        const conflict = hasRangeConflict(
+          reservations,
+          target.facilityId,
+          target.tanggal,
+          target.start,
+          target.end,
+          target.id
+        );
+        if (conflict) {
+          return {
+            ok: false,
+            message: `Bentrok dengan reservasi '${conflict.pemohon}' (${conflict.start}–${conflict.end} WIB) yang sudah disetujui sebelumnya.`,
+          };
         }
         setReservations((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'disetujui' } : r)));
         return { ok: true };
