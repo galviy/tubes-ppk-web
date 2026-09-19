@@ -16,7 +16,7 @@ function JadwalContent() {
   const facility = facilityById(activeFacilityId);
 
   function goOrLogin(path: string) {
-    router.push(currentUser ? path : '/login');
+    router.push(currentUser ? path : '/#auth');
   }
 
   return (

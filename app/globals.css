@@ -1292,27 +1292,78 @@ button.slot-lg:disabled {
   max-width: 480px;
 }
 
-/* Waiting List Floating Card */
+/* Waiting List / Auth Floating Card */
 .ochoco-waiting-card {
-  width: 420px;
+  width: 440px;
   max-width: 100%;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
   background: #FFFFFF;
   border-radius: 12px 12px 0 0;
-  padding: 38px 36px 36px;
+  padding: 30px 30px 32px;
   box-shadow: 0 24px 50px -10px rgba(0, 0, 0, 0.35);
   flex-shrink: 0;
   position: relative;
   z-index: 20;
 }
 
+/* Auth Tabs */
+.ochoco-auth-tabs {
+  display: flex;
+  border-bottom: 2px solid #E5E7EB;
+  margin-bottom: 22px;
+}
+.ochoco-auth-tab {
+  flex: 1;
+  padding: 10px 8px 12px;
+  text-align: center;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  color: #8C94A0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.ochoco-auth-tab.active {
+  color: #181D24;
+  border-bottom-color: #b59876;
+}
+.ochoco-auth-tab:hover:not(.active) {
+  color: #374151;
+}
+
+.ochoco-card-eyebrow {
+  font-family: var(--font);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #b59876;
+  margin-bottom: 4px;
+}
+
 .ochoco-waiting-title {
   font-family: var(--font);
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #181D24;
-  margin: 0 0 26px 0;
+  margin: 0 0 8px 0;
+}
+
+.ochoco-card-subtitle {
+  font-family: var(--font);
+  font-size: 12.5px;
+  color: #6B7280;
+  line-height: 1.5;
+  margin: 0 0 18px 0;
 }
 
 .ochoco-waiting-form {
@@ -1323,17 +1374,17 @@ button.slot-lg:disabled {
 .ochoco-underline-field {
   display: flex;
   flex-direction: column;
-  margin-bottom: 22px;
+  margin-bottom: 16px;
 }
 
 .ochoco-underline-field label {
   font-family: var(--font);
-  font-size: 10.5px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #6B7280;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .ochoco-underline-field input,
@@ -1343,9 +1394,9 @@ button.slot-lg:disabled {
   border-bottom: 1px solid #C9CDD4;
   border-radius: 0;
   background: transparent;
-  padding: 6px 0 8px;
+  padding: 6px 0 7px;
   font-family: var(--font);
-  font-size: 14px;
+  font-size: 13.5px;
   color: #181D24;
   outline: none;
   transition: border-color 0.2s ease;
@@ -1356,24 +1407,225 @@ button.slot-lg:disabled {
   border-bottom-color: #b59876;
 }
 
+.ochoco-field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.ochoco-remember-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font);
+  font-size: 12.5px;
+  color: #6B7280;
+  margin: -4px 0 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ochoco-auth-error {
+  background: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  color: #B91C1C;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 14px;
+}
+
+.ochoco-auth-info {
+  background: #F9FAFB;
+  border-left: 3px solid #b59876;
+  padding: 8px 12px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #4B5563;
+  margin-bottom: 16px;
+  border-radius: 0 4px 4px 0;
+}
+
 .ochoco-waiting-btn {
   width: 100%;
   background: #b59876;
   color: #FFFFFF;
   border: none;
-  border-radius: 8px;
-  padding: 15px;
+  border-radius: 6px;
+  padding: 13px;
   font-family: var(--font);
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: background 0.2s ease;
+}
+.ochoco-waiting-btn:hover:not(:disabled) {
+  background: #9c805f;
+}
+.ochoco-waiting-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.ochoco-auth-switch {
+  text-align: center;
+  margin-top: 14px;
+  font-family: var(--font);
+  font-size: 12px;
+  color: #6B7280;
+}
+.ochoco-text-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  color: #b59876;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.ochoco-text-link:hover {
+  color: #9c805f;
+}
+
+/* Demo Credentials Box inside card */
+.ochoco-demo-box {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed #E5E7EB;
+}
+.ochoco-demo-title {
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8C94A0;
+  margin-bottom: 8px;
+}
+.ochoco-demo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.ochoco-demo-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-family: var(--font);
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.ochoco-demo-row:hover {
+  border-color: #b59876;
+  background: #FDFBF7;
+}
+.ochoco-demo-role {
+  font-weight: 700;
+  text-transform: capitalize;
+  color: #b59876;
+  width: 58px;
+  flex-shrink: 0;
+}
+.ochoco-demo-email {
+  color: #181D24;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ochoco-demo-fill {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #8C94A0;
+  flex-shrink: 0;
+}
+
+/* Active user state */
+.ochoco-logged-box {
+  text-align: left;
+}
+.ochoco-logged-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 14px 0;
+}
+.ochoco-logged-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #b59876;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.ochoco-logged-details {
+  flex: 1;
+  overflow: hidden;
+}
+.ochoco-logged-name {
+  font-weight: 600;
+  font-size: 13.5px;
+  color: #181D24;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ochoco-logged-email {
+  font-size: 11.5px;
+  color: #6B7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ochoco-logged-desc {
+  font-size: 12.5px;
+  color: #6B7280;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.ochoco-logout-btn {
+  width: 100%;
+  background: transparent;
+  color: #6B7280;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  padding: 11px;
+  font-family: var(--font);
+  font-size: 11.5px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
-  margin-top: 10px;
-  transition: background 0.2s ease;
+  margin-top: 8px;
+  transition: all 0.2s ease;
 }
-.ochoco-waiting-btn:hover {
-  background: #9c805f;
+.ochoco-logout-btn:hover {
+  background: #FEE2E2;
+  border-color: #FCA5A5;
+  color: #B91C1C;
 }
 
 .ochoco-waiting-success {

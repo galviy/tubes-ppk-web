@@ -35,7 +35,7 @@ export default function Footer() {
             <a href="#features">FEATURES</a>
             <Link href="/jadwal">SCHEDULE</Link>
             <Link href="/fasilitas">FACILITIES</Link>
-            <Link href="/login">LOGIN</Link>
+            <a href="#auth">LOGIN</a>
           </nav>
 
           {/* Right: Accessibility & Campus Badges */}

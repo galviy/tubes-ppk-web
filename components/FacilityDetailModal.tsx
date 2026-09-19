@@ -23,7 +23,7 @@ export default function FacilityDetailModal({ facility, onClose }: FacilityDetai
 
   function goOrLogin(path: string) {
     onClose();
-    router.push(currentUser ? path : '/login');
+    router.push(currentUser ? path : '/#auth');
   }
 
   return (

@@ -1,26 +1,98 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAppData } from '@/context/AppDataContext';
+import { FAKE_USERS_DB } from '@/mock/fake-users-db';
+
+const ROLE_HOME: Record<string, string> = {
+  pengguna: '/pengguna',
+  petugas: '/petugas',
+  admin: '/admin',
+};
 
 export default function Hero() {
   const router = useRouter();
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [interest, setInterest] = useState('Ruang Kelas');
-  const [submitted, setSubmitted] = useState(false);
+  const { login, logout, submitSelfRegistration, currentUser } = useAppData();
 
-  function handleSubmit(e: React.FormEvent) {
+  // Tab state: 'login' | 'register'
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
+
+  // Login form state
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [remember, setRemember] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  // Register form state
+  const [regNama, setRegNama] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regNim, setRegNim] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regPeran, setRegPeran] = useState('Mahasiswa');
+  const [regPass, setRegPass] = useState('');
+  const [regConfirmPass, setRegConfirmPass] = useState('');
+  const [regError, setRegError] = useState('');
+  const [regLoading, setRegLoading] = useState(false);
+  const [regSuccess, setRegSuccess] = useState(false);
+
+  // Check URL search parameters or hash to activate register tab
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('auth') === 'register') {
+        setActiveTab('register');
+      }
+    }
+  }, []);
+
+  async function handleLoginSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name || !email) {
-      alert('Mohon lengkapi nama dan email Anda.');
+    setLoginError('');
+    setLoginLoading(true);
+
+    const result = await login(loginEmail, loginPassword);
+    setLoginLoading(false);
+
+    if (!result.ok || !result.user) {
+      setLoginError(result.message || 'Email atau kata sandi tidak valid.');
       return;
     }
-    setSubmitted(true);
-    setTimeout(() => {
-      router.push(`/jadwal?interest=${encodeURIComponent(interest)}`);
-    }, 1500);
+
+    const targetUrl = ROLE_HOME[result.user.role] ?? '/';
+    router.push(targetUrl);
+  }
+
+  function fillDemo(demoEmail: string, demoPassword: string) {
+    setLoginEmail(demoEmail);
+    setLoginPassword(demoPassword);
+    setLoginError('');
+  }
+
+  async function handleRegisterSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setRegError('');
+
+    if (regPass.length < 8) {
+      setRegError('Kata sandi minimal 8 karakter.');
+      return;
+    }
+    if (regPass !== regConfirmPass) {
+      setRegError('Konfirmasi kata sandi tidak cocok.');
+      return;
+    }
+
+    setRegLoading(true);
+    const result = await submitSelfRegistration(regNama, regEmail, regPeran);
+    setRegLoading(false);
+
+    if (!result.ok) {
+      setRegError(result.message);
+      return;
+    }
+
+    setRegSuccess(true);
   }
 
   return (
@@ -46,74 +118,315 @@ export default function Hero() {
           </p>
         </div>
 
-        {/* Right Side: Floating Waiting List Card */}
-        <div className="ochoco-waiting-card">
-          <h3 className="ochoco-waiting-title">
-            <span style={{ color: '#b59876' }}>AJUKAN</span> RESERVASI CEPAT
-          </h3>
+        {/* Right Side: Floating Auth Card (Masuk / Daftar Akun) */}
+        <div className="ochoco-waiting-card" id="auth">
+          {currentUser ? (
+            /* Logged in state */
+            <div className="ochoco-logged-box">
+              <div className="ochoco-card-eyebrow">SESI ANDA AKTIF</div>
+              <h3 className="ochoco-waiting-title">
+                <span style={{ color: '#b59876' }}>SELAMAT DATANG</span>, {currentUser.nama.split(' ')[0]}
+              </h3>
 
-          {submitted ? (
-            <div className="ochoco-waiting-success">
-              <div className="ochoco-success-check">✓</div>
-              <h4>Permohonan Terkirim</h4>
-              <p>Terima kasih {name}, Anda sedang diarahkan ke jadwal ketersediaan fasilitas Universitas Diponegoro...</p>
+              <div className="ochoco-logged-profile">
+                <div className="ochoco-logged-avatar">
+                  {currentUser.nama.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="ochoco-logged-details">
+                  <div className="ochoco-logged-name">{currentUser.nama}</div>
+                  <div className="ochoco-logged-email">{currentUser.email}</div>
+                  <span className="ochoco-role-chip" style={{ display: 'inline-block', marginTop: 4 }}>
+                    {currentUser.role}
+                  </span>
+                </div>
+              </div>
+
+              <p className="ochoco-logged-desc">
+                Anda saat ini terhubung ke sistem SiPinjam Undip dengan hak akses <strong>{currentUser.role}</strong>.
+              </p>
+
+              <button
+                type="button"
+                className="ochoco-waiting-btn"
+                onClick={() => router.push(ROLE_HOME[currentUser.role] || '/')}
+              >
+                BUKA DASHBOARD ({currentUser.role.toUpperCase()})
+              </button>
+
+              <button
+                type="button"
+                className="ochoco-logout-btn"
+                onClick={logout}
+              >
+                KELUAR DARI AKUN
+              </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="ochoco-waiting-form">
-              <div className="ochoco-underline-field">
-                <label htmlFor="hero-name">NAMA LENGKAP</label>
-                <input
-                  id="hero-name"
-                  type="text"
-                  placeholder=""
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="ochoco-underline-field">
-                <label htmlFor="hero-phone">NOMOR WHATSAPP</label>
-                <input
-                  id="hero-phone"
-                  type="tel"
-                  placeholder=""
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                />
-              </div>
-
-              <div className="ochoco-underline-field">
-                <label htmlFor="hero-email">EMAIL KAMPUS (@students.undip.ac.id)</label>
-                <input
-                  id="hero-email"
-                  type="email"
-                  placeholder=""
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="ochoco-underline-field">
-                <label htmlFor="hero-interest">PILIHAN FASILITAS</label>
-                <select
-                  id="hero-interest"
-                  value={interest}
-                  onChange={(e) => setInterest(e.target.value)}
+            /* Authentication Tabs (Masuk vs Daftar Akun) */
+            <>
+              <div className="ochoco-auth-tabs">
+                <button
+                  type="button"
+                  className={`ochoco-auth-tab ${activeTab === 'login' ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab('login');
+                    setLoginError('');
+                  }}
                 >
-                  <option value="Ruang Kelas">Ruang Kelas Perkuliahan</option>
-                  <option value="Aula">Aula Utama Pertemuan</option>
-                  <option value="Laboratorium">Laboratorium Komputer & Riset</option>
-                  <option value="Lapangan">Lapangan Olahraga Mahasiswa</option>
-                  <option value="Alat">Alat (Audio Visual & Proyektor)</option>
-                </select>
+                  Masuk
+                </button>
+                <button
+                  type="button"
+                  className={`ochoco-auth-tab ${activeTab === 'register' ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab('register');
+                    setRegError('');
+                    setRegSuccess(false);
+                  }}
+                >
+                  Daftar Akun
+                </button>
               </div>
 
-              <button type="submit" className="ochoco-waiting-btn">
-                CEK KETERSEDIAAN / AJUKAN
-              </button>
-            </form>
+              {activeTab === 'login' ? (
+                /* ================= TAB 1: LOGIN ================= */
+                <div>
+                  <div className="ochoco-card-eyebrow">AKSES AKUN</div>
+                  <h3 className="ochoco-waiting-title">
+                    <span style={{ color: '#b59876' }}>MASUK</span> KE AKUN
+                  </h3>
+                  <p className="ochoco-card-subtitle">
+                    Gunakan akun aktif untuk mengelola reservasi dan laporan fasilitas.
+                  </p>
+
+                  <form onSubmit={handleLoginSubmit} className="ochoco-waiting-form">
+                    <div className="ochoco-underline-field">
+                      <label htmlFor="login-email">EMAIL KAMPUS / DINAS</label>
+                      <input
+                        id="login-email"
+                        type="email"
+                        placeholder="nama@sipinjam.ac.id"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className="ochoco-underline-field">
+                      <label htmlFor="login-password">KATA SANDI</label>
+                      <input
+                        id="login-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <label className="ochoco-remember-row">
+                      <input
+                        type="checkbox"
+                        checked={remember}
+                        onChange={(e) => setRemember(e.target.checked)}
+                      />
+                      <span>Ingat saya</span>
+                    </label>
+
+                    {loginError && <div className="ochoco-auth-error">{loginError}</div>}
+
+                    <button
+                      type="submit"
+                      className="ochoco-waiting-btn"
+                      disabled={loginLoading}
+                    >
+                      {loginLoading ? 'MEMERIKSA AKUN…' : 'MASUK KE SISTEM'}
+                    </button>
+                  </form>
+
+                  <div className="ochoco-auth-switch">
+                    Belum punya akun?{' '}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('register');
+                        setRegError('');
+                        setRegSuccess(false);
+                      }}
+                      className="ochoco-text-link"
+                    >
+                      Daftar sekarang
+                    </button>
+                  </div>
+
+                  {/* Quick Demo Credentials Box */}
+                  <div className="ochoco-demo-box">
+                    <div className="ochoco-demo-title">KREDENSIAL DEMO (KLIK UNTUK MENGISI)</div>
+                    <div className="ochoco-demo-list">
+                      {FAKE_USERS_DB.map((u) => (
+                        <button
+                          key={u.id}
+                          type="button"
+                          className="ochoco-demo-row"
+                          onClick={() => fillDemo(u.email, u.password)}
+                          title={`Gunakan akun ${u.role}`}
+                        >
+                          <span className="ochoco-demo-role">{u.role}</span>
+                          <span className="ochoco-demo-email">{u.email}</span>
+                          <span className="ochoco-demo-fill">Isi otomatis</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* ================= TAB 2: REGISTER ================= */
+                <div>
+                  {regSuccess ? (
+                    <div className="ochoco-waiting-success">
+                      <div className="ochoco-success-check">✓</div>
+                      <h4>Pendaftaran Terkirim</h4>
+                      <p>
+                        Akun atas nama <strong>{regNama}</strong> ({regEmail}) berhasil didaftarkan dan sedang menunggu verifikasi admin.
+                      </p>
+                      <button
+                        type="button"
+                        className="ochoco-waiting-btn"
+                        style={{ marginTop: 20 }}
+                        onClick={() => {
+                          setRegSuccess(false);
+                          setActiveTab('login');
+                          setLoginEmail(regEmail);
+                          setLoginPassword(regPass);
+                        }}
+                      >
+                        MENUJU FORM MASUK
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="ochoco-card-eyebrow">AKUN PENGGUNA</div>
+                      <h3 className="ochoco-waiting-title">
+                        <span style={{ color: '#b59876' }}>BUAT</span> AKUN BARU
+                      </h3>
+                      <div className="ochoco-auth-info">
+                        Akun baru berstatus <b>menunggu verifikasi admin</b> sebelum dapat login.
+                      </div>
+
+                      <form onSubmit={handleRegisterSubmit} className="ochoco-waiting-form">
+                        <div className="ochoco-underline-field">
+                          <label htmlFor="reg-name">NAMA LENGKAP</label>
+                          <input
+                            id="reg-name"
+                            type="text"
+                            placeholder="Contoh: Budi Santoso"
+                            value={regNama}
+                            onChange={(e) => setRegNama(e.target.value)}
+                            required
+                          />
+                        </div>
+
+                        <div className="ochoco-underline-field">
+                          <label htmlFor="reg-email">EMAIL KAMPUS</label>
+                          <input
+                            id="reg-email"
+                            type="email"
+                            placeholder="nama@students.undip.ac.id"
+                            value={regEmail}
+                            onChange={(e) => setRegEmail(e.target.value)}
+                            required
+                          />
+                        </div>
+
+                        <div className="ochoco-field-grid">
+                          <div className="ochoco-underline-field">
+                            <label htmlFor="reg-nim">NIM/NIP (OPSIONAL)</label>
+                            <input
+                              id="reg-nim"
+                              type="text"
+                              placeholder="240601..."
+                              value={regNim}
+                              onChange={(e) => setRegNim(e.target.value)}
+                            />
+                          </div>
+                          <div className="ochoco-underline-field">
+                            <label htmlFor="reg-phone">NO. WHATSAPP</label>
+                            <input
+                              id="reg-phone"
+                              type="tel"
+                              placeholder="08xxxxxxxxxx"
+                              value={regPhone}
+                              onChange={(e) => setRegPhone(e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="ochoco-underline-field">
+                          <label htmlFor="reg-peran">PERAN AKADEMIK</label>
+                          <select
+                            id="reg-peran"
+                            value={regPeran}
+                            onChange={(e) => setRegPeran(e.target.value)}
+                          >
+                            <option value="Mahasiswa">Mahasiswa</option>
+                            <option value="Dosen">Dosen</option>
+                            <option value="Staf">Staf</option>
+                          </select>
+                        </div>
+
+                        <div className="ochoco-underline-field">
+                          <label htmlFor="reg-pass">KATA SANDI</label>
+                          <input
+                            id="reg-pass"
+                            type="password"
+                            placeholder="Minimal 8 karakter"
+                            value={regPass}
+                            onChange={(e) => setRegPass(e.target.value)}
+                            required
+                          />
+                        </div>
+
+                        <div className="ochoco-underline-field">
+                          <label htmlFor="reg-confirm-pass">KONFIRMASI KATA SANDI</label>
+                          <input
+                            id="reg-confirm-pass"
+                            type="password"
+                            placeholder="Ulangi kata sandi"
+                            value={regConfirmPass}
+                            onChange={(e) => setRegConfirmPass(e.target.value)}
+                            required
+                          />
+                        </div>
+
+                        {regError && <div className="ochoco-auth-error">{regError}</div>}
+
+                        <button
+                          type="submit"
+                          className="ochoco-waiting-btn"
+                          disabled={regLoading}
+                        >
+                          {regLoading ? 'MENGIRIM…' : 'DAFTAR SEKARANG'}
+                        </button>
+                      </form>
+
+                      <div className="ochoco-auth-switch">
+                        Sudah punya akun?{' '}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveTab('login');
+                            setLoginError('');
+                          }}
+                          className="ochoco-text-link"
+                        >
+                          Masuk di sini
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

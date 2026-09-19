@@ -91,7 +91,7 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
                 </button>
               </div>
             ) : (
-              <Link href="/login" className="ochoco-btn-login-dark">
+              <Link href="/#auth" className="ochoco-btn-login-dark">
                 LOGIN
               </Link>
             )}
@@ -125,7 +125,7 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
                 </button>
               </>
             ) : (
-              <Link href="/login" onClick={() => setMobileOpen(false)}>LOGIN</Link>
+              <Link href="/#auth" onClick={() => setMobileOpen(false)}>LOGIN</Link>
             )}
           </div>
         )}
@@ -173,9 +173,9 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
             DASHBOARD ({currentUser.nama.split(' ')[0]})
           </Link>
         ) : (
-          <Link href="/login" className="ochoco-auth-link">
+          <a href="#auth" className="ochoco-auth-link">
             LOGIN
-          </Link>
+          </a>
         )}
 
         {/* Mobile menu trigger */}
@@ -201,7 +201,7 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
           {currentUser ? (
             <Link href={ROLE_HOME[currentUser.role]} onClick={() => setMobileOpen(false)}>DASHBOARD</Link>
           ) : (
-            <Link href="/login" onClick={() => setMobileOpen(false)}>LOGIN</Link>
+            <a href="#auth" onClick={() => setMobileOpen(false)}>LOGIN</a>
           )}
         </div>
       )}
