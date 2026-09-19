@@ -1,4 +1,4 @@
-package createfasilitas
+package fasilitas
 
 import (
 	"backend-ppk/repositories"
