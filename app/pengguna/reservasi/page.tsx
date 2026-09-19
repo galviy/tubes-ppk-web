@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
 import { generateTimeSlots, currentHHMM } from '@/lib/slots';
@@ -10,6 +10,153 @@ import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptM
 const SLOTS = generateTimeSlots();
 const START_OPTIONS = SLOTS.map((s) => s.start); // '07:00' to '19:30'
 const END_OPTIONS = SLOTS.map((s) => s.end);     // '07:30' to '20:00' (includes 20:00)
+
+// Custom dropdown that ALWAYS opens downwards with smooth scroll
+function DownwardTimeSelect({
+  label,
+  value,
+  placeholder,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  placeholder: string;
+  options: string[];
+  onChange: (val: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="fgroup" ref={dropdownRef} style={{ position: 'relative' }}>
+      <label>{label}</label>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        style={{
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '10px 14px',
+          borderRadius: 6,
+          border: open ? '1.5px solid #b59876' : '1px solid #D5D0C7',
+          background: '#FFFFFF',
+          color: value ? '#181D24' : '#6B7280',
+          fontSize: 14,
+          fontFamily: 'inherit',
+          cursor: 'pointer',
+          textAlign: 'left',
+          outline: 'none',
+          boxShadow: open ? '0 0 0 3px rgba(181, 152, 118, 0.15)' : 'none',
+          transition: 'all 0.15s ease',
+        }}
+      >
+        <span style={{ fontWeight: value ? 600 : 400 }}>
+          {value ? `${value} WIB` : placeholder}
+        </span>
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{
+            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.15s ease',
+            color: '#6B7280',
+            flexShrink: 0,
+          }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            right: 0,
+            maxHeight: 220,
+            overflowY: 'auto',
+            background: '#FFFFFF',
+            border: '1px solid #D5D0C7',
+            borderRadius: 6,
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+            zIndex: 100,
+          }}
+        >
+          <div
+            onClick={() => {
+              onChange('');
+              setOpen(false);
+            }}
+            style={{
+              padding: '9px 14px',
+              fontSize: 13,
+              color: '#9CA3AF',
+              cursor: 'pointer',
+              borderBottom: '1px solid #F3F0EB',
+              background: !value ? '#FAF8F5' : '#FFFFFF',
+            }}
+          >
+            {placeholder}
+          </div>
+          {options.map((t) => (
+            <div
+              key={t}
+              onClick={() => {
+                onChange(t);
+                setOpen(false);
+              }}
+              style={{
+                padding: '9px 14px',
+                fontSize: 13,
+                fontWeight: value === t ? 600 : 400,
+                color: value === t ? '#b59876' : '#181D24',
+                background: value === t ? '#FBF8F4' : '#FFFFFF',
+                cursor: 'pointer',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                transition: 'background 0.1s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (value !== t) e.currentTarget.style.background = '#F9F8F6';
+              }}
+              onMouseLeave={(e) => {
+                if (value !== t) e.currentTarget.style.background = '#FFFFFF';
+              }}
+            >
+              <span>{t} WIB</span>
+              {value === t && (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b59876" strokeWidth="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // 4 Periode waktu yang persis sama dengan halaman Jadwal Ketersediaan
 const PERIODS = [
@@ -81,6 +228,21 @@ function AjukanReservasiContent() {
 
   function handleEndChange(newEnd: string) {
     setEndTime(newEnd);
+    if (newEnd && (!startTime || startTime >= newEnd)) {
+      const [h, m] = newEnd.split(':').map(Number);
+      let prevH = h;
+      let prevM = m - 30;
+      if (prevM < 0) {
+        prevH -= 1;
+        prevM = 30;
+      }
+      const prevStart = `${String(Math.max(prevH, 7)).padStart(2, '0')}:${String(prevM).padStart(2, '0')}`;
+      if (START_OPTIONS.includes(prevStart)) {
+        setStartTime(prevStart);
+      } else {
+        setStartTime('07:00');
+      }
+    }
   }
 
   // Interaksi klik kartu slot yang cerdas & sinkron dengan periode
@@ -255,31 +417,23 @@ function AjukanReservasiContent() {
             <input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} />
           </div>
 
-          {/* Start Time Dropdown */}
-          <div className="fgroup">
-            <label>Jam Mulai</label>
-            <select value={startTime} onChange={(e) => handleStartChange(e.target.value)}>
-              <option value="">— Pilih Jam Mulai —</option>
-              {START_OPTIONS.map((t) => (
-                <option key={t} value={t}>{t} WIB</option>
-              ))}
-            </select>
-          </div>
+          {/* Start Time Dropdown (Always opens downward) */}
+          <DownwardTimeSelect
+            label="Jam Mulai"
+            value={startTime}
+            placeholder="— Pilih Jam Mulai —"
+            options={START_OPTIONS}
+            onChange={handleStartChange}
+          />
 
-          {/* End Time Dropdown (includes 20:00) */}
-          <div className="fgroup">
-            <label>Jam Selesai (Hingga 20:00 WIB)</label>
-            <select
-              value={endTime}
-              onChange={(e) => handleEndChange(e.target.value)}
-              disabled={!startTime}
-            >
-              <option value="">— Pilih Jam Selesai —</option>
-              {END_OPTIONS.filter((t) => !startTime || t > startTime).map((t) => (
-                <option key={t} value={t}>{t} WIB</option>
-              ))}
-            </select>
-          </div>
+          {/* End Time Dropdown (Always opens downward) */}
+          <DownwardTimeSelect
+            label="Jam Selesai (Hingga 20:00 WIB)"
+            value={endTime}
+            placeholder="— Pilih Jam Selesai —"
+            options={END_OPTIONS}
+            onChange={handleEndChange}
+          />
 
           {/* Slot Grid Section Grouped by Period (PAGI, SIANG, SORE, MALAM) */}
           <div className="fgroup full" style={{ marginTop: 8 }}>

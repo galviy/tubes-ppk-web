@@ -22,7 +22,7 @@ export default function PetugasFasilitasPage() {
               <th>Lokasi</th>
               <th>Kapasitas</th>
               <th>Status</th>
-              <th style={{ textAlign: 'right' }}>Aksi</th>
+              <th style={{ textAlign: 'left' }}>Tindakan</th>
             </tr>
           </thead>
           <tbody>
@@ -34,27 +34,23 @@ export default function PetugasFasilitasPage() {
                 <td style={{ color: '#4B5563', fontSize: 13 }}>{f.cap ? `${f.cap} orang` : '—'}</td>
                 <td>
                   <span className={`pill ${f.status === 'repair' ? 'busy' : 'avail'}`} style={{ fontSize: 11 }}>
-                    {f.status === 'repair' ? 'Dalam Perbaikan' : 'Tersedia / Aktif'}
+                    {f.status === 'repair' ? 'Perbaikan' : 'Aktif'}
                   </span>
                 </td>
-                <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                  {f.status === 'repair' ? (
-                    <button
-                      type="button"
-                      className="btn-act-outline-green"
-                      onClick={() => setFacilityStatus(f.id, 'avail')}
-                    >
-                      Kembalikan aktif
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn-act-outline-neutral"
-                      onClick={() => setFacilityStatus(f.id, 'repair')}
-                    >
-                      Tandai perbaikan
-                    </button>
-                  )}
+                <td style={{ textAlign: 'left', whiteSpace: 'nowrap' }}>
+                  <select
+                    className="table-select-action"
+                    value={f.status === 'repair' ? 'repair' : 'avail'}
+                    onChange={(e) => setFacilityStatus(f.id, e.target.value as 'avail' | 'repair')}
+                    style={{
+                      borderColor: f.status === 'repair' ? '#FCD34D' : '#86EFAC',
+                      color: f.status === 'repair' ? '#92400E' : '#166534',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <option value="avail">Aktif</option>
+                    <option value="repair">Perbaikan</option>
+                  </select>
                 </td>
               </tr>
             ))}

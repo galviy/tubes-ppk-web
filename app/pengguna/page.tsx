@@ -41,7 +41,7 @@ export default function PenggunaHomePage() {
 
       <div className="alert info">
         Slot yang kamu ajukan dikunci otomatis 10 menit selama proses pengisian formulir, dan butuh
-        persetujuan petugas sebelum berstatus <b>Disetujui</b>. Batas pembatalan sendiri adalah <b>2 jam</b>
+        persetujuan petugas sebelum berstatus <b>Disetujui</b>. Batas pembatalan sendiri adalah <b>2 jam</b>{' '}
         sebelum jam mulai.
       </div>
 

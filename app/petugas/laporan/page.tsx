@@ -13,7 +13,7 @@ const STATUS_CONFIG: Record<ReportStatus, { pillClass: string; label: string }> 
 };
 
 export default function PetugasLaporanPage() {
-  const { reports, facilityById, updateReportStatus, setFacilityStatus } = useAppData();
+  const { reports, facilityById, updateReportStatus } = useAppData();
   const [filterStatus, setFilterStatus] = useState<string>('semua');
   const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
     isOpen: false,
@@ -60,14 +60,6 @@ export default function PetugasLaporanPage() {
     });
   }
 
-  function handleToggleRepair(facilityId: string, currentStatus: string | undefined) {
-    if (currentStatus === 'repair') {
-      setFacilityStatus(facilityId, 'avail');
-    } else {
-      setFacilityStatus(facilityId, 'repair');
-    }
-  }
-
   // Sort: 'baru' first, then 'diproses', then others
   const sorted = [...reports].sort((a, b) => {
     const order: Record<string, number> = { baru: 1, diproses: 2, selesai: 3, ditolak: 4 };
@@ -81,7 +73,7 @@ export default function PetugasLaporanPage() {
       {/* Header Split matching Reference Image 4 */}
       <div className="dash-split-header">
         <h2>Antrian laporan kerusakan</h2>
-        <p>Ubah status laporan dan tandai fasilitas dalam perbaikan bila perlu.</p>
+        <p>Kelola dan perbarui progres penanganan laporan kerusakan fasilitas.</p>
       </div>
 
       {/* Filter Chips */}
@@ -123,7 +115,7 @@ export default function PetugasLaporanPage() {
               <th>Kategori</th>
               <th>Deskripsi</th>
               <th>Status</th>
-              <th style={{ textAlign: 'right' }}>Aksi</th>
+              <th style={{ textAlign: 'left' }}>Tindakan</th>
             </tr>
           </thead>
           <tbody>
@@ -151,21 +143,34 @@ export default function PetugasLaporanPage() {
                       <div style={{ fontWeight: 600, color: '#181D24' }}>
                         {fac?.name || `Fasilitas #${r.facilityId}`}
                       </div>
-                      {isRepair && (
-                        <div style={{ fontSize: 11, color: '#DC2626', fontWeight: 600, marginTop: 2 }}>
-                          [Status: Dalam Perbaikan]
-                        </div>
-                      )}
+                      <div style={{ fontSize: 12, color: '#6B7280' }}>
+                        {fac?.type} • {fac?.loc}
+                        {isRepair && (
+                          <span style={{ color: '#d97706', fontWeight: 600, marginLeft: 6 }}>
+                            [Status: Perbaikan]
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     {/* KATEGORI */}
-                    <td style={{ whiteSpace: 'nowrap', fontSize: 13, color: '#4B5563' }}>
-                      {r.kategori}
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <span className="badge-kategori">{r.kategori}</span>
                     </td>
 
-                    {/* DESKRIPSI */}
-                    <td style={{ maxWidth: 320, fontSize: 13, color: '#4B5563', lineHeight: 1.5 }}>
-                      {r.deskripsi}
+                    {/* DESKRIPSI & FOTO */}
+                    <td style={{ maxWidth: 280, fontSize: 13, color: '#4B5563' }}>
+                      <div>{r.deskripsi}</div>
+                      {r.foto && (
+                        <div style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 4, color: '#b59876', fontSize: 12 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+                            <path d="M21 15l-5-5L5 21" stroke="currentColor" strokeWidth="2" />
+                          </svg>
+                          <span>Foto: {r.foto}</span>
+                        </div>
+                      )}
                       {r.catatan && (
                         <div style={{ marginTop: 4, fontSize: 12, color: '#166534', fontStyle: 'italic' }}>
                           Catatan: {r.catatan}
@@ -180,63 +185,40 @@ export default function PetugasLaporanPage() {
                       </span>
                     </td>
 
-                    {/* AKSI */}
-                    <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-                        {/* Top row of status action buttons */}
-                        <div style={{ display: 'inline-flex', gap: 6 }}>
-                          <button
-                            type="button"
-                            className="btn-act-outline-green"
-                            onClick={() => handleProses(r.id)}
-                            disabled={r.status === 'diproses' || r.status === 'selesai'}
-                            title="Tandai sedang diproses"
-                          >
-                            Proses
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-act-outline-green"
-                            onClick={() => handleSelesai(r.id)}
-                            disabled={r.status === 'selesai'}
-                            title="Tandai selesai diperbaiki"
-                          >
-                            Selesai
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-act-outline-red"
-                            onClick={() => handleTolak(r.id)}
-                            disabled={r.status === 'ditolak' || r.status === 'selesai'}
-                            title="Tolak laporan"
-                          >
-                            Tolak
-                          </button>
-                        </div>
-
-                        {/* Bottom facility repair toggle button matching Image 4 */}
-                        <div>
-                          {isRepair ? (
-                            <button
-                              type="button"
-                              className="btn-act-outline-neutral"
-                              onClick={() => handleToggleRepair(r.facilityId, fac?.status)}
-                              title="Kembalikan status fasilitas menjadi aktif/tersedia"
-                            >
-                              Kembalikan aktif
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              className="btn-act-outline-neutral"
-                              onClick={() => handleToggleRepair(r.facilityId, fac?.status)}
-                              title="Tandai fasilitas sedang dalam perbaikan"
-                            >
-                              Tandai perbaikan
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                    {/* TINDAKAN */}
+                    <td style={{ whiteSpace: 'nowrap', textAlign: 'left' }}>
+                      <select
+                        className="table-select-action"
+                        value={r.status}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === 'proses') handleProses(r.id);
+                          if (val === 'selesai') handleSelesai(r.id);
+                          if (val === 'tolak') handleTolak(r.id);
+                        }}
+                      >
+                        {r.status === 'baru' && (
+                          <>
+                            <option value="baru">Baru</option>
+                            <option value="proses">Proses</option>
+                            <option value="selesai">Selesai</option>
+                            <option value="tolak">Tolak</option>
+                          </>
+                        )}
+                        {r.status === 'diproses' && (
+                          <>
+                            <option value="diproses">Diproses</option>
+                            <option value="selesai">Selesai</option>
+                            <option value="tolak">Tolak</option>
+                          </>
+                        )}
+                        {r.status === 'selesai' && (
+                          <option value="selesai">Selesai</option>
+                        )}
+                        {r.status === 'ditolak' && (
+                          <option value="ditolak">Ditolak</option>
+                        )}
+                      </select>
                     </td>
                   </tr>
                 );

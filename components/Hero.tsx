@@ -3,13 +3,19 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
-import { FAKE_USERS_DB } from '@/mock/fake-users-db';
 
 const ROLE_HOME: Record<string, string> = {
   pengguna: '/pengguna',
   petugas: '/petugas',
   admin: '/admin',
 };
+
+const DEMO_ACCOUNTS = [
+  { role: 'admin', label: 'Admin', email: 'admin@sipinjam.ac.id', pass: 'admin123' },
+  { role: 'petugas', label: 'Petugas', email: 'petugas@sipinjam.ac.id', pass: 'petugas123' },
+  { role: 'pengguna', label: 'Mahasiswa', email: 'mahasiswa@sipinjam.ac.id', pass: 'mhs12345' },
+  { role: 'pengguna', label: 'Dosen', email: 'dosen@sipinjam.ac.id', pass: 'dosen123' },
+];
 
 export default function Hero() {
   const router = useRouter();
@@ -39,12 +45,21 @@ export default function Hero() {
 
   // Check URL search parameters or hash to activate register tab
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined') return;
+
+    function checkAuthTab() {
       const params = new URLSearchParams(window.location.search);
-      if (params.get('auth') === 'register') {
+      const hash = window.location.hash;
+      if (params.get('auth') === 'register' || hash === '#register') {
         setActiveTab('register');
+      } else if (params.get('auth') === 'login' || hash === '#login') {
+        setActiveTab('login');
       }
     }
+
+    checkAuthTab();
+    window.addEventListener('hashchange', checkAuthTab);
+    return () => window.removeEventListener('hashchange', checkAuthTab);
   }, []);
 
   async function handleLoginSubmit(e: React.FormEvent) {
@@ -84,7 +99,7 @@ export default function Hero() {
     }
 
     setRegLoading(true);
-    const result = await submitSelfRegistration(regNama, regEmail, regPeran);
+    const result = await submitSelfRegistration(regNama, regEmail, regPeran, regNim, regPhone);
     setRegLoading(false);
 
     if (!result.ok) {
@@ -240,7 +255,7 @@ export default function Hero() {
                       className="ochoco-waiting-btn"
                       disabled={loginLoading}
                     >
-                      {loginLoading ? 'MEMERIKSA AKUN…' : 'MASUK KE SISTEM'}
+                      {loginLoading ? 'MEMERIKSA AKUN…' : 'MASUK'}
                     </button>
                   </form>
 
@@ -259,19 +274,19 @@ export default function Hero() {
                     </button>
                   </div>
 
-                  {/* Quick Demo Credentials Box */}
+                  {/* Quick Demo Credentials Box (Auto-fill) */}
                   <div className="ochoco-demo-box">
-                    <div className="ochoco-demo-title">AKUN DEMO</div>
+                    <div className="ochoco-demo-title">AKUN DEMO (KLIK UNTUK ISI OTOMATIS)</div>
                     <div className="ochoco-demo-list">
-                      {FAKE_USERS_DB.map((u) => (
+                      {DEMO_ACCOUNTS.map((u) => (
                         <button
-                          key={u.id}
+                          key={u.email}
                           type="button"
                           className="ochoco-demo-row"
-                          onClick={() => fillDemo(u.email, u.password)}
-                          title={`Gunakan akun ${u.role}`}
+                          onClick={() => fillDemo(u.email, u.pass)}
+                          title={`Gunakan akun ${u.label}`}
                         >
-                          <span className="ochoco-demo-role">{u.role}</span>
+                          <span className="ochoco-demo-role">{u.label}</span>
                           <span className="ochoco-demo-email">{u.email}</span>
                           <span className="ochoco-demo-fill">Isi otomatis</span>
                         </button>

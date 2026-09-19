@@ -12,12 +12,22 @@ import {
 } from '@/models/facilities-data';
 import { isSlotBooked, hasRangeConflict } from '@/lib/slots';
 import { login as apiLogin, registerSelf as apiRegisterSelf, AuthResult } from '@/mock/auth-api';
-import { UserRole } from '@/mock/fake-users-db';
+import { UserRole, FakeUserRecord, FAKE_USERS_DB } from '@/mock/fake-users-db';
 
 let nextId = 1000;
 function genId() {
   nextId += 1;
   return nextId;
+}
+
+export interface DirectRegisterInput {
+  nama: string;
+  email: string;
+  peran: string; // 'Petugas' | 'Admin' | 'Dosen' | 'Mahasiswa'
+  nip?: string;
+  phone?: string;
+  unit?: string;
+  password?: string;
 }
 
 export interface LoggedInUser {
@@ -40,7 +50,13 @@ interface AppDataValue {
   // Auth
   login: (email: string, password: string) => Promise<AuthResult>;
   logout: () => void;
-  submitSelfRegistration: (nama: string, email: string, peran: string) => Promise<{ ok: boolean; message: string }>;
+  submitSelfRegistration: (
+    nama: string,
+    email: string,
+    peran: string,
+    nim?: string,
+    phone?: string
+  ) => Promise<{ ok: boolean; message: string }>;
 
   // Pengguna
   submitReservation: (input: Omit<Reservation, 'id' | 'pemohon' | 'status' | 'createdAt'>) => void;
@@ -51,13 +67,16 @@ interface AppDataValue {
   approveReservation: (id: number) => { ok: boolean; message?: string };
   rejectReservation: (id: number) => void;
   cancelApprovedReservation: (id: number, alasan: string) => void;
+  resetReservationToWaiting: (id: number) => void;
   updateReportStatus: (id: number, status: Report['status'], catatan?: string) => void;
   setFacilityStatus: (facilityId: string, status: Facility['status']) => void;
 
   // Admin
+  registeredAccounts: FakeUserRecord[];
   addFacility: (input: Omit<Facility, 'id' | 'status'>) => void;
   updateFacility: (id: string, input: Omit<Facility, 'id' | 'status'>) => void;
-  registerAccountDirectly: (nama: string, email: string, peran: string) => void;
+  registerAccountDirectly: (input: DirectRegisterInput) => { ok: boolean; message?: string; account?: FakeUserRecord };
+  toggleAccountStatus: (id: string) => void;
   verifyPendingAccount: (id: number, approve: boolean) => void;
 }
 
@@ -68,6 +87,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [reservations, setReservations] = useState<Reservation[]>(SEED_RESERVATIONS);
   const [reports, setReports] = useState<Report[]>(SEED_REPORTS);
   const [pendingAccounts, setPendingAccounts] = useState<PendingAccount[]>(SEED_PENDING_ACCOUNTS);
+  const [registeredAccounts, setRegisteredAccounts] = useState<FakeUserRecord[]>(FAKE_USERS_DB);
   const [currentUser, setCurrentUser] = useState<LoggedInUser | null>(null);
 
   const value = useMemo<AppDataValue>(
@@ -76,6 +96,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       reservations,
       reports,
       pendingAccounts,
+      registeredAccounts,
       currentUser,
 
       facilityById: (id) => facilities.find((f) => f.id === id),
@@ -88,10 +109,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         return result;
       },
       logout: () => setCurrentUser(null),
-      submitSelfRegistration: async (nama, email, peran) => {
-        const result = await apiRegisterSelf({ nama, email, peran });
+      submitSelfRegistration: async (nama, email, peran, nim, phone) => {
+        const result = await apiRegisterSelf({ nama, email, peran, nim, phone });
         if (result.ok) {
-          setPendingAccounts((prev) => [...prev, { id: genId(), nama, email, peran, status: 'menunggu' }]);
+          setPendingAccounts((prev) => [
+            ...prev,
+            { id: genId(), nama, email, peran, nim, phone, status: 'menunggu' },
+          ]);
         }
         return result;
       },
@@ -153,6 +177,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           prev.map((r) => (r.id === id ? { ...r, status: 'dibatalkan', catatanBatal: alasan } : r))
         );
       },
+      resetReservationToWaiting: (id) => {
+        setReservations((prev) =>
+          prev.map((r) => (r.id === id ? { ...r, status: 'menunggu' } : r))
+        );
+      },
       updateReportStatus: (id, status, catatan) => {
         setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status, catatan: catatan ?? r.catatan } : r)));
       },
@@ -166,18 +195,73 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       updateFacility: (id, input) => {
         setFacilities((prev) => prev.map((f) => (f.id === id ? { ...f, ...input } : f)));
       },
-      registerAccountDirectly: () => {
-        // Prototipe UI: pendaftaran langsung oleh admin tidak melalui
-        // antrean verifikasi. Pada implementasi asli, ini memanggil API
-        // pembuatan akun (petugas/pengguna) di backend.
+      registerAccountDirectly: (input: DirectRegisterInput) => {
+        const exists = registeredAccounts.some(
+          (a) => a.email.toLowerCase() === input.email.trim().toLowerCase()
+        );
+        if (exists) {
+          return { ok: false, message: 'Email sudah terdaftar dalam sistem.' };
+        }
+
+        let role: UserRole = 'pengguna';
+        if (input.peran.toLowerCase().includes('admin')) role = 'admin';
+        else if (input.peran.toLowerCase().includes('petugas')) role = 'petugas';
+
+        const newAcc: FakeUserRecord = {
+          id: `u-${role}-${genId()}`,
+          email: input.email.trim(),
+          password: input.password || 'Sipinjam2026!',
+          nama: input.nama.trim(),
+          role,
+          nip: input.nip?.trim() || '-',
+          phone: input.phone?.trim() || '-',
+          unit: input.unit?.trim() || 'Universitas Diponegoro',
+          jabatan: input.peran,
+          status: 'aktif',
+          createdAt: new Date().toISOString().split('T')[0],
+        };
+
+        setRegisteredAccounts((prev) => [newAcc, ...prev]);
+
+        return { ok: true, account: newAcc };
+      },
+      toggleAccountStatus: (id: string) => {
+        setRegisteredAccounts((prev) =>
+          prev.map((acc) =>
+            acc.id === id
+              ? { ...acc, status: acc.status === 'aktif' ? 'nonaktif' : 'aktif' }
+              : acc
+          )
+        );
       },
       verifyPendingAccount: (id, approve) => {
         setPendingAccounts((prev) =>
-          prev.map((a) => (a.id === id ? { ...a, status: approve ? 'diverifikasi' : 'ditolak' } : a))
+          prev.map((a) => {
+            if (a.id === id) {
+              if (approve) {
+                const newAcc: FakeUserRecord = {
+                  id: `u-pengguna-${genId()}`,
+                  email: a.email,
+                  password: 'mhs12345',
+                  nama: a.nama,
+                  role: 'pengguna',
+                  nip: a.nim || '-',
+                  phone: a.phone || '-',
+                  unit: a.peran === 'Dosen' ? 'Dosen Undip' : 'Mahasiswa Undip',
+                  jabatan: a.peran,
+                  status: 'aktif',
+                  createdAt: new Date().toISOString().split('T')[0],
+                };
+                setRegisteredAccounts((existing) => [newAcc, ...existing]);
+              }
+              return { ...a, status: approve ? 'diverifikasi' : 'ditolak' };
+            }
+            return a;
+          })
         );
       },
     }),
-    [facilities, reservations, reports, pendingAccounts, currentUser]
+    [facilities, reservations, reports, pendingAccounts, registeredAccounts, currentUser]
   );
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;

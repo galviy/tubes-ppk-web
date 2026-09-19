@@ -40,6 +40,8 @@ export async function login(email: string, password: string): Promise<AuthResult
 export interface SelfRegisterInput {
   nama: string;
   email: string;
+  nim?: string;
+  phone?: string;
   peran: string; // "Mahasiswa" | "Dosen" — ditampilkan apa adanya, bukan role sistem
 }
 

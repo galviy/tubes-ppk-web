@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="16" fill="#15171a"/>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="none" stroke="#b59876" stroke-width="2" stroke-opacity="0.6"/>
+  <!-- Undip Campus Building & Facility Emblem -->
+  <path d="M32 10 L48 22 H16 Z" fill="#b59876"/>
+  <path d="M32 6 L32 10" stroke="#b59876" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="32" cy="6" r="1.5" fill="#f0e2cf"/>
+  <!-- Architrave beam -->
+  <rect x="14" y="22" width="36" height="4" rx="1" fill="#f0e2cf"/>
+  <!-- Pillars -->
+  <rect x="18" y="26" width="4" height="18" rx="1" fill="#b59876"/>
+  <rect x="26" y="26" width="4" height="18" rx="1" fill="#b59876"/>
+  <rect x="34" y="26" width="4" height="18" rx="1" fill="#b59876"/>
+  <rect x="42" y="26" width="4" height="18" rx="1" fill="#b59876"/>
+  <!-- Keyhole in center portal -->
+  <circle cx="32" cy="33" r="2.2" fill="#15171a"/>
+  <polygon points="30.8,33 33.2,33 32.8,39 31.2,39" fill="#15171a"/>
+  <!-- Pedestal Foundation -->
+  <rect x="12" y="44" width="40" height="4" rx="1.5" fill="#f0e2cf"/>
+  <rect x="9" y="48" width="46" height="4" rx="1.5" fill="#b59876"/>
+</svg>

@@ -103,17 +103,13 @@ export default function PetugasRingkasanPage() {
       </div>
 
       <div className="menu-card-grid">
-        <Link href="/petugas/dashboard" className="menu-card">
-          <h3>Dashboard</h3>
-          <p>Ringkasan antrian reservasi dan laporan yang menunggu.</p>
-        </Link>
         <Link href="/petugas/reservasi" className="menu-card">
           <h3>Antrian Reservasi</h3>
           <p>Setujui, tolak, atau batalkan reservasi.</p>
         </Link>
         <Link href="/petugas/laporan" className="menu-card">
           <h3>Antrian Laporan</h3>
-          <p>Proses laporan kerusakan dan tandai fasilitas dalam perbaikan.</p>
+          <p>Proses dan tindak lanjuti laporan kendala sarpras.</p>
         </Link>
         <Link href="/petugas/fasilitas" className="menu-card">
           <h3>Status Fasilitas</h3>

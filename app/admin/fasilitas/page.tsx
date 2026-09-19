@@ -127,7 +127,7 @@ export default function KelolaFasilitasPage() {
               <th>Lokasi</th>
               <th>Kapasitas</th>
               <th>Status</th>
-              <th>Aksi</th>
+              <th>Tindakan</th>
             </tr>
           </thead>
           <tbody>
@@ -142,19 +142,38 @@ export default function KelolaFasilitasPage() {
                     {f.status === 'repair' ? 'Perbaikan' : 'Aktif'}
                   </span>
                 </td>
-                <td className="btn-row">
-                  <button className="btn" onClick={() => startEdit(f)}>
-                    Edit
-                  </button>
-                  {f.status === 'avail' ? (
-                    <button className="btn ghost-danger" onClick={() => setFacilityStatus(f.id, 'repair')}>
-                      Nonaktifkan
+                <td style={{ whiteSpace: 'nowrap', textAlign: 'left' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <select
+                      className="table-select-action"
+                      value={f.status}
+                      onChange={(e) => setFacilityStatus(f.id, e.target.value as 'avail' | 'repair')}
+                      style={{
+                        borderColor: f.status === 'repair' ? '#FCD34D' : '#86EFAC',
+                        color: f.status === 'repair' ? '#92400E' : '#166534',
+                        fontWeight: 600,
+                      }}
+                    >
+                      <option value="avail">Aktif</option>
+                      <option value="repair">Perbaikan</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => startEdit(f)}
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        border: '1px solid #D5D0C7',
+                        background: '#FFFFFF',
+                        borderRadius: 6,
+                        cursor: 'pointer',
+                        color: '#181D24',
+                      }}
+                    >
+                      Edit
                     </button>
-                  ) : (
-                    <button className="btn ghost-avail" onClick={() => setFacilityStatus(f.id, 'avail')}>
-                      Aktifkan
-                    </button>
-                  )}
+                  </div>
                 </td>
               </tr>
             ))}

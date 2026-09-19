@@ -20,6 +20,7 @@ export default function PetugasReservasiPage() {
     approveReservation,
     rejectReservation,
     cancelApprovedReservation,
+    resetReservationToWaiting,
     isSlotTaken,
   } = useAppData();
 
@@ -92,16 +93,17 @@ export default function PetugasReservasiPage() {
       {/* Header Split matching Reference Image 3 */}
       <div className="dash-split-header">
         <h2>Antrian reservasi</h2>
-        <p>Setujui atau tolak permohonan. Sistem menandai bentrok jadwal secara otomatis.</p>
+        <p>Verifikasi permohonan baru (setujui/tolak) dan kelola pembatalan reservasi yang telah disetujui.</p>
       </div>
 
       {/* Filter Chips */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
         {[
           { key: 'semua', label: `Semua (${reservations.length})` },
           { key: 'menunggu', label: `Menunggu (${reservations.filter((r) => r.status === 'menunggu').length})` },
           { key: 'disetujui', label: `Disetujui (${reservations.filter((r) => r.status === 'disetujui').length})` },
           { key: 'ditolak', label: `Ditolak (${reservations.filter((r) => r.status === 'ditolak').length})` },
+          { key: 'dibatalkan', label: `Dibatalkan (${reservations.filter((r) => r.status === 'dibatalkan').length})` },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -135,7 +137,7 @@ export default function PetugasReservasiPage() {
               <th>Peserta</th>
               <th>Tujuan</th>
               <th>Status</th>
-              <th style={{ textAlign: 'right' }}>Aksi</th>
+              <th style={{ textAlign: 'left' }}>Tindakan</th>
             </tr>
           </thead>
           <tbody>
@@ -188,54 +190,54 @@ export default function PetugasReservasiPage() {
                       </span>
                     </td>
 
-                    {/* AKSI */}
-                    <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                        {r.status === 'menunggu' && (
-                          <>
-                            <button
-                              type="button"
-                              className="btn-act-outline-green"
-                              disabled={conflict}
-                              onClick={() => handleApprove(r.id)}
-                              title={conflict ? 'Slot waktu bentrok dengan reservasi lain' : 'Setujui permohonan'}
-                            >
-                              Setujui
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-act-outline-red"
-                              onClick={() => handleReject(r.id)}
-                            >
-                              Tolak
-                            </button>
-                            {conflict && (
-                              <span style={{ color: '#dc2626', fontSize: 11, fontWeight: 600, marginLeft: 4 }}>
-                                Bentrok
-                              </span>
-                            )}
-                          </>
-                        )}
-
-                        {r.status === 'disetujui' && (
-                          <button
-                            type="button"
-                            className="btn-act-outline-red"
-                            onClick={() => handleCancelApproved(r.id)}
-                            title="Batalkan reservasi yang telah disetujui (mendesak)"
+                    {/* TINDAKAN */}
+                    <td style={{ whiteSpace: 'nowrap', textAlign: 'left' }}>
+                      {r.status === 'menunggu' && (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          <select
+                            className="table-select-action"
+                            value="menunggu"
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === 'setuju') handleApprove(r.id);
+                              if (val === 'tolak') handleReject(r.id);
+                            }}
                           >
-                            Batalkan (mendesak)
-                          </button>
-                        )}
+                            <option value="menunggu">Menunggu</option>
+                            <option value="setuju" disabled={conflict}>Setuju</option>
+                            <option value="tolak">Tolak</option>
+                          </select>
+                          {conflict && (
+                            <span style={{ color: '#dc2626', fontSize: 11, fontWeight: 600 }}>
+                              Bentrok
+                            </span>
+                          )}
+                        </div>
+                      )}
 
-                        {r.status === 'ditolak' && (
-                          <span style={{ color: '#9CA3AF', fontSize: 12 }}>—</span>
-                        )}
+                      {r.status === 'disetujui' && (
+                        <select
+                          className="table-select-action"
+                          value="setuju"
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === 'batal') handleCancelApproved(r.id);
+                          }}
+                        >
+                          <option value="setuju">Setuju</option>
+                          <option value="batal">Batal</option>
+                        </select>
+                      )}
 
-                        {r.status === 'dibatalkan' && (
-                          <span style={{ color: '#9CA3AF', fontSize: 12 }}>—</span>
-                        )}
-                      </div>
+                      {r.status === 'ditolak' && (
+                        <span style={{ color: '#9CA3AF', fontSize: 12 }}>Ditolak</span>
+                      )}
+
+                      {r.status === 'dibatalkan' && (
+                        <span style={{ color: '#9CA3AF', fontSize: 12 }} title={r.catatanBatal || undefined}>
+                          Dibatalkan
+                        </span>
+                      )}
                     </td>
                   </tr>
                 );

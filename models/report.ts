@@ -17,6 +17,8 @@ export interface PendingAccount {
   id: number;
   nama: string;
   email: string;
+  nim?: string;
+  phone?: string;
   peran: string;
   status: 'menunggu' | 'diverifikasi' | 'ditolak';
 }

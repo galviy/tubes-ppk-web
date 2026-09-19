@@ -14,6 +14,12 @@ export interface FakeUserRecord {
   password: string; // teks biasa — HANYA untuk demo, jangan pernah begini di backend asli
   nama: string;
   role: UserRole;
+  nip?: string;
+  phone?: string;
+  unit?: string;
+  jabatan?: string;
+  status?: 'aktif' | 'nonaktif';
+  createdAt?: string;
 }
 
 export const FAKE_USERS_DB: FakeUserRecord[] = [
@@ -23,6 +29,12 @@ export const FAKE_USERS_DB: FakeUserRecord[] = [
     password: 'admin123',
     nama: 'Admin Sarpras',
     role: 'admin',
+    nip: '197805122003121002',
+    phone: '08112839485',
+    unit: 'Biro Umum & Aset Undip',
+    jabatan: 'Administrator Sistem Sarpras',
+    status: 'aktif',
+    createdAt: '2026-01-10',
   },
   {
     id: 'u-petugas-1',
@@ -30,6 +42,12 @@ export const FAKE_USERS_DB: FakeUserRecord[] = [
     password: 'petugas123',
     nama: 'Budi (Petugas Sarpras)',
     role: 'petugas',
+    nip: '198603152010121003',
+    phone: '08122938475',
+    unit: 'Subbag Rumah Tangga & Sarpras',
+    jabatan: 'Staf Teknis Pemeliharaan',
+    status: 'aktif',
+    createdAt: '2026-02-14',
   },
   {
     id: 'u-pengguna-1',
@@ -37,6 +55,12 @@ export const FAKE_USERS_DB: FakeUserRecord[] = [
     password: 'mhs12345',
     nama: 'Sinta (Mahasiswa)',
     role: 'pengguna',
+    nip: '24060122140123',
+    phone: '085712345678',
+    unit: 'Fakultas Sains dan Matematika',
+    jabatan: 'Mahasiswa S1 Informatika',
+    status: 'aktif',
+    createdAt: '2026-03-01',
   },
   {
     id: 'u-pengguna-2',
@@ -44,5 +68,11 @@ export const FAKE_USERS_DB: FakeUserRecord[] = [
     password: 'dosen123',
     nama: 'Pak Herman (Dosen)',
     role: 'pengguna',
+    nip: '197405121999031001',
+    phone: '081329876543',
+    unit: 'Departemen Informatika',
+    jabatan: 'Dosen Pembina Kemahasiswaan',
+    status: 'aktif',
+    createdAt: '2026-02-20',
   },
 ];
