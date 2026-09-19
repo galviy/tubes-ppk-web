@@ -44,8 +44,9 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/admin', label: 'Ringkasan' },
       { href: '/admin/fasilitas', label: 'Kelola Fasilitas' },
-      { href: '/admin/akun', label: 'Kelola Akun' },
+      { href: '/admin/reservasi', label: 'Semua Reservasi' },
       { href: '/admin/laporan', label: 'Semua Laporan' },
+      { href: '/admin/akun', label: 'Kelola Akun' },
       { href: '/admin/rekap', label: 'Rekap & Ekspor' },
     ],
   },

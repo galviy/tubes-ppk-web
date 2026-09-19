@@ -146,13 +146,17 @@ export default function AdminHomePage() {
           <h3>Kelola Fasilitas</h3>
           <p>Tambah, ubah, atau nonaktifkan fasilitas kampus.</p>
         </Link>
-        <Link href="/admin/akun" className="menu-card">
-          <h3>Kelola Akun</h3>
-          <p>Daftarkan akun staf langsung atau verifikasi registrasi mandiri.</p>
+        <Link href="/admin/reservasi" className="menu-card">
+          <h3>Semua Reservasi</h3>
+          <p>Log audit seluruh pengajuan reservasi fasilitas dan status persetujuan.</p>
         </Link>
         <Link href="/admin/laporan" className="menu-card">
           <h3>Semua Laporan</h3>
           <p>Log audit seluruh laporan kerusakan dan progres penanganan sarpras.</p>
+        </Link>
+        <Link href="/admin/akun" className="menu-card">
+          <h3>Kelola Akun</h3>
+          <p>Daftarkan akun petugas langsung atau verifikasi registrasi mandiri.</p>
         </Link>
         <Link href="/admin/rekap" className="menu-card">
           <h3>Rekap &amp; Ekspor</h3>

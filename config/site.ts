@@ -24,11 +24,11 @@ export const SITE_CONFIG = {
       home: '/pengguna',
     },
     petugas: {
-      label: 'Petugas Sarpras',
+      label: 'Petugas',
       home: '/petugas',
     },
     admin: {
-      label: 'Admin Sarpras',
+      label: 'Admin',
       home: '/admin',
     },
   },
@@ -41,3 +41,31 @@ export const SITE_CONFIG = {
     { label: 'GUIDE', href: '/panduan' },
   ],
 } as const;
+
+// Unit Kerja Resmi Operasional Petugas Sarpras & Pengelola Fasilitas Undip
+export const UNIT_PETUGAS = [
+  'Subbagian Rumah Tangga & Sarpras Undip',
+  'Biro Umum & Pengelolaan Aset (BUPA) Undip',
+  'UPT Laboratorium Terpadu Undip',
+  'Pengelola Gedung Kuliah Bersama (GKB)',
+  'Pengelola Sarana Olahraga Undip (Stadion/GSG)',
+  'Pengelola Gedung Prof. Soedarto & ICT Undip',
+] as const;
+
+// Fakultas & Sekolah Civitas Akademika Universitas Diponegoro (Mahasiswa & Dosen)
+export const FAKULTAS_UNDIP = [
+  'Fakultas Sains dan Matematika (FSM)',
+  'Fakultas Teknik (FT)',
+  'Fakultas Ekonomika dan Bisnis (FEB)',
+  'Fakultas Kedokteran (FK)',
+  'Fakultas Hukum (FH)',
+  'Fakultas Ilmu Sosial dan Ilmu Politik (FISIP)',
+  'Fakultas Ilmu Budaya (FIB)',
+  'Fakultas Psikologi',
+  'Fakultas Kesehatan Masyarakat (FKM)',
+  'Fakultas Perikanan dan Ilmu Kelautan (FPIK)',
+  'Fakultas Peternakan dan Pertanian (FPP)',
+  'Sekolah Vokasi (SV)',
+  'Sekolah Pascasarjana',
+] as const;
+

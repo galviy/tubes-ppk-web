@@ -87,5 +87,14 @@ export const SEED_REPORTS: Report[] = [
 ];
 
 export const SEED_PENDING_ACCOUNTS: PendingAccount[] = [
-  { id: 301, nama: 'Putri Ayu', email: 'putri@students.undip.ac.id', peran: 'Mahasiswa', status: 'menunggu' },
+  {
+    id: 301,
+    nama: 'Putri Ayu',
+    email: 'putri@students.undip.ac.id',
+    nim: '24060122140055',
+    phone: '081234567891',
+    peran: 'Mahasiswa',
+    fakultas: 'Fakultas Sains dan Matematika (FSM)',
+    status: 'menunggu',
+  },
 ];

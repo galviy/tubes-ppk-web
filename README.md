@@ -39,8 +39,8 @@ npx serve out    # Pratinjau hasil build statis lokal
 5. **17 User Stories Lengkap & Berperan Ganda**
    - **Pengunjung / Publik**: Eksplorasi katalog fasilitas, filter kategori, denah lantai (floor plans), dan cek matriks ketersediaan tanpa perlu login.
    - **Pengguna (Mahasiswa/Dosen)**: Pengajuan izin peminjaman ruangan/alat, pemantauan riwayat reservasi, pembatalan mandiri, pelaporan kerusakan fasilitas berlampirkan bukti, dan pengecekan status penanganan.
-   - **Petugas Sarpras**: Validasi permohonan reservasi (setujui / tolak berargumen), pembatalan darurat berargumen, tindak lanjut laporan kerusakan (proses / selesaikan dengan catatan resolusi / tolak), serta kontrol status operasional fasilitas (Aktif / Perbaikan).
-   - **Admin Sarpras**: Dashboard rekapitulasi, pengelolaan master data fasilitas, pendaftaran akun langsung, verifikasi registrasi mandiri (termasuk NIM/NIP & No. HP), serta ekspor laporan rekap (CSV, Excel, PDF).
+   - **Petugas**: Validasi permohonan reservasi (setujui / tolak berargumen), pembatalan darurat berargumen, tindak lanjut laporan kerusakan (proses / selesaikan dengan catatan resolusi / tolak), serta kontrol status operasional fasilitas (Aktif / Perbaikan).
+   - **Admin**: Dashboard rekapitulasi, pengelolaan master data fasilitas, log audit seluruh reservasi fasilitas kampus (`/admin/reservasi`), log audit pelaporan sarpras (`/admin/laporan`), pendaftaran akun langsung (Petugas & Pengguna), verifikasi registrasi mandiri, serta ekspor laporan rekap (CSV, Excel, PDF).
 
 ---
 
@@ -74,7 +74,9 @@ app/
     layout.tsx              Layout dashboard admin
     page.tsx                Ringkasan tata kelola fasilitas, reservasi, dan pengguna
     fasilitas/page.tsx       Kelola data master fasilitas (tambah, edit, ubah status)
-    akun/page.tsx            Daftarkan akun langsung & verifikasi registrasi mandiri (+ NIM/NIP & HP)
+    reservasi/page.tsx       Log audit seluruh reservasi fasilitas kampus (+ filter status & fasilitas)
+    laporan/page.tsx         Log audit seluruh laporan kerusakan sarpras
+    akun/page.tsx            Daftarkan akun langsung (Petugas/Admin/Pengguna) & verifikasi registrasi mandiri
     rekap/page.tsx           Rekap okupansi & kerusakan sarpras (ekspor CSV/Excel/PDF)
 
 components/
@@ -118,8 +120,8 @@ Pada kartu autentikasi di landing page (`/#auth`), terdapat kotak **"AKUN DEMO (
 
 | Peran          | Nama Akun               | Email                      | Kata Sandi  | Akses Halaman |
 |----------------|-------------------------|----------------------------|-------------|---------------|
-| **Admin**      | Admin Sarpras           | `admin@sipinjam.ac.id`     | `admin123`  | `/admin/*`    |
-| **Petugas**    | Budi (Petugas Sarpras)  | `petugas@sipinjam.ac.id`   | `petugas123`| `/petugas/*`  |
+| **Admin**      | Admin                   | `admin@sipinjam.ac.id`     | `admin123`  | `/admin/*`    |
+| **Petugas**    | Budi (Petugas)          | `petugas@sipinjam.ac.id`   | `petugas123`| `/petugas/*`  |
 | **Mahasiswa**  | Sinta (Mahasiswa FSM)   | `mahasiswa@sipinjam.ac.id` | `mhs12345`  | `/pengguna/*` |
 | **Dosen**      | Pak Herman (Dosen IF)   | `dosen@sipinjam.ac.id`     | `dosen123`  | `/pengguna/*` |
 

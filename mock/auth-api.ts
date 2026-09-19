@@ -43,6 +43,7 @@ export interface SelfRegisterInput {
   nim?: string;
   phone?: string;
   peran: string; // "Mahasiswa" | "Dosen" — ditampilkan apa adanya, bukan role sistem
+  fakultas?: string;
 }
 
 export interface SelfRegisterResult {

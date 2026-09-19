@@ -55,7 +55,8 @@ interface AppDataValue {
     email: string,
     peran: string,
     nim?: string,
-    phone?: string
+    phone?: string,
+    fakultas?: string
   ) => Promise<{ ok: boolean; message: string }>;
 
   // Pengguna
@@ -109,12 +110,21 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         return result;
       },
       logout: () => setCurrentUser(null),
-      submitSelfRegistration: async (nama, email, peran, nim, phone) => {
-        const result = await apiRegisterSelf({ nama, email, peran, nim, phone });
+      submitSelfRegistration: async (nama, email, peran, nim, phone, fakultas) => {
+        const result = await apiRegisterSelf({ nama, email, peran, nim, phone, fakultas });
         if (result.ok) {
           setPendingAccounts((prev) => [
             ...prev,
-            { id: genId(), nama, email, peran, nim, phone, status: 'menunggu' },
+            {
+              id: genId(),
+              nama,
+              email,
+              peran,
+              nim,
+              phone,
+              fakultas: fakultas || (peran === 'Dosen' ? 'Fakultas Teknik (FT)' : 'Fakultas Sains dan Matematika (FSM)'),
+              status: 'menunggu',
+            },
           ]);
         }
         return result;
@@ -247,7 +257,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
                   role: 'pengguna',
                   nip: a.nim || '-',
                   phone: a.phone || '-',
-                  unit: a.peran === 'Dosen' ? 'Dosen Undip' : 'Mahasiswa Undip',
+                  unit: a.fakultas || (a.peran === 'Dosen' ? 'Fakultas Teknik (FT)' : 'Fakultas Sains dan Matematika (FSM)'),
                   jabatan: a.peran,
                   status: 'aktif',
                   createdAt: new Date().toISOString().split('T')[0],

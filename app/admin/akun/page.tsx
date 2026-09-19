@@ -3,20 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
-
-const UNIT_OPTIONS = [
-  'Subbagian Rumah Tangga & Sarpras',
-  'Biro Umum & Pengelolaan Aset Undip',
-  'UPT Laboratorium Terpadu',
-  'Gedung Kuliah Bersama (GKB)',
-  'Fakultas Teknik',
-  'Fakultas Sains dan Matematika',
-  'Departemen Informatika',
-  'Fakultas Ekonomika dan Bisnis',
-  'Fakultas Kedokteran',
-  'Fakultas Hukum',
-  'Fakultas Ilmu Budaya',
-];
+import { UNIT_PETUGAS, FAKULTAS_UNDIP } from '@/config/site';
 
 function DownwardSelect({
   label,
@@ -169,8 +156,8 @@ export default function KelolaAkunPage() {
   const [nip, setNip] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [peran, setPeran] = useState('Petugas Sarpras');
-  const [unit, setUnit] = useState(UNIT_OPTIONS[0]);
+  const [peran, setPeran] = useState('Petugas');
+  const [unit, setUnit] = useState<string>(UNIT_PETUGAS[0]);
   const [password, setPassword] = useState('Sipinjam2026!');
   const [showPass, setShowPass] = useState(false);
 
@@ -412,7 +399,13 @@ export default function KelolaAkunPage() {
                 type="button"
                 onClick={() => {
                   setTargetTipe('petugas');
-                  setPeran('Petugas Sarpras');
+                  setPeran('Petugas');
+                  setUnit(UNIT_PETUGAS[0]);
+                  setNama('');
+                  setNip('');
+                  setEmail('');
+                  setPhone('');
+                  setPassword('Sipinjam2026!');
                 }}
                 style={{
                   padding: '9px 18px',
@@ -437,6 +430,12 @@ export default function KelolaAkunPage() {
                 onClick={() => {
                   setTargetTipe('pengguna');
                   setPeran('Mahasiswa');
+                  setUnit(FAKULTAS_UNDIP[0]);
+                  setNama('');
+                  setNip('');
+                  setEmail('');
+                  setPhone('');
+                  setPassword('Sipinjam2026!');
                 }}
                 style={{
                   padding: '9px 18px',
@@ -461,12 +460,12 @@ export default function KelolaAkunPage() {
               <h3 style={{ fontSize: 16, fontWeight: 700, color: '#181D24', margin: 0 }}>
                 {targetTipe === 'petugas'
                   ? 'Formulir Pendaftaran Akun Petugas Baru'
-                  : 'Formulir Pendaftaran Akun Pengguna Baru'}
+                  : 'Formulir Pendaftaran Akun Pengguna Baru (Mahasiswa / Dosen)'}
               </h3>
               <p style={{ fontSize: 13, color: '#6B7280', marginTop: 4 }}>
                 {targetTipe === 'petugas'
-                  ? 'Daftarkan akun petugas sarana prasarana atau admin pengelola aset kampus Undip.'
-                  : 'Daftarkan akun mahasiswa atau dosen secara langsung tanpa melalui antrean verifikasi registrasi mandiri.'}
+                  ? 'Daftarkan akun petugas atau admin pengelola fasilitas kampus Undip.'
+                  : 'Daftarkan akun mahasiswa atau dosen secara langsung dengan fakultas dan identitas yang valid.'}
               </p>
             </div>
 
@@ -474,9 +473,15 @@ export default function KelolaAkunPage() {
               <div className="form-grid">
                 {/* Nama Lengkap */}
                 <div className="fgroup">
-                  <label>Nama Lengkap &amp; Gelar *</label>
+                  <label>Nama Lengkap *</label>
                   <input
-                    placeholder={targetTipe === 'petugas' ? 'Contoh: Agus Supriyono, S.Kom.' : 'Contoh: Dewi Lestari / Dr. Ir. Budi Santoso'}
+                    placeholder={
+                      targetTipe === 'petugas'
+                        ? 'Contoh: Agus Supriyono, S.Kom.'
+                        : peran === 'Dosen'
+                        ? 'Contoh: Dr. Ir. Budi Santoso, M.T.'
+                        : 'Contoh: Sinta Rahmawati'
+                    }
                     value={nama}
                     onChange={(e) => setNama(e.target.value)}
                     required
@@ -485,20 +490,33 @@ export default function KelolaAkunPage() {
 
                 {/* NIP / NIM */}
                 <div className="fgroup">
-                  <label>{targetTipe === 'petugas' ? 'NIP / No. Identitas Pegawai *' : 'NIM (Mahasiswa) / NIP (Dosen) *'}</label>
+                  <label>{targetTipe === 'petugas' || peran === 'Dosen' ? 'NIP *' : 'NIM *'}</label>
                   <input
-                    placeholder={targetTipe === 'petugas' ? 'Contoh: 198604152010121002' : 'Contoh: 24060122140123 / 197405121999031001'}
+                    placeholder={
+                      targetTipe === 'petugas'
+                        ? 'Contoh: 198604152010121002'
+                        : peran === 'Dosen'
+                        ? 'Contoh: 197405121999031001'
+                        : 'Contoh: 24060122140123'
+                    }
                     value={nip}
                     onChange={(e) => setNip(e.target.value)}
+                    required
                   />
                 </div>
 
                 {/* Email Resmi */}
                 <div className="fgroup">
-                  <label>Email Resmi Kampus Undip *</label>
+                  <label>Email Resmi Undip *</label>
                   <input
                     type="email"
-                    placeholder={targetTipe === 'petugas' ? 'nama.petugas@sipinjam.ac.id' : 'nama.mhs@sipinjam.ac.id / nama.dosen@sipinjam.ac.id'}
+                    placeholder={
+                      targetTipe === 'petugas'
+                        ? 'nama.petugas@undip.ac.id'
+                        : peran === 'Dosen'
+                        ? 'nama.dosen@lecturer.undip.ac.id'
+                        : 'nama.mhs@students.undip.ac.id'
+                    }
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -517,29 +535,36 @@ export default function KelolaAkunPage() {
 
                 {/* Peran Sistem (Dropdown ke bawah) */}
                 <DownwardSelect
-                  label="Peran Hak Akses *"
+                  label={targetTipe === 'petugas' ? 'Peran Hak Akses *' : 'Peran *'}
                   value={peran}
-                  onChange={setPeran}
+                  onChange={(val) => {
+                    setPeran(val);
+                  }}
                   options={
                     targetTipe === 'petugas'
                       ? [
-                          { value: 'Petugas Sarpras', label: 'Petugas Sarpras (Operasional)' },
-                          { value: 'Petugas Lab', label: 'Petugas Laboratorium' },
-                          { value: 'Admin Sarpras', label: 'Admin Sarpras (Full Control)' },
+                          { value: 'Petugas', label: 'Petugas' },
+                          { value: 'Admin', label: 'Admin' },
                         ]
                       : [
-                          { value: 'Mahasiswa', label: 'Mahasiswa (Civitas Akademika)' },
-                          { value: 'Dosen', label: 'Dosen (Civitas Akademika)' },
+                          { value: 'Mahasiswa', label: 'Mahasiswa' },
+                          { value: 'Dosen', label: 'Dosen' },
                         ]
                   }
                 />
 
-                {/* Unit Kerja (Dropdown ke bawah) */}
+                {/* Unit Kerja / Fakultas (Terpisah untuk Petugas vs Pengguna) */}
                 <DownwardSelect
-                  label={targetTipe === 'petugas' ? 'Unit Kerja / Departemen Penugasan *' : 'Fakultas / Program Studi *'}
+                  label={
+                    targetTipe === 'petugas'
+                      ? 'Unit Kerja / Lokasi Penugasan *'
+                      : peran === 'Dosen'
+                      ? 'Fakultas / Departemen Homebase *'
+                      : 'Fakultas / Program Studi *'
+                  }
                   value={unit}
                   onChange={setUnit}
-                  options={UNIT_OPTIONS}
+                  options={targetTipe === 'petugas' ? (UNIT_PETUGAS as unknown as string[]) : (FAKULTAS_UNDIP as unknown as string[])}
                 />
 
                 {/* Kata Sandi Awal */}
@@ -632,9 +657,9 @@ export default function KelolaAkunPage() {
               <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                 {[
                   { key: 'semua', label: `Semua (${registeredAccounts.length})` },
+                  { key: 'pengguna', label: `Pengguna (${registeredAccounts.filter((a) => a.role === 'pengguna').length})` },
                   { key: 'petugas', label: `Petugas (${registeredAccounts.filter((a) => a.role === 'petugas').length})` },
                   { key: 'admin', label: `Admin (${registeredAccounts.filter((a) => a.role === 'admin').length})` },
-                  { key: 'pengguna', label: `Pengguna (${registeredAccounts.filter((a) => a.role === 'pengguna').length})` },
                 ].map((chip) => (
                   <button
                     key={chip.key}
@@ -664,7 +689,7 @@ export default function KelolaAkunPage() {
                   <th>Kontak</th>
                   <th>Peran &amp; Unit Kerja</th>
                   <th>Status</th>
-                  <th style={{ textAlign: 'left' }}>Tindakan</th>
+                  <th style={{ textAlign: 'center', width: 120 }}>Tindakan</th>
                 </tr>
               </thead>
               <tbody>
@@ -694,7 +719,7 @@ export default function KelolaAkunPage() {
                       {/* Peran & Unit */}
                       <td style={{ whiteSpace: 'nowrap' }}>
                         <div style={{ fontWeight: 600, color: '#b59876', fontSize: 13 }}>
-                          {acc.jabatan || acc.role.toUpperCase()}
+                          {acc.jabatan || (acc.role === 'admin' ? 'Admin' : acc.role === 'petugas' ? 'Petugas' : 'Pengguna')}
                         </div>
                         <div style={{ fontSize: 12, color: '#6B7280' }}>{acc.unit || 'Universitas Diponegoro'}</div>
                       </td>
@@ -706,24 +731,28 @@ export default function KelolaAkunPage() {
                         </span>
                       </td>
 
-                      {/* Tindakan */}
-                      <td style={{ whiteSpace: 'nowrap', textAlign: 'left' }}>
-                        <button
-                          type="button"
-                          onClick={() => toggleAccountStatus(acc.id)}
-                          style={{
-                            padding: '4px 10px',
-                            fontSize: 11,
-                            fontWeight: 600,
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            border: acc.status === 'nonaktif' ? '1px solid #86EFAC' : '1px solid #FECACA',
-                            background: acc.status === 'nonaktif' ? '#F0FDF4' : '#FEF2F2',
-                            color: acc.status === 'nonaktif' ? '#166534' : '#DC2626',
-                          }}
-                        >
-                          {acc.status === 'nonaktif' ? 'Aktifkan' : 'Nonaktifkan'}
-                        </button>
+                      {/* Tindakan (Role Admin tidak ada tindakan) */}
+                      <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
+                        {acc.role === 'admin' ? (
+                          <span style={{ color: '#9CA3AF', fontSize: 15, fontWeight: 500, display: 'inline-block' }}>—</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => toggleAccountStatus(acc.id)}
+                            style={{
+                              padding: '4px 10px',
+                              fontSize: 11,
+                              fontWeight: 600,
+                              borderRadius: 4,
+                              cursor: 'pointer',
+                              border: acc.status === 'nonaktif' ? '1px solid #86EFAC' : '1px solid #FECACA',
+                              background: acc.status === 'nonaktif' ? '#F0FDF4' : '#FEF2F2',
+                              color: acc.status === 'nonaktif' ? '#166534' : '#DC2626',
+                            }}
+                          >
+                            {acc.status === 'nonaktif' ? 'Aktifkan' : 'Nonaktifkan'}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -743,6 +772,7 @@ export default function KelolaAkunPage() {
                 <th>NIM/NIP</th>
                 <th>No. HP</th>
                 <th>Peran</th>
+                <th>Fakultas / Unit Asal</th>
                 <th>Status</th>
                 <th style={{ textAlign: 'left' }}>Tindakan</th>
               </tr>
@@ -750,7 +780,7 @@ export default function KelolaAkunPage() {
             <tbody>
               {pendingAccounts.length === 0 && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', color: 'var(--ink-soft)' }}>
+                  <td colSpan={8} style={{ textAlign: 'center', color: 'var(--ink-soft)' }}>
                     Tidak ada akun menunggu verifikasi.
                   </td>
                 </tr>
@@ -762,6 +792,9 @@ export default function KelolaAkunPage() {
                   <td>{a.nim || '—'}</td>
                   <td>{a.phone || '—'}</td>
                   <td>{a.peran}</td>
+                  <td style={{ color: '#4B5563', fontSize: 13 }}>
+                    {a.fakultas || (a.peran === 'Dosen' ? 'Fakultas Teknik (FT)' : 'Fakultas Sains dan Matematika (FSM)')}
+                  </td>
                   <td>
                     {a.status === 'menunggu' && <span className="pill busy">Menunggu</span>}
                     {a.status === 'diverifikasi' && <span className="pill avail">Diverifikasi</span>}

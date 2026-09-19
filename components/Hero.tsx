@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
+import { FAKULTAS_UNDIP } from '@/config/site';
 
 const ROLE_HOME: Record<string, string> = {
   pengguna: '/pengguna',
@@ -37,6 +38,7 @@ export default function Hero() {
   const [regNim, setRegNim] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regPeran, setRegPeran] = useState('Mahasiswa');
+  const [regFakultas, setRegFakultas] = useState<string>(FAKULTAS_UNDIP[0]);
   const [regPass, setRegPass] = useState('');
   const [regConfirmPass, setRegConfirmPass] = useState('');
   const [regError, setRegError] = useState('');
@@ -99,7 +101,7 @@ export default function Hero() {
     }
 
     setRegLoading(true);
-    const result = await submitSelfRegistration(regNama, regEmail, regPeran, regNim, regPhone);
+    const result = await submitSelfRegistration(regNama, regEmail, regPeran, regNim, regPhone, regFakultas);
     setRegLoading(false);
 
     if (!result.ok) {
@@ -330,38 +332,56 @@ export default function Hero() {
 
                       <form onSubmit={handleRegisterSubmit} className="ochoco-waiting-form">
                         <div className="ochoco-underline-field">
-                          <label htmlFor="reg-name">NAMA LENGKAP</label>
+                          <label htmlFor="reg-name">NAMA LENGKAP &amp; GELAR</label>
                           <input
                             id="reg-name"
                             type="text"
-                            placeholder="Contoh: Budi Santoso"
+                            placeholder={regPeran === 'Dosen' ? 'Contoh: Dr. Ir. Budi Santoso, M.T.' : 'Contoh: Sinta Rahmawati'}
                             value={regNama}
                             onChange={(e) => setRegNama(e.target.value)}
                             required
                           />
                         </div>
 
-                        <div className="ochoco-underline-field">
-                          <label htmlFor="reg-email">EMAIL KAMPUS</label>
-                          <input
-                            id="reg-email"
-                            type="email"
-                            placeholder="nama@students.undip.ac.id"
-                            value={regEmail}
-                            onChange={(e) => setRegEmail(e.target.value)}
-                            required
-                          />
+                        <div className="ochoco-field-grid">
+                          <div className="ochoco-underline-field">
+                            <label htmlFor="reg-peran">PERAN AKADEMIK</label>
+                            <select
+                              id="reg-peran"
+                              value={regPeran}
+                              onChange={(e) => setRegPeran(e.target.value)}
+                            >
+                              <option value="Mahasiswa">Mahasiswa</option>
+                              <option value="Dosen">Dosen</option>
+                            </select>
+                          </div>
+
+                          <div className="ochoco-underline-field">
+                            <label htmlFor="reg-fakultas">FAKULTAS / SEKOLAH KAMPUS</label>
+                            <select
+                              id="reg-fakultas"
+                              value={regFakultas}
+                              onChange={(e) => setRegFakultas(e.target.value)}
+                            >
+                              {FAKULTAS_UNDIP.map((f) => (
+                                <option key={f} value={f}>{f}</option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
 
                         <div className="ochoco-field-grid">
                           <div className="ochoco-underline-field">
-                            <label htmlFor="reg-nim">NIM/NIP (OPSIONAL)</label>
+                            <label htmlFor="reg-nim">
+                              {regPeran === 'Dosen' ? 'NIP PEGAWAI DOSEN' : 'NIM MAHASISWA'}
+                            </label>
                             <input
                               id="reg-nim"
                               type="text"
-                              placeholder="240601..."
+                              placeholder={regPeran === 'Dosen' ? 'Contoh: 197405121999031001' : 'Contoh: 24060122140123'}
                               value={regNim}
                               onChange={(e) => setRegNim(e.target.value)}
+                              required
                             />
                           </div>
                           <div className="ochoco-underline-field">
@@ -377,15 +397,15 @@ export default function Hero() {
                         </div>
 
                         <div className="ochoco-underline-field">
-                          <label htmlFor="reg-peran">PERAN AKADEMIK</label>
-                          <select
-                            id="reg-peran"
-                            value={regPeran}
-                            onChange={(e) => setRegPeran(e.target.value)}
-                          >
-                            <option value="Mahasiswa">Mahasiswa</option>
-                            <option value="Dosen">Dosen</option>
-                          </select>
+                          <label htmlFor="reg-email">EMAIL KAMPUS UNDIP</label>
+                          <input
+                            id="reg-email"
+                            type="email"
+                            placeholder={regPeran === 'Dosen' ? 'nama@lecturer.undip.ac.id' : 'nama@students.undip.ac.id'}
+                            value={regEmail}
+                            onChange={(e) => setRegEmail(e.target.value)}
+                            required
+                          />
                         </div>
 
                         <div className="ochoco-underline-field">
