@@ -35,6 +35,7 @@ export default function Footer() {
             <a href="#features">FEATURES</a>
             <Link href="/jadwal">SCHEDULE</Link>
             <Link href="/fasilitas">FACILITIES</Link>
+            <Link href="/panduan">GUIDE</Link>
             <a href="#auth">LOGIN</a>
           </nav>
 

@@ -59,6 +59,9 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
             <Link href="/jadwal" className={pathname.startsWith('/jadwal') ? 'active' : ''}>
               SCHEDULE
             </Link>
+            <Link href="/panduan" className={pathname.startsWith('/panduan') ? 'active' : ''}>
+              GUIDE
+            </Link>
             {currentUser && (
               <Link
                 href={ROLE_HOME[currentUser.role]}
@@ -115,6 +118,7 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
             <Link href="/" onClick={() => setMobileOpen(false)}>HOME</Link>
             <Link href="/fasilitas" onClick={() => setMobileOpen(false)}>FACILITIES</Link>
             <Link href="/jadwal" onClick={() => setMobileOpen(false)}>SCHEDULE</Link>
+            <Link href="/panduan" onClick={() => setMobileOpen(false)}>GUIDE</Link>
             {currentUser ? (
               <>
                 <Link href={ROLE_HOME[currentUser.role]} onClick={() => setMobileOpen(false)}>
@@ -142,6 +146,7 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
         <a href="#floor-plans" className="ochoco-nav-link">FLOOR PLANS</a>
         <Link href="/fasilitas" className="ochoco-nav-link">FACILITIES</Link>
         <Link href="/jadwal" className="ochoco-nav-link">SCHEDULE</Link>
+        <Link href="/panduan" className="ochoco-nav-link">GUIDE</Link>
         <a href="#features" className="ochoco-nav-link">FEATURES</a>
         {currentUser && (
           <Link
@@ -197,6 +202,7 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
           <a href="#floor-plans" onClick={() => setMobileOpen(false)}>FLOOR PLANS</a>
           <Link href="/fasilitas" onClick={() => setMobileOpen(false)}>FACILITIES</Link>
           <Link href="/jadwal" onClick={() => setMobileOpen(false)}>SCHEDULE</Link>
+          <Link href="/panduan" onClick={() => setMobileOpen(false)}>GUIDE</Link>
           <a href="#features" onClick={() => setMobileOpen(false)}>FEATURES</a>
           {currentUser ? (
             <Link href={ROLE_HOME[currentUser.role]} onClick={() => setMobileOpen(false)}>DASHBOARD</Link>

@@ -314,7 +314,7 @@ function AjukanReservasiContent() {
                   onClick={() => applyPreset(4)}
                   style={{ fontSize: 11, padding: '5px 11px', borderRadius: 4, border: '1px solid #D5D0C7', background: '#FAF8F5', cursor: 'pointer', fontWeight: 600 }}
                 >
-                  4 Jam (Setengah Hari)
+                  +4 Jam
                 </button>
                 <button
                   type="button"
