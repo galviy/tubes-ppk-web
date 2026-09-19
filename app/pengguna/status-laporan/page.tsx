@@ -24,44 +24,47 @@ export default function StatusLaporanPage() {
         <p>Status laporan kerusakan yang pernah diajukan.</p>
       </div>
 
-      <div className="panel table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Fasilitas</th>
-              <th>Kategori</th>
-              <th>Deskripsi</th>
-              <th>Status</th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {mine.length === 0 && (
-              <tr>
-                <td colSpan={5} style={{ textAlign: 'center', color: 'var(--ink-soft)' }}>
-                  Belum ada laporan.
-                </td>
-              </tr>
-            )}
-            {mine.map((r) => {
-              const facility = facilityById(r.facilityId);
-              const [cls, label] = STATUS_PILL[r.status];
-              return (
-                <tr key={r.id}>
-                  <td>{facility?.name}</td>
-                  <td>{r.kategori}</td>
-                  <td>{r.deskripsi}</td>
-                  <td><span className={`pill ${cls}`}>{label}</span></td>
-                  <td>
-                    <button className="btn" onClick={() => setDetailFor(r)}>
-                      Detail lengkap
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className="card-list">
+        {mine.length === 0 && (
+          <div className="panel" style={{ textAlign: 'center', color: 'var(--ink-soft)' }}>
+            Belum ada laporan.
+          </div>
+        )}
+        {mine.map((r) => {
+          const facility = facilityById(r.facilityId);
+          const [cls, label] = STATUS_PILL[r.status];
+          return (
+            <div key={r.id} className="item-card">
+              <div className="item-card-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <h3 style={{ fontSize: 17, margin: 0 }}>{facility?.name}</h3>
+                  <span className={`pill ${cls}`}>{label}</span>
+                  <span className="pill" style={{ background: '#f1f3f5', color: 'var(--ink-main)' }}>{r.kategori}</span>
+                </div>
+                <button className="btn ghost" onClick={() => setDetailFor(r)}>
+                  Detail Lengkap
+                </button>
+              </div>
+              <div className="item-card-body" style={{ display: 'flex', gap: 20 }}>
+                {r.foto && (
+                  <div style={{ width: 100, height: 75, borderRadius: 6, background: '#eee', flexShrink: 0, overflow: 'hidden' }}>
+                    <div style={{ width: '100%', height: '100%', background: 'url("https://images.unsplash.com/photo-1616832880699-8541b04005c2?w=200&q=80") center/cover' }} />
+                  </div>
+                )}
+                <div>
+                  <p style={{ margin: '0 0 12px 0', lineHeight: 1.5, color: 'var(--ink-main)' }}>
+                    {r.deskripsi}
+                  </p>
+                  <div className="item-meta-row" style={{ fontSize: 13 }}>
+                    <span className="meta-item">ID: rp{r.id}</span>
+                    <span className="meta-item">·</span>
+                    <span className="meta-item">Diajukan: {r.createdAt ? new Date(r.createdAt).toLocaleDateString('id-ID') : 'Tanggal tidak tersedia'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {detailFor && (

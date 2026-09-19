@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import FacilityFilterBar from '@/components/FacilityFilterBar';
@@ -31,64 +32,85 @@ function FasilitasContent() {
   const visibleList = list.slice(0, visibleCount);
   const detailFacility = facilities.find((f) => f.id === detailId) || null;
 
-  // Reset ke halaman pertama setiap kali filter berubah, supaya hasil baru
-  // selalu mulai dari atas — penting saat daftar fasilitas sudah banyak.
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
   }, [filters.category, filters.lokasi, filters.kapasitas, filters.status]);
 
   return (
-    <>
-      <div style={{ background: 'var(--offwhite)' }}>
-        <Navbar />
+    <div className="ochoco-page-wrapper">
+      <Navbar variant="dashboard" />
+
+      {/* Top Breadcrumb & Back Navigation Bar */}
+      <div className="ochoco-sub-header-bar">
+        <div className="wrap ochoco-sub-header-row">
+          <Link href="/" className="ochoco-back-button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            <span>KEMBALI KE HOME</span>
+          </Link>
+
+          <div className="ochoco-breadcrumb">
+            <span>Home</span>
+            <span>/</span>
+            <span style={{ color: '#b59876' }}>Facilities</span>
+            <span>/</span>
+            <span>Universitas Diponegoro</span>
+          </div>
+        </div>
       </div>
 
-      <section className="pub">
+      <main className="ochoco-main-content">
         <div className="wrap">
-          <div className="section-head">
-            <h2>Fasilitas kampus</h2>
-            <p>Cari berdasarkan tipe fasilitas, tipe gedung, kapasitas, dan status ketersediaan. Klik kartu untuk lihat detail dan ajukan reservasi.</p>
+          <div className="ochoco-page-head">
+            <div className="ochoco-page-eyebrow">FACILITIES • UNIVERSITAS DIPONEGORO</div>
+            <h1 className="ochoco-page-title">
+              CAMPUS <span style={{ color: '#b59876' }}>FACILITIES</span>
+            </h1>
+            <p className="ochoco-page-subtitle">
+              Daftar ruang perkuliahan, aula serbaguna, laboratorium komputer, gelanggang olahraga, dan peralatan
+              akademik Universitas Diponegoro.
+            </p>
           </div>
 
           <FacilityFilterBar filters={filters} onChange={setFilters} />
 
           <div className="facility-count">
             Menampilkan {visibleList.length} dari {list.length} fasilitas
-            {list.length !== facilities.length && ` (total ${facilities.length} fasilitas)`}
+            {list.length !== facilities.length && ` (total ${facilities.length} fasilitas Universitas Diponegoro)`}
           </div>
 
           <div className="facility-layout">
             <CategorySidebar
-              active={filters.category}
-              onSelect={(cat) => setFilters((f) => ({ ...f, category: cat }))}
+              selected={filters.category}
+              onSelect={(category) => setFilters((prev) => ({ ...prev, category }))}
             />
+
             <div>
               <div className="grid">
-                {visibleList.length === 0 ? (
-                  <p style={{ gridColumn: '1/-1', textAlign: 'center', padding: '40px 0' }}>
-                    Tidak ada fasilitas yang cocok.
-                  </p>
-                ) : (
-                  visibleList.map((f) => <FacilityCard key={f.id} facility={f} onOpenDetail={setDetailId} />)
-                )}
+                {visibleList.map((f) => (
+                  <FacilityCard key={f.id} facility={f} onOpenDetail={setDetailId} />
+                ))}
               </div>
 
               {visibleCount < list.length && (
                 <div className="load-more-row">
-                  <button className="btn" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}>
-                    Muat {Math.min(PAGE_SIZE, list.length - visibleCount)} fasilitas lagi
+                  <button className="btn primary" onClick={() => setVisibleCount((v) => v + PAGE_SIZE)}>
+                    Muat lebih banyak ({list.length - visibleCount} tersisa)
                   </button>
                 </div>
               )}
             </div>
           </div>
+
+          {detailFacility && (
+            <FacilityDetailModal facility={detailFacility} onClose={() => setDetailId(null)} />
+          )}
         </div>
-      </section>
+      </main>
 
       <Footer />
-
-      {detailFacility && <FacilityDetailModal facility={detailFacility} onClose={() => setDetailId(null)} />}
-    </>
+    </div>
   );
 }
 

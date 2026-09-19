@@ -7,8 +7,10 @@ export interface Report {
   pelapor: string;
   kategori: string;
   deskripsi: string;
+  foto?: string;
   status: ReportStatus;
   catatan: string;
+  createdAt: string;
 }
 
 export interface PendingAccount {

@@ -45,7 +45,7 @@ interface AppDataValue {
   // Pengguna
   submitReservation: (input: Omit<Reservation, 'id' | 'pemohon' | 'status' | 'createdAt'>) => void;
   cancelReservation: (id: number) => void;
-  submitReport: (input: Omit<Report, 'id' | 'pelapor' | 'status' | 'catatan'>) => void;
+  submitReport: (input: Omit<Report, 'id' | 'pelapor' | 'status' | 'catatan' | 'createdAt'>) => void;
 
   // Petugas
   approveReservation: (id: number) => { ok: boolean; message?: string };
@@ -114,7 +114,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       submitReport: (input) => {
         setReports((prev) => [
           ...prev,
-          { ...input, id: genId(), pelapor: currentUser?.nama ?? 'Pengguna', status: 'baru', catatan: '' },
+          {
+            ...input,
+            id: genId(),
+            pelapor: currentUser?.nama ?? 'Pengguna',
+            status: 'baru',
+            catatan: '',
+            createdAt: new Date().toISOString(),
+          },
         ]);
       },
 

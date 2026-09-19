@@ -24,9 +24,9 @@ export default function AuthSplitLayout({ topRightLabel, eyebrow, title, subtitl
         <div className="asl-overlay">
           <Link href="/" className="asl-brand">
             <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
-              <rect width="30" height="30" rx="9" fill="#fff" fillOpacity="0.12" />
-              <path d="M8 20L15 9L22 20" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M11 20L15 13L19 20" stroke="#8FB4FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <rect width="30" height="30" rx="9" fill="rgba(255,255,255,0.1)" />
+              <path d="M8 20L15 9L22 20" stroke="#C29F7B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M11 20L15 13L19 20" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             SiPinjam
           </Link>
@@ -51,7 +51,13 @@ export default function AuthSplitLayout({ topRightLabel, eyebrow, title, subtitl
 
       <div className="auth-split-right">
         <div className="asr-top">
-          <span>{topRightLabel}</span>
+          <Link href="/" className="btn-back">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            <span>KEMBALI KE HOME</span>
+          </Link>
+          <span className="asr-top-tag">{topRightLabel}</span>
         </div>
         <div className="asr-form-wrap">
           <span className="asr-eyebrow">{eyebrow}</span>

@@ -36,6 +36,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/petugas/dashboard', label: 'Dashboard' },
       { href: '/petugas/reservasi', label: 'Antrian Reservasi' },
       { href: '/petugas/laporan', label: 'Antrian Laporan' },
+      { href: '/petugas/fasilitas', label: 'Status Fasilitas' },
     ],
   },
   {

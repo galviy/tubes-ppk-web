@@ -1,40 +1,92 @@
 'use client';
 
+import { useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { ReservationStatus } from '@/models/reservation';
 
-const STATUS_PILL: Record<ReservationStatus, [string, string]> = {
-  menunggu: ['busy', 'Menunggu'],
-  disetujui: ['avail', 'Disetujui'],
-  ditolak: ['danger', 'Ditolak'],
-  dibatalkan: ['repair', 'Dibatalkan'],
+const STATUS_CONFIG: Record<ReservationStatus, { pillClass: string; label: string }> = {
+  menunggu: { pillClass: 'busy', label: 'Menunggu' },
+  disetujui: { pillClass: 'avail', label: 'Disetujui' },
+  ditolak: { pillClass: 'danger', label: 'Ditolak' },
+  dibatalkan: { pillClass: 'danger', label: 'Dibatalkan' },
 };
 
-export default function AntrianReservasiPage() {
-  const { reservations, facilityById, isSlotTaken, approveReservation, rejectReservation, cancelApprovedReservation } =
-    useAppData();
+export default function PetugasReservasiPage() {
+  const {
+    reservations,
+    facilityById,
+    approveReservation,
+    rejectReservation,
+    cancelApprovedReservation,
+    isSlotTaken,
+  } = useAppData();
 
-  const queue = reservations.filter((r) => r.status === 'menunggu' || r.status === 'disetujui');
+  const [filterStatus, setFilterStatus] = useState<string>('semua');
 
   function handleApprove(id: number) {
     const result = approveReservation(id);
     if (!result.ok) alert(result.message);
   }
 
+  function handleReject(id: number) {
+    const alasan = prompt('Alasan penolakan permohonan reservasi:');
+    if (alasan === null) return;
+    rejectReservation(id);
+  }
+
   function handleCancelApproved(id: number) {
-    const alasan = prompt('Alasan pembatalan mendesak:');
+    const alasan = prompt('Alasan pembatalan mendesak permohonan reservasi:');
     if (alasan === null) return;
     cancelApprovedReservation(id, alasan);
   }
 
+  // Sort: 'menunggu' first, then 'disetujui', then others
+  const sorted = [...reservations].sort((a, b) => {
+    const order: Record<string, number> = { menunggu: 1, disetujui: 2, ditolak: 3, dibatalkan: 4 };
+    return (order[a.status] || 5) - (order[b.status] || 5);
+  });
+
+  const filtered = filterStatus === 'semua' ? sorted : sorted.filter((r) => r.status === filterStatus);
+
   return (
     <div>
-      <div className="content-head">
+      {/* Header Split matching Reference Image 3 */}
+      <div className="dash-split-header">
         <h2>Antrian reservasi</h2>
         <p>Setujui atau tolak permohonan. Sistem menandai bentrok jadwal secara otomatis.</p>
       </div>
 
-      <div className="panel table-scroll">
+      {/* Filter Chips */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+        {[
+          { key: 'semua', label: `Semua (${reservations.length})` },
+          { key: 'menunggu', label: `Menunggu (${reservations.filter((r) => r.status === 'menunggu').length})` },
+          { key: 'disetujui', label: `Disetujui (${reservations.filter((r) => r.status === 'disetujui').length})` },
+          { key: 'ditolak', label: `Ditolak (${reservations.filter((r) => r.status === 'ditolak').length})` },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setFilterStatus(tab.key)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 4,
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+              border: filterStatus === tab.key ? '1px solid #b59876' : '1px solid #E5E0D8',
+              background: filterStatus === tab.key ? '#15171a' : '#FFFFFF',
+              color: filterStatus === tab.key ? '#b59876' : '#6B7280',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Table matching Reference Image 3 */}
+      <div className="panel table-scroll" style={{ padding: 0, overflow: 'hidden' }}>
         <table>
           <thead>
             <tr>
@@ -44,60 +96,110 @@ export default function AntrianReservasiPage() {
               <th>Peserta</th>
               <th>Tujuan</th>
               <th>Status</th>
-              <th>Aksi</th>
+              <th style={{ textAlign: 'right' }}>Aksi</th>
             </tr>
           </thead>
           <tbody>
-            {queue.length === 0 && (
+            {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', color: 'var(--ink-soft)' }}>
-                  Tidak ada antrian.
+                <td colSpan={7} style={{ textAlign: 'center', padding: '36px', color: '#6B7280' }}>
+                  Tidak ada reservasi dalam kategori ini.
                 </td>
               </tr>
+            ) : (
+              filtered.map((r) => {
+                const fac = facilityById(r.facilityId);
+                const conflict = r.status === 'menunggu' && isSlotTaken(r.facilityId, r.start, r.id);
+                const cfg = STATUS_CONFIG[r.status] || { pillClass: 'neutral', label: r.status };
+
+                return (
+                  <tr key={r.id}>
+                    {/* PEMOHON */}
+                    <td style={{ fontWeight: 600, color: '#181D24', whiteSpace: 'nowrap' }}>
+                      {r.pemohon}
+                    </td>
+
+                    {/* FASILITAS */}
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <span style={{ fontWeight: 600, color: '#181D24' }}>{fac?.name || `Fasilitas #${r.facilityId}`}</span>
+                    </td>
+
+                    {/* JADWAL */}
+                    <td style={{ whiteSpace: 'nowrap', fontSize: 13 }}>
+                      <div>{r.tanggal}</div>
+                      <div style={{ color: '#6B7280', fontSize: 12 }}>{r.start}–{r.end}</div>
+                    </td>
+
+                    {/* PESERTA */}
+                    <td style={{ whiteSpace: 'nowrap', fontSize: 13 }}>
+                      {r.peserta ? `${r.peserta} orang` : '—'}
+                    </td>
+
+                    {/* TUJUAN */}
+                    <td style={{ maxWidth: 220, fontSize: 13, color: '#4B5563' }}>
+                      {r.tujuan}
+                    </td>
+
+                    {/* STATUS */}
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <span className={`pill ${cfg.pillClass}`} style={{ fontSize: 11 }}>
+                        {cfg.label}
+                      </span>
+                    </td>
+
+                    {/* AKSI */}
+                    <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
+                      <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                        {r.status === 'menunggu' && (
+                          <>
+                            <button
+                              type="button"
+                              className="btn-act-outline-green"
+                              disabled={conflict}
+                              onClick={() => handleApprove(r.id)}
+                              title={conflict ? 'Slot waktu bentrok dengan reservasi lain' : 'Setujui permohonan'}
+                            >
+                              Setujui
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-act-outline-red"
+                              onClick={() => handleReject(r.id)}
+                            >
+                              Tolak
+                            </button>
+                            {conflict && (
+                              <span style={{ color: '#dc2626', fontSize: 11, fontWeight: 600, marginLeft: 4 }}>
+                                Bentrok
+                              </span>
+                            )}
+                          </>
+                        )}
+
+                        {r.status === 'disetujui' && (
+                          <button
+                            type="button"
+                            className="btn-act-outline-red"
+                            onClick={() => handleCancelApproved(r.id)}
+                            title="Batalkan reservasi yang telah disetujui (mendesak)"
+                          >
+                            Batalkan (mendesak)
+                          </button>
+                        )}
+
+                        {r.status === 'ditolak' && (
+                          <span style={{ color: '#9CA3AF', fontSize: 12 }}>—</span>
+                        )}
+
+                        {r.status === 'dibatalkan' && (
+                          <span style={{ color: '#9CA3AF', fontSize: 12 }}>—</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
-            {queue.map((r) => {
-              const facility = facilityById(r.facilityId);
-              const [cls, label] = STATUS_PILL[r.status];
-              const conflict = r.status === 'menunggu' && isSlotTaken(r.facilityId, r.start, r.id);
-              const overCap = !!facility && !!r.peserta && r.peserta > facility.cap;
-              return (
-                <tr key={r.id}>
-                  <td>{r.pemohon}</td>
-                  <td>{facility?.name}</td>
-                  <td>{r.tanggal}, {r.start}–{r.end}</td>
-                  <td>
-                    {r.peserta ? `${r.peserta} orang` : '—'}
-                    {overCap && <div style={{ fontSize: 11, color: '#c2740a', fontWeight: 600 }}>Melebihi kapasitas</div>}
-                  </td>
-                  <td>{r.tujuan}</td>
-                  <td>
-                    <span className={`pill ${cls}`}>{label}</span>
-                    {conflict && (
-                      <>
-                        <br />
-                        <span className="pill danger" style={{ marginTop: 4 }}>Bentrok jadwal</span>
-                      </>
-                    )}
-                  </td>
-                  <td className="btn-row">
-                    {r.status === 'menunggu' ? (
-                      <>
-                        <button className="btn ghost-avail" disabled={conflict} onClick={() => handleApprove(r.id)}>
-                          Setujui
-                        </button>
-                        <button className="btn ghost-danger" onClick={() => rejectReservation(r.id)}>
-                          Tolak
-                        </button>
-                      </>
-                    ) : (
-                      <button className="btn ghost-danger" onClick={() => handleCancelApproved(r.id)}>
-                        Batalkan (mendesak)
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
           </tbody>
         </table>
       </div>

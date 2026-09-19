@@ -8,7 +8,7 @@ import { Facility } from './facility';
 export const FACILITIES: Facility[] = [
   {
     id: 'aula',
-    name: 'Aula Terpadu',
+    name: 'Aula Utama',
     type: 'Aula',
     loc: 'Gedung A',
     cap: 300,
@@ -82,8 +82,8 @@ export const SEED_RESERVATIONS: Reservation[] = [
 ];
 
 export const SEED_REPORTS: Report[] = [
-  { id: 201, facilityId: 'proj', pelapor: 'Sinta (Staf)', kategori: 'Kelistrikan', deskripsi: 'Lampu proyektor redup, kemungkinan mendekati akhir usia pakai.', status: 'diproses', catatan: '' },
-  { id: 202, facilityId: 'futsal', pelapor: 'Andi (Mahasiswa)', kategori: 'Lainnya', deskripsi: 'Gawang sedikit goyang di sisi timur lapangan.', status: 'baru', catatan: '' },
+  { id: 201, facilityId: 'proj', pelapor: 'Sinta (Staf)', kategori: 'Kelistrikan', deskripsi: 'Lampu proyektor redup, kemungkinan mendekati akhir usia pakai.', foto: 'IMG_4021.jpg', status: 'diproses', catatan: '', createdAt: '2026-09-17T08:30:00.000Z' },
+  { id: 202, facilityId: 'futsal', pelapor: 'Andi (Mahasiswa)', kategori: 'Lainnya', deskripsi: 'Gawang sedikit goyang di sisi timur lapangan.', status: 'baru', catatan: '', createdAt: '2026-09-18T10:15:00.000Z' },
 ];
 
 export const SEED_PENDING_ACCOUNTS: PendingAccount[] = [

@@ -23,10 +23,13 @@ export default function PenggunaHomePage() {
     <div>
       <div className="greeting-band">
         <div>
-          <h2>Halo, {currentUser?.nama?.split(' (')[0]}</h2>
-          <p>Ringkasan aktivitas reservasi dan laporan kerusakan kamu.</p>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#b59876', textTransform: 'uppercase', marginBottom: 4 }}>
+            PORTAL MAHASISWA &amp; DOSEN • UNIVERSITAS DIPONEGORO
+          </div>
+          <h2>SELAMAT DATANG, {currentUser?.nama?.split(' (')[0].toUpperCase()}</h2>
+          <p>Ringkasan aktivitas reservasi dan pelaporan fasilitas kampus Universitas Diponegoro.</p>
         </div>
-        <span className="role-chip">Akun Pengguna</span>
+        <span className="role-chip">AKUN PENGGUNA</span>
       </div>
 
       <div className="summary-row">

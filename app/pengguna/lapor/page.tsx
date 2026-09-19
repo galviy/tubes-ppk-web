@@ -28,7 +28,7 @@ function LaporKerusakanContent() {
       alert('Isi deskripsi kerusakan.');
       return;
     }
-    submitReport({ facilityId, kategori, deskripsi: deskripsi.trim() });
+    submitReport({ facilityId, kategori, deskripsi: deskripsi.trim(), foto: fileName || undefined });
     setDeskripsi('');
     setKategori('');
     setFileName('');
@@ -38,8 +38,8 @@ function LaporKerusakanContent() {
   return (
     <div>
       <div className="content-head">
-        <h2>Laporkan kerusakan</h2>
-        <p>Isi form di bawah untuk melaporkan kerusakan atau masalah fasilitas.</p>
+        <h2>LAPORKAN KERUSAKAN FASILITAS</h2>
+        <p>Isi formulir di bawah dengan bukti foto/video untuk mempercepat tindak lanjut perbaikan sarpras Universitas Diponegoro.</p>
       </div>
 
       <div className="panel">

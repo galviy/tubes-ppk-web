@@ -18,10 +18,13 @@ export default function AdminHomePage() {
     <div>
       <div className="greeting-band">
         <div>
-          <h2>Halo, {currentUser?.nama?.split(' (')[0]}</h2>
-          <p>Rekap ringkas lintas fasilitas, reservasi, dan laporan.</p>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#b59876', textTransform: 'uppercase', marginBottom: 4 }}>
+            PORTAL ADMINISTRATOR SARPRAS • UNIVERSITAS DIPONEGORO
+          </div>
+          <h2>SELAMAT DATANG, {currentUser?.nama?.split(' (')[0].toUpperCase() || 'ADMINISTRATOR'}</h2>
+          <p>Rekap ringkas tata kelola fasilitas, antrean reservasi, dan pelaporan Universitas Diponegoro.</p>
         </div>
-        <span className="role-chip">Akun Admin</span>
+        <span className="role-chip">AKUN ADMIN</span>
       </div>
 
       <div className="summary-row">
