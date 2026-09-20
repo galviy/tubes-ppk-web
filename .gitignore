@@ -1,4 +1,5 @@
 .env
 backend/uploads/
-backened/cookies.txt
+backend/cookies.txt
 backend/tmp/
+example.env
