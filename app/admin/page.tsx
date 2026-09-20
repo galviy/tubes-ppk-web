@@ -54,7 +54,7 @@ export default function AdminHomePage() {
     <div>
       <div className="greeting-band">
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#b59876', textTransform: 'uppercase', marginBottom: 4 }}>
+          <div className="greeting-eyebrow">
             PORTAL ADMINISTRATOR SARPRAS • UNIVERSITAS DIPONEGORO
           </div>
           <h2>SELAMAT DATANG, {currentUser?.nama?.split(' (')[0].toUpperCase() || 'ADMINISTRATOR'}</h2>

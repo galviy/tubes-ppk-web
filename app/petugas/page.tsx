@@ -44,6 +44,9 @@ export default function PetugasRingkasanPage() {
       {/* Top Greeting Banner */}
       <div className="greeting-band">
         <div>
+          <div className="greeting-eyebrow">
+            PORTAL PETUGAS OPERASIONAL • UNIVERSITAS DIPONEGORO
+          </div>
           <h2>Halo, {displayName}</h2>
           <p>Ringkasan antrian yang perlu kamu tindak lanjuti hari ini.</p>
         </div>
@@ -98,8 +101,8 @@ export default function PetugasRingkasanPage() {
       </div>
 
       {/* Quick Menu Section */}
-      <div style={{ marginTop: 8, marginBottom: 18 }}>
-        <h3 style={{ fontSize: 18, fontWeight: 600, color: '#181D24', margin: '0 0 16px 0' }}>Menu cepat</h3>
+      <div style={{ marginTop: 12, marginBottom: 18 }}>
+        <h3 style={{ fontSize: 20, fontWeight: 600, color: '#181D24', margin: '0 0 16px 0' }}>Menu cepat</h3>
       </div>
 
       <div className="menu-card-grid">

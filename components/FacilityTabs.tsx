@@ -401,14 +401,13 @@ export default function FacilityTabs() {
   }, [currentType, facilities]);
 
   return (
-    <section className="ochoco-fp-section" id="floor-plans">
+    <section className="ochoco-fp-section" id="facilities">
+      <span id="floor-plans" style={{ position: 'relative', top: '-80px', visibility: 'hidden' }} />
       <div className="ochoco-fp-container">
         {/* Header Row: Title left, dynamic space tabs right */}
         <div className="ochoco-fp-header">
           <h2 className="ochoco-fp-title">
-            <span style={{ color: '#b59876' }}>FLOOR</span>
-            <br />
-            PLANS
+            <span style={{ color: '#b59876' }}>FACILITIES</span>
           </h2>
 
           <ul className="ochoco-fp-tabs-list" role="tablist">

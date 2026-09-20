@@ -23,7 +23,7 @@ export default function PenggunaHomePage() {
     <div>
       <div className="greeting-band">
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#b59876', textTransform: 'uppercase', marginBottom: 4 }}>
+          <div className="greeting-eyebrow">
             PORTAL MAHASISWA &amp; DOSEN • UNIVERSITAS DIPONEGORO
           </div>
           <h2>SELAMAT DATANG, {currentUser?.nama?.split(' (')[0].toUpperCase()}</h2>
@@ -45,8 +45,8 @@ export default function PenggunaHomePage() {
         sebelum jam mulai.
       </div>
 
-      <div className="content-head" style={{ marginTop: 8 }}>
-        <h2 style={{ fontSize: 17 }}>Menu cepat</h2>
+      <div className="content-head" style={{ marginTop: 12 }}>
+        <h2 style={{ fontSize: 20 }}>Menu cepat</h2>
       </div>
       <div className="menu-card-grid">
         <Link href="/pengguna/reservasi" className="menu-card">

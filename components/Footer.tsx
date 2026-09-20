@@ -30,13 +30,11 @@ export default function Footer() {
 
           {/* Center: Navigation Links */}
           <nav className="ochoco-footer-nav">
-            <a href="#home">HOME</a>
-            <a href="#floor-plans">FLOOR PLANS</a>
-            <a href="#features">FEATURES</a>
-            <Link href="/jadwal">SCHEDULE</Link>
+            <Link href="/">HOME</Link>
             <Link href="/fasilitas">FACILITIES</Link>
+            <Link href="/jadwal">SCHEDULE</Link>
             <Link href="/panduan">GUIDE</Link>
-            <a href="#auth">LOGIN</a>
+            <Link href="/#auth">LOGIN</Link>
           </nav>
 
           {/* Right: Accessibility & Campus Badges */}
