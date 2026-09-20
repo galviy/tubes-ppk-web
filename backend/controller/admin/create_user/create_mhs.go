@@ -86,5 +86,5 @@ func Create_MHS(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseJSONMessage(w, "Internal server error", http.StatusInternalServerError, false)
 		return
 	}
-	utils.ResponseJSONMessage(w, "Successfully created account with username ("+username+"), you can login when your account is verified!", 200, true)
+	utils.ResponseJSONMessage(w, "Successfully created account with username ("+username+")!", 200, true)
 }
