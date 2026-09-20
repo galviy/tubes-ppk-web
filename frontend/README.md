@@ -1,6 +1,6 @@
 # SiPinjam — Sistem Reservasi & Pelaporan Fasilitas Kampus Universitas Diponegoro
 
-Sistem informasi berbasis web modern untuk pengelolaan izin reservasi dan pelaporan kendala sarana prasarana akademik di lingkungan Universitas Diponegoro. Dibangun menggunakan Next.js (App Router), TypeScript, dan Vanilla CSS dengan design system elegan bertema arsitektural kampus (*The Reserve at Ochoco*).
+Sistem informasi berbasis web modern untuk pengelolaan izin reservasi dan pelaporan kendala sarana prasarana akademik di lingkungan Universitas Diponegoro. Dibangun menggunakan **Next.js 16** (App Router, **Webpack** — lihat catatan bundler di bawah), **React 19**, TypeScript, dan Vanilla CSS dengan design system elegan bertema arsitektural kampus (*The Reserve at Ochoco*).
 
 ---
 
@@ -12,6 +12,14 @@ npm run dev      # Jalankan development server di http://localhost:3000
 npm run build    # Produksi static export (folder out/)
 npx serve out    # Pratinjau hasil build statis lokal
 ```
+
+> **Catatan bundler:** Next.js 16 defaultnya pakai Turbopack, tapi project ini
+> sengaja dikunci ke **Webpack** (flag `--webpack` di script `dev` & `build`)
+> karena Turbopack di versi ini punya bug hydration yang cukup terdokumentasi
+> (event/tombol bisa tidak merespons walau build sukses). Kalau suatu saat mau
+> coba Turbopack lagi, hapus flag `--webpack` di `package.json` — tapi **wajib**
+> tes klik semua tombol utama langsung di browser dulu, jangan cuma andalkan
+> `npm run build` yang sukses.
 
 ---
 
