@@ -48,7 +48,11 @@ export default function StatusLaporanPage() {
               <div className="item-card-body" style={{ display: 'flex', gap: 20 }}>
                 {r.foto && (
                   <div style={{ width: 100, height: 75, borderRadius: 6, background: '#eee', flexShrink: 0, overflow: 'hidden' }}>
-                    <div style={{ width: '100%', height: '100%', background: 'url("https://images.unsplash.com/photo-1616832880699-8541b04005c2?w=200&q=80") center/cover' }} />
+                    <img
+                      src={r.foto.startsWith('data:') || r.foto.startsWith('http') ? r.foto : 'https://images.unsplash.com/photo-1616832880699-8541b04005c2?w=200&q=80'}
+                      alt="Foto Bukti"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
                   </div>
                 )}
                 <div>

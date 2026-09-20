@@ -286,7 +286,6 @@ export default function KelolaFasilitasPage() {
           <div className="fgroup full">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <label style={{ margin: 0 }}>Foto Fasilitas / Gambar Denah Ruangan</label>
-              <span style={{ fontSize: 11, color: '#6B7280' }}>Tampil di Katalog & Floor Plans Beranda</span>
             </div>
             <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
               {/* Preview Thumbnail */}

@@ -66,6 +66,21 @@ export default function ReportDetailModal({ report, facility, onClose }: ReportD
           <div><span>Status</span><b>{label}</b></div>
         </div>
 
+        {report.foto && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#6B7280', marginBottom: 6 }}>
+              BUKTI FOTO KERUSAKAN
+            </div>
+            <div style={{ width: '100%', maxHeight: 200, borderRadius: 6, overflow: 'hidden', border: '1px solid #D5D0C7', background: '#15171a' }}>
+              <img
+                src={report.foto.startsWith('data:') || report.foto.startsWith('http') ? report.foto : 'https://images.unsplash.com/photo-1616832880699-8541b04005c2?w=600&q=80'}
+                alt="Foto Bukti Kerusakan"
+                style={{ width: '100%', height: '100%', maxHeight: 200, objectFit: 'contain', display: 'block' }}
+              />
+            </div>
+          </div>
+        )}
+
         <div className="alert info" style={{ marginTop: 18, marginBottom: 0 }}>
           {contextualNote(report.status, report.catatan)}
         </div>
