@@ -11,10 +11,15 @@ export type UserRole = 'pengguna' | 'petugas' | 'admin';
 export interface FakeUserRecord {
   id: string;
   email: string;
+  username?: string;
   password: string; // teks biasa — HANYA untuk demo, jangan pernah begini di backend asli
   nama: string;
   role: UserRole;
   nip?: string;
+  nim?: string;
+  nidn?: string;
+  angkatan?: number | string;
+  prodi?: string;
   phone?: string;
   unit?: string;
   jabatan?: string;

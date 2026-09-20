@@ -128,7 +128,7 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           >
             {facilities.map((f) => (
               <option key={f.id} value={f.id}>
-                {f.name} ({f.loc}) • {f.status === 'repair' ? 'Perbaikan' : 'Tersedia'}
+                {f.name} ({f.loc}) • {f.status === 'repair' ? 'Perbaikan' : f.status === 'nonaktif' ? 'Nonaktif' : 'Tersedia'}
               </option>
             ))}
           </select>
@@ -143,7 +143,7 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
             className={`sched-fac-tab${f.id === activeFacilityId ? ' active' : ''}`}
             onClick={() => onSelectFacility(f.id)}
           >
-            <span className={`fac-dot ${f.status === 'repair' ? 'repair' : 'avail'}`} />
+            <span className={`fac-dot ${f.status === 'repair' || f.status === 'nonaktif' ? 'repair' : 'avail'}`} />
             {f.name}
           </button>
         ))}

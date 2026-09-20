@@ -5,7 +5,12 @@ import { useSearchParams } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
 
-const KATEGORI_OPTIONS = ['Kelistrikan', 'Pendingin ruangan (AC)', 'Furnitur', 'Perangkat keras', 'Kebersihan', 'Lainnya'];
+const KATEGORI_OPTIONS = [
+  { value: 'AC/Pendingin', label: 'AC / Pendingin Ruangan' },
+  { value: 'Elektronik', label: 'Elektronik (Audio Visual, Proyektor, Kelistrikan)' },
+  { value: 'Kebersihan', label: 'Kebersihan & Sanitasi' },
+  { value: 'Lainnya', label: 'Lainnya (Furnitur, Pintu, Bangunan, Fasilitas Lain)' },
+];
 
 function LaporKerusakanContent() {
   const searchParams = useSearchParams();
@@ -32,11 +37,11 @@ function LaporKerusakanContent() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 20 * 1024 * 1024) {
+    if (file.size > 2 * 1024 * 1024) {
       setModalConfig({
         isOpen: true,
         title: 'Ukuran File Terlalu Besar',
-        subtitle: 'Batas ukuran file foto/video adalah 20MB. Silakan gunakan file yang lebih ringkas.',
+        subtitle: 'Batas ukuran file bukti kerusakan adalah 2MB sesuai standar sistem backend. Silakan gunakan foto yang lebih ringkas.',
         confirmText: 'Mengerti',
         confirmVariant: 'warning',
         showInput: false,
@@ -129,9 +134,11 @@ function LaporKerusakanContent() {
           <div className="fgroup full">
             <label>Kategori kerusakan</label>
             <select value={kategori} onChange={(e) => setKategori(e.target.value)}>
-              <option value="">— Pilih kategori —</option>
+              <option value="">— Pilih kategori kerusakan —</option>
               {KATEGORI_OPTIONS.map((k) => (
-                <option key={k}>{k}</option>
+                <option key={k.value} value={k.value}>
+                  {k.label}
+                </option>
               ))}
             </select>
           </div>
@@ -150,7 +157,7 @@ function LaporKerusakanContent() {
               <label style={{ margin: 0 }}>
                 Foto / Video Bukti <span className="opt">(opsional)</span>
               </label>
-              <span style={{ fontSize: 11, color: '#6B7280' }}>Format JPG, PNG, GIF, MP4 (Maks. 20MB)</span>
+              <span style={{ fontSize: 11, color: '#6B7280' }}>Format JPG, PNG (Maks. 2MB)</span>
             </div>
 
             <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>

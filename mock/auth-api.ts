@@ -24,9 +24,12 @@ function delay<T>(value: T, ms = 300): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
 }
 
-export async function login(email: string, password: string): Promise<AuthResult> {
+export async function login(identifier: string, password: string): Promise<AuthResult> {
+  const cleanId = identifier.trim().toLowerCase();
   const match = FAKE_USERS_DB.find(
-    (u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.password === password
+    (u) =>
+      (u.email.toLowerCase() === cleanId || (u.username && u.username.toLowerCase() === cleanId)) &&
+      u.password === password
   );
 
   if (!match) {
@@ -38,11 +41,17 @@ export async function login(email: string, password: string): Promise<AuthResult
 }
 
 export interface SelfRegisterInput {
+  username?: string;
   nama: string;
   email: string;
+  password?: string;
   nim?: string;
+  nidn?: string;
+  nip?: string;
+  angkatan?: number | string;
+  prodi?: string;
   phone?: string;
-  peran: string; // "Mahasiswa" | "Dosen" — ditampilkan apa adanya, bukan role sistem
+  peran: string; // "Mahasiswa" | "Dosen" | "Staf"
   fakultas?: string;
 }
 

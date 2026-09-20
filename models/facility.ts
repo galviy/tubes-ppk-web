@@ -5,7 +5,7 @@
 
 export type FacilityType = string;
 
-export type FacilityStatus = 'avail' | 'busy' | 'repair';
+export type FacilityStatus = 'avail' | 'busy' | 'repair' | 'nonaktif';
 
 export interface Facility {
   id: string;

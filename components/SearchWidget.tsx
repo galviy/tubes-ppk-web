@@ -50,6 +50,7 @@ export default function SearchWidget({ filters, onChange, onSearch }: SearchWidg
             <option>Semua Status</option>
             <option>Tersedia</option>
             <option>Perbaikan</option>
+            <option>Nonaktif</option>
           </select>
         </div>
       </div>

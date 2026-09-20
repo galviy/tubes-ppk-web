@@ -33,23 +33,43 @@ export default function PetugasFasilitasPage() {
                 <td style={{ color: '#4B5563', fontSize: 13 }}>{f.loc}</td>
                 <td style={{ color: '#4B5563', fontSize: 13 }}>{f.cap ? `${f.cap} orang` : '—'}</td>
                 <td>
-                  <span className={`pill ${f.status === 'repair' ? 'busy' : 'avail'}`} style={{ fontSize: 11 }}>
-                    {f.status === 'repair' ? 'Perbaikan' : 'Aktif'}
+                  <span
+                    className={`pill ${
+                      f.status === 'repair' ? 'busy' : f.status === 'nonaktif' ? 'danger' : 'avail'
+                    }`}
+                    style={{ fontSize: 11 }}
+                  >
+                    {f.status === 'repair'
+                      ? 'Perbaikan'
+                      : f.status === 'nonaktif'
+                      ? 'Nonaktif'
+                      : 'Aktif'}
                   </span>
                 </td>
                 <td style={{ textAlign: 'left', whiteSpace: 'nowrap' }}>
                   <select
                     className="table-select-action"
-                    value={f.status === 'repair' ? 'repair' : 'avail'}
-                    onChange={(e) => setFacilityStatus(f.id, e.target.value as 'avail' | 'repair')}
+                    value={f.status}
+                    onChange={(e) => setFacilityStatus(f.id, e.target.value as any)}
                     style={{
-                      borderColor: f.status === 'repair' ? '#FCD34D' : '#86EFAC',
-                      color: f.status === 'repair' ? '#92400E' : '#166534',
+                      borderColor:
+                        f.status === 'repair'
+                          ? '#FCD34D'
+                          : f.status === 'nonaktif'
+                          ? '#FECACA'
+                          : '#86EFAC',
+                      color:
+                        f.status === 'repair'
+                          ? '#92400E'
+                          : f.status === 'nonaktif'
+                          ? '#DC2626'
+                          : '#166534',
                       fontWeight: 600,
                     }}
                   >
                     <option value="avail">Aktif</option>
                     <option value="repair">Perbaikan</option>
+                    <option value="nonaktif">Nonaktif</option>
                   </select>
                 </td>
               </tr>

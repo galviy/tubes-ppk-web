@@ -17,7 +17,12 @@ export interface PendingAccount {
   id: number;
   nama: string;
   email: string;
+  username?: string;
   nim?: string;
+  nidn?: string;
+  nip?: string;
+  angkatan?: number | string;
+  prodi?: string;
   phone?: string;
   peran: string;
   fakultas?: string;

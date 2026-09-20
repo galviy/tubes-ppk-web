@@ -120,7 +120,7 @@ export const SEED_RESERVATIONS: Reservation[] = [
 ];
 
 export const SEED_REPORTS: Report[] = [
-  { id: 201, facilityId: 'proj3', pelapor: 'Dr. Sinta (Dosen)', kategori: 'Kelistrikan', deskripsi: 'Lampu proyektor redup, kemungkinan mendekati akhir usia pakai.', foto: 'IMG_4021.jpg', status: 'diproses', catatan: '', createdAt: '2026-09-17T08:30:00.000Z' },
+  { id: 201, facilityId: 'proj3', pelapor: 'Dr. Sinta (Dosen)', kategori: 'Elektronik', deskripsi: 'Lampu proyektor redup, kemungkinan mendekati akhir usia pakai.', foto: 'IMG_4021.jpg', status: 'diproses', catatan: '', createdAt: '2026-09-17T08:30:00.000Z' },
   { id: 202, facilityId: 'futsal', pelapor: 'Andi (Mahasiswa)', kategori: 'Lainnya', deskripsi: 'Gawang sedikit goyang di sisi timur lapangan.', status: 'baru', catatan: '', createdAt: '2026-09-18T10:15:00.000Z' },
 ];
 
@@ -128,8 +128,11 @@ export const SEED_PENDING_ACCOUNTS: PendingAccount[] = [
   {
     id: 301,
     nama: 'Putri Ayu',
+    username: 'putriayu',
     email: 'putri@students.undip.ac.id',
     nim: '24060122140055',
+    angkatan: 2022,
+    prodi: 'Informatika',
     phone: '081234567891',
     peran: 'Mahasiswa',
     fakultas: 'Fakultas Sains dan Matematika (FSM)',
@@ -137,9 +140,22 @@ export const SEED_PENDING_ACCOUNTS: PendingAccount[] = [
   },
   {
     id: 302,
+    nama: 'Dr. Hendra Saputra, M.T.',
+    username: 'hendra_dosen',
+    email: 'hendra@lecturer.undip.ac.id',
+    nidn: '0012058001',
+    prodi: 'Informatika',
+    phone: '081298765432',
+    peran: 'Dosen',
+    fakultas: 'Fakultas Teknik (FT)',
+    status: 'menunggu',
+  },
+  {
+    id: 303,
     nama: 'Bambang Irawan, S.E.',
+    username: 'bambang1987',
     email: 'bambang@staff.undip.ac.id',
-    nim: '198705142012051002',
+    nip: '198705142012051002',
     phone: '081390123456',
     peran: 'Staf',
     fakultas: 'Fakultas Teknik (FT)',

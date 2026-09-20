@@ -60,6 +60,7 @@ export default function FacilityFilterBar({ filters, onChange }: FacilityFilterB
           <option>Semua Status</option>
           <option>Tersedia</option>
           <option>Perbaikan</option>
+          <option>Nonaktif</option>
         </select>
       </div>
     </div>

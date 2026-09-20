@@ -4,6 +4,7 @@ const statusBadge: Record<Facility['status'], { cls: string; label: string }> = 
   avail: { cls: 'avail', label: 'Tersedia' },
   busy: { cls: 'busy', label: 'Digunakan' },
   repair: { cls: 'repair', label: 'Perbaikan' },
+  nonaktif: { cls: 'repair', label: 'Nonaktif' },
 };
 
 interface FacilityCardProps {

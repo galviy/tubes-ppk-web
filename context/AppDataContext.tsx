@@ -11,7 +11,7 @@ import {
   SEED_PENDING_ACCOUNTS,
 } from '@/models/facilities-data';
 import { isSlotBooked, hasRangeConflict } from '@/lib/slots';
-import { login as apiLogin, registerSelf as apiRegisterSelf, AuthResult } from '@/mock/auth-api';
+import { login as apiLogin, registerSelf as apiRegisterSelf, AuthResult, SelfRegisterInput } from '@/mock/auth-api';
 import { UserRole, FakeUserRecord, FAKE_USERS_DB } from '@/mock/fake-users-db';
 
 let nextId = 1000;
@@ -23,8 +23,13 @@ function genId() {
 export interface DirectRegisterInput {
   nama: string;
   email: string;
-  peran: string; // 'Petugas' | 'Admin' | 'Dosen' | 'Mahasiswa'
+  peran: string; // 'Petugas' | 'Admin' | 'Dosen' | 'Mahasiswa' | 'Staf'
+  username?: string;
+  nim?: string;
+  nidn?: string;
   nip?: string;
+  angkatan?: number | string;
+  prodi?: string;
   phone?: string;
   unit?: string;
   password?: string;
@@ -51,9 +56,23 @@ interface AppDataValue {
   login: (email: string, password: string) => Promise<AuthResult>;
   logout: () => void;
   submitSelfRegistration: (
-    nama: string,
-    email: string,
-    peran: string,
+    namaOrInput:
+      | string
+      | {
+          nama: string;
+          email: string;
+          peran: string;
+          username?: string;
+          nim?: string;
+          nidn?: string;
+          nip?: string;
+          angkatan?: number | string;
+          prodi?: string;
+          phone?: string;
+          fakultas?: string;
+        },
+    email?: string,
+    peran?: string,
     nim?: string,
     phone?: string,
     fakultas?: string
@@ -111,19 +130,42 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         return result;
       },
       logout: () => setCurrentUser(null),
-      submitSelfRegistration: async (nama, email, peran, nim, phone, fakultas) => {
-        const result = await apiRegisterSelf({ nama, email, peran, nim, phone, fakultas });
+      submitSelfRegistration: async (namaOrInput, email, peran, nim, phone, fakultas) => {
+        let input: SelfRegisterInput;
+        if (typeof namaOrInput === 'object') {
+          input = namaOrInput;
+        } else {
+          input = {
+            nama: namaOrInput,
+            email: email || '',
+            peran: peran || 'Mahasiswa',
+            nim,
+            phone,
+            fakultas,
+          };
+        }
+        const result = await apiRegisterSelf(input);
         if (result.ok) {
           setPendingAccounts((prev) => [
             ...prev,
             {
               id: genId(),
-              nama,
-              email,
-              peran,
-              nim,
-              phone,
-              fakultas: fakultas || (peran === 'Dosen' ? 'Fakultas Teknik (FT)' : 'Fakultas Sains dan Matematika (FSM)'),
+              nama: input.nama,
+              email: input.email,
+              username: input.username,
+              peran: input.peran,
+              nim: input.nim || input.nidn || input.nip,
+              nidn: input.nidn,
+              nip: input.nip,
+              angkatan: input.angkatan,
+              prodi: input.prodi,
+              phone: input.phone,
+              fakultas:
+                input.fakultas ||
+                input.prodi ||
+                (input.peran === 'Dosen'
+                  ? 'Fakultas Teknik (FT)'
+                  : 'Fakultas Sains dan Matematika (FSM)'),
               status: 'menunggu',
             },
           ]);
@@ -224,12 +266,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         const newAcc: FakeUserRecord = {
           id: `u-${role}-${genId()}`,
           email: input.email.trim(),
+          username: input.username?.trim(),
           password: input.password || 'Sipinjam2026!',
           nama: input.nama.trim(),
           role,
-          nip: input.nip?.trim() || '-',
+          nip: input.nip?.trim() || input.nim?.trim() || input.nidn?.trim() || '-',
+          nim: input.nim?.trim(),
+          nidn: input.nidn?.trim(),
+          angkatan: input.angkatan,
+          prodi: input.prodi?.trim(),
           phone: input.phone?.trim() || '-',
-          unit: input.unit?.trim() || 'Universitas Diponegoro',
+          unit: input.unit?.trim() || (input.prodi ? `Prodi ${input.prodi}` : 'Universitas Diponegoro'),
           jabatan: input.peran,
           status: 'aktif',
           createdAt: new Date().toISOString().split('T')[0],
@@ -256,12 +303,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
                 const newAcc: FakeUserRecord = {
                   id: `u-pengguna-${genId()}`,
                   email: a.email,
+                  username: a.username,
                   password: 'mhs12345',
                   nama: a.nama,
                   role: 'pengguna',
-                  nip: a.nim || '-',
+                  nip: a.nim || a.nidn || a.nip || '-',
+                  nim: a.nim,
+                  nidn: a.nidn,
+                  angkatan: a.angkatan,
+                  prodi: a.prodi,
                   phone: a.phone || '-',
-                  unit: a.fakultas || (a.peran === 'Dosen' ? 'Fakultas Teknik (FT)' : 'Fakultas Sains dan Matematika (FSM)'),
+                  unit: a.fakultas || (a.prodi ? `Prodi ${a.prodi}` : a.peran === 'Dosen' ? 'Fakultas Teknik (FT)' : 'Fakultas Sains dan Matematika (FSM)'),
                   jabatan: a.peran,
                   status: 'aktif',
                   createdAt: new Date().toISOString().split('T')[0],

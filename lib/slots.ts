@@ -75,7 +75,7 @@ export function getSlotState(
   slotStart: string,
   reservations: Reservation[]
 ): SlotState {
-  if (facility.status === 'repair') return 'maint';
+  if (facility.status === 'repair' || facility.status === 'nonaktif') return 'maint';
   if (isSlotBooked(reservations, facility.id, slotStart)) return 'booked';
   return slotStart < currentHHMM() ? 'passed' : 'avail';
 }

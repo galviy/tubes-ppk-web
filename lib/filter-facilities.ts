@@ -41,6 +41,7 @@ export function filterFacilities(list: Facility[], filters: FacilityFilters): Fa
 
     if (filters.status === 'Tersedia' && f.status !== 'avail') return false;
     if (filters.status === 'Perbaikan' && f.status !== 'repair') return false;
+    if (filters.status === 'Nonaktif' && f.status !== 'nonaktif') return false;
 
     return true;
   });

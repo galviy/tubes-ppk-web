@@ -9,6 +9,7 @@ const statusBadge: Record<Facility['status'], { cls: string; label: string }> = 
   avail: { cls: 'avail', label: 'Tersedia' },
   busy: { cls: 'busy', label: 'Digunakan' },
   repair: { cls: 'repair', label: 'Perbaikan' },
+  nonaktif: { cls: 'repair', label: 'Nonaktif' },
 };
 
 interface FacilityDetailModalProps {
@@ -64,7 +65,7 @@ export default function FacilityDetailModal({ facility, onClose }: FacilityDetai
           </Link>
           <button
             className="btn primary"
-            disabled={facility.status === 'repair'}
+            disabled={facility.status === 'repair' || facility.status === 'nonaktif'}
             onClick={() => goOrLogin(`/pengguna/reservasi?facility=${facility.id}`)}
           >
             Ajukan reservasi

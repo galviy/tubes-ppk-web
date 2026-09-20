@@ -506,8 +506,16 @@ export default function KelolaFasilitasPage() {
                 <td>{f.loc}</td>
                 <td>{f.cap} orang</td>
                 <td>
-                  <span className={`pill ${f.status === 'repair' ? 'repair' : 'avail'}`}>
-                    {f.status === 'repair' ? 'Perbaikan' : 'Aktif'}
+                  <span
+                    className={`pill ${
+                      f.status === 'repair' ? 'busy' : f.status === 'nonaktif' ? 'danger' : 'avail'
+                    }`}
+                  >
+                    {f.status === 'repair'
+                      ? 'Perbaikan'
+                      : f.status === 'nonaktif'
+                      ? 'Nonaktif'
+                      : 'Aktif'}
                   </span>
                 </td>
                 <td style={{ whiteSpace: 'nowrap', textAlign: 'left' }}>
@@ -515,15 +523,26 @@ export default function KelolaFasilitasPage() {
                     <select
                       className="table-select-action"
                       value={f.status}
-                      onChange={(e) => setFacilityStatus(f.id, e.target.value as 'avail' | 'repair')}
+                      onChange={(e) => setFacilityStatus(f.id, e.target.value as any)}
                       style={{
-                        borderColor: f.status === 'repair' ? '#FCD34D' : '#86EFAC',
-                        color: f.status === 'repair' ? '#92400E' : '#166534',
+                        borderColor:
+                          f.status === 'repair'
+                            ? '#FCD34D'
+                            : f.status === 'nonaktif'
+                            ? '#FECACA'
+                            : '#86EFAC',
+                        color:
+                          f.status === 'repair'
+                            ? '#92400E'
+                            : f.status === 'nonaktif'
+                            ? '#DC2626'
+                            : '#166534',
                         fontWeight: 600,
                       }}
                     >
                       <option value="avail">Aktif</option>
                       <option value="repair">Perbaikan</option>
+                      <option value="nonaktif">Nonaktif</option>
                     </select>
 
                     <button
