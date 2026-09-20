@@ -22,3 +22,5 @@ yarn-error.log*
 
 # typescript cache
 *.tsbuildinfo
+AGENTS.md
+CLAUDE.md
