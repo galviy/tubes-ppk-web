@@ -55,8 +55,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 ? `Akun ${currentUser.role} tidak memiliki izin untuk membuka bagian ini.`
                 : 'Halaman portal dashboard hanya bisa dibuka setelah masuk ke akun.'}
             </p>
-            <Link className="btn primary" href="/#auth" style={{ display: 'inline-block', marginTop: 16 }}>
-              Menuju Form Masuk
+            <Link className="btn primary" href="/login" style={{ display: 'inline-block', marginTop: 16 }}>
+              Menuju Halaman Login
             </Link>
           </div>
         </div>

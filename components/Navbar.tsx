@@ -83,6 +83,23 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
 
           {currentUser ? (
             <div className="ochoco-user-bar">
+              <Link
+                href={ROLE_HOME[currentUser.role] || '/'}
+                className="ochoco-btn-dashboard"
+                style={{
+                  padding: '4px 10px',
+                  fontSize: 10.5,
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  borderRadius: 4,
+                  background: 'rgba(181, 152, 118, 0.2)',
+                  border: '1px solid rgba(181, 152, 118, 0.5)',
+                  color: '#b59876',
+                  textDecoration: 'none',
+                }}
+              >
+                DASHBOARD
+              </Link>
               <span className="ochoco-role-chip">{currentUser.role}</span>
               <span className="ochoco-user-name">{currentUser.nama}</span>
               <button
@@ -94,9 +111,12 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
               </button>
             </div>
           ) : (
-            <a href="#auth" className="ochoco-auth-link">
+            <Link
+              href="/login"
+              className="ochoco-auth-link"
+            >
               LOGIN
-            </a>
+            </Link>
           )}
 
           {/* Mobile menu trigger */}
@@ -128,7 +148,12 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
                 </button>
               </>
             ) : (
-              <a href="#auth" onClick={() => setMobileOpen(false)}>LOGIN</a>
+              <Link
+                href="/login"
+                onClick={() => setMobileOpen(false)}
+              >
+                LOGIN
+              </Link>
             )}
           </div>
         )}
@@ -180,8 +205,25 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
 
           {currentUser ? (
             <div className="ochoco-user-bar">
+              <Link
+                href={ROLE_HOME[currentUser.role] || '/'}
+                className="ochoco-btn-dashboard"
+                style={{
+                  padding: '4px 10px',
+                  fontSize: 10.5,
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  borderRadius: 4,
+                  background: 'rgba(181, 152, 118, 0.2)',
+                  border: '1px solid rgba(181, 152, 118, 0.5)',
+                  color: '#b59876',
+                  textDecoration: 'none',
+                }}
+              >
+                DASHBOARD
+              </Link>
               <span className="ochoco-role-chip">{currentUser.role}</span>
-              <span className="ochoco-user-name">{currentUser.nama}</span>
+              <span className="ochoco-user-name" style={{ color: '#FFFFFF' }}>{currentUser.nama}</span>
               <button
                 type="button"
                 className="ochoco-btn-logout"
@@ -191,7 +233,10 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
               </button>
             </div>
           ) : (
-            <Link href="/#auth" className="ochoco-btn-login-dark">
+            <Link
+              href="/login"
+              className="ochoco-btn-login-dark"
+            >
               LOGIN
             </Link>
           )}
@@ -226,7 +271,12 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
               </button>
             </>
           ) : (
-            <Link href="/#auth" onClick={() => setMobileOpen(false)}>LOGIN</Link>
+            <Link
+              href="/login"
+              onClick={() => setMobileOpen(false)}
+            >
+              LOGIN
+            </Link>
           )}
         </div>
       )}

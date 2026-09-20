@@ -3094,3 +3094,248 @@ button.slot-lg:disabled {
   border-color: #b59876;
   box-shadow: 0 0 0 2px rgba(181, 152, 118, 0.2);
 }
+
+/* ================= Ochoco Standalone Auth Page (/login) ================= */
+.ochoco-auth-page {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #1a1e24;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.ochoco-auth-header {
+  position: relative;
+  z-index: 30;
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 24px 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.ochoco-auth-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #b59876;
+  text-decoration: none;
+  background: rgba(181, 152, 118, 0.1);
+  border: 1px solid rgba(181, 152, 118, 0.3);
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+.ochoco-auth-back:hover {
+  background: rgba(181, 152, 118, 0.2);
+  color: #FFFFFF;
+  border-color: #b59876;
+}
+
+.ochoco-auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.ochoco-auth-container {
+  position: relative;
+  z-index: 20;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 24px 60px;
+}
+
+.ochoco-auth-standalone-card {
+  width: 580px;
+  max-width: 95vw;
+  max-height: none;
+  border-radius: 14px;
+  padding: 44px 48px 48px;
+  margin: auto;
+  box-shadow: 0 32px 70px -12px rgba(0, 0, 0, 0.6);
+}
+
+.ochoco-auth-standalone-card .ochoco-underline-field input,
+.ochoco-auth-standalone-card .ochoco-underline-field select {
+  padding: 8px 0 9px;
+  font-size: 14.5px;
+}
+
+.ochoco-auth-standalone-card .ochoco-underline-field label {
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  margin-bottom: 5px;
+}
+
+.ochoco-auth-standalone-card .ochoco-demo-row {
+  padding: 9px 12px;
+  font-size: 13px;
+}
+
+/* ================= Hero Actions & Showcase Styling ================= */
+.ochoco-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 30px;
+}
+
+.ochoco-hero-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 26px;
+  background: #b59876;
+  color: #15171A;
+  font-family: var(--font);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  box-shadow: 0 8px 24px rgba(181, 152, 118, 0.28);
+}
+.ochoco-hero-primary-btn:hover {
+  background: #c5a987;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(181, 152, 118, 0.4);
+}
+
+.ochoco-hero-secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #FFFFFF;
+  font-family: var(--font);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-radius: 6px;
+  text-decoration: none;
+  backdrop-filter: blur(8px);
+  transition: all 0.25s ease;
+}
+.ochoco-hero-secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: #b59876;
+  color: #b59876;
+  transform: translateY(-2px);
+}
+
+.ochoco-hero-ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  font-family: var(--font);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+.ochoco-hero-ghost-btn:hover {
+  color: #FFFFFF;
+}
+
+.ochoco-hero-showcase {
+  max-width: 440px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 50px;
+}
+
+.ochoco-showcase-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: rgba(21, 23, 26, 0.65);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 3px solid #b59876;
+  border-radius: 8px;
+  color: #FFFFFF;
+  transition: all 0.25s ease;
+}
+.ochoco-showcase-card:hover {
+  background: rgba(21, 23, 26, 0.82);
+  border-color: rgba(181, 152, 118, 0.4);
+  transform: translateX(4px);
+}
+.ochoco-showcase-icon {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(181, 152, 118, 0.12);
+  border: 1px solid rgba(181, 152, 118, 0.3);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.ochoco-showcase-title {
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #FFFFFF;
+  letter-spacing: 0.02em;
+}
+.ochoco-showcase-desc {
+  font-family: var(--font);
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.68);
+  margin-top: 3px;
+  line-height: 1.45;
+}
+
+.ochoco-showcase-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: rgba(181, 152, 118, 0.15);
+  border: 1px dashed rgba(181, 152, 118, 0.6);
+  border-radius: 8px;
+  color: #b59876;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+.ochoco-showcase-cta:hover {
+  background: rgba(181, 152, 118, 0.28);
+  color: #FFFFFF;
+  border-style: solid;
+  transform: translateY(-2px);
+}

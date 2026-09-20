@@ -18,8 +18,8 @@ const STEPS = [
     title: 'Ajukan Formulir Reservasi',
     tag: 'Autentikasi Akun',
     desc: 'Masuk dengan akun civitas akademika Undip Anda. Tentukan tanggal, jam mulai, jam selesai, estimasi jumlah peserta, serta tujuan kegiatan. Sistem otomatis memvalidasi potensi bentrok jadwal dan batas kapasitas ruangan.',
-    link: '/#auth',
-    linkText: 'Buka Form Masuk →',
+    link: '/login',
+    linkText: 'Buka Portal Masuk (Tab Baru) →',
   },
   {
     num: '03',
