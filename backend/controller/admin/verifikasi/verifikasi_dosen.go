@@ -3,6 +3,8 @@ package verifikasi
 import (
 	"backend-ppk/repositories"
 	utils "backend-ppk/utilities"
+	"database/sql"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -24,20 +26,19 @@ func Verifikasi_dosen(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseJSONMessage(w, "You have to input a integer boskuh!", http.StatusBadRequest, false)
 		return
 	}
-	cek_exist, err := repositories.IsNidnExist(id_dosen_convert)
-	if err != nil {
-		utils.ResponseJSONMessage(w, "You need id_dosen to peform this action!", http.StatusForbidden, false)
-		return
-	}
-	if cek_exist {
-		utils.ResponseJSONMessage(w, "nidn tersebut sudah pernah terverifikasi!", http.StatusForbidden, false)
-		return
-	}
 	err_verif := repositories.Verif_Dosen(id_dosen_convert)
 	if err_verif != nil {
-		log.Printf("Error verifying student: %v", err_verif)
+		log.Printf("Error verifying dosen: %v", err_verif)
+		if errors.Is(err_verif, sql.ErrNoRows) {
+			utils.ResponseJSONMessage(w, "Data dosen pending dengan id tersebut tidak ditemukan!", http.StatusNotFound, false)
+			return
+		}
+		if utils.IsDuplicateEntry(err_verif) {
+			utils.ResponseJSONMessage(w, "nidn tersebut sudah pernah terverifikasi!", http.StatusConflict, false)
+			return
+		}
 		utils.ResponseJSONMessage(w, "Internal server error!", http.StatusInternalServerError, false)
 		return
 	}
-	utils.ResponseJSONMessage(w, "Berhasil melakukan verifikasi user "+id_dosen, http.StatusOK, false)
+	utils.ResponseJSONMessage(w, "Berhasil melakukan verifikasi user dosen "+id_dosen, http.StatusOK, true)
 }

@@ -60,10 +60,15 @@ func Create_staff(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseJSONMessage(w, "Internal server error", http.StatusInternalServerError, false)
 		return
 	}
-	//CreateSTAFF(username string, email string, password string, tipeUser string, nip string, namaLengkap string)
-	errCreate := repositories.CreateSTAFF(username, email, passwordHash, "Staff", nip, nama_lengap)
+	//CreateSTAFFLangsung dipakai agar staff buatan admin langsung aktif
+	//(isVerified = 1), konsisten dengan CreateMHSLangsung/CreateDosenLangsung.
+	errCreate := repositories.CreateSTAFFLangsung(username, email, passwordHash, "Staff", nip, nama_lengap)
 	if errCreate != nil {
 		log.Printf("Gagal membuat user: %v", errCreate)
+		if utils.IsDuplicateEntry(errCreate) {
+			utils.ResponseJSONMessage(w, "Username, email, atau nip sudah terdaftar di database kita!", http.StatusConflict, false)
+			return
+		}
 		utils.ResponseJSONMessage(w, "Internal server error", http.StatusInternalServerError, false)
 		return
 	}

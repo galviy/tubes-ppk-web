@@ -150,11 +150,13 @@ Content-Type: application/json
 ```
 
 ```json
-HTTP/1.1 500 Internal Server Error
+HTTP/1.1 400 Bad Request
 Content-Type: application/json
 
 {"message":"Sudah ada mahasiswa dengan nim (1921221) terdaftar di database kita!","success":false}
 ```
+
+> Duplikat nim dari pre-check `IsMhsExist` dibalas `400` (register mhs & admin create mhs). Race duplikat yang lolos pre-check (MySQL 1062) dibalas `409 {"message":"Username, email, atau nim sudah terdaftar di database kita!"}`. Berlaku sama untuk dosen (`nidn`) dan staff (`nip`).
 
 #### - POST   /auth/create_account/dosen
 
@@ -200,7 +202,76 @@ Content-Type: application/json
 HTTP/1.1 400 Bad Request
 Content-Type: application/json
 
-{"message":"NIDN must be exactly 10 characters","success":false}
+{"message":"Sudah ada mahasiswa dengan nim (1921221) terdaftar di database kita!","success":false}
+```
+
+```json
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+
+{"message":"Username, email, atau nim sudah terdaftar di database kita!","success":false}
+```
+
+> `409` untuk race duplikat yang lolos pre-check (MySQL 1062).
+
+```json
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+
+{"message":"Username atau email sudah exist sebelumnya!","success":false}
+```
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"Sudah ada Dosen dengan nidn (1234567890) terdaftar di database kita!","success":false}
+```
+
+```json
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+
+{"message":"Username, email, atau nidn sudah terdaftar di database kita!","success":false}
+```
+
+#### - POST   /auth/create_account/staff
+
+Registrasi staff mandiri. Masuk ke `user` (`isVerified=0`, `user_role=3`, `tipe_user=Staff`) + tabel `staff` (satu tabel untuk pending & terverifikasi, dibedakan via `user.isVerified`). Tanpa auth. Route terdaftar di `routes/router.go`.
+
+```curl
+curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
+-X POST http://127.0.0.1:8080/auth/create_account/staff \
+-H "Content-Type: application/x-www-form-urlencoded" \
+-d "username=staff01&email=staff01@gmail.com&password=Test@123&nip=198001012345&nama_lengkap=Staff+Satu"
+```
+
+Field form:
+
+| Field | Wajib | Validasi |
+|---|---|---|
+| `username` | ya | 5-100 char |
+| `email` | ya | format email standar |
+| `password` | ya | `IsPasswordValid` (min 5 char, 1 huruf besar, 1 simbol) |
+| `nip` | ya | dicek via `IsStaffExist` di tabel `staff.nip` |
+| `nama_lengkap` | ya | 3-100 char |
+
+Response sukses
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Successfully created account with username (staff01), you can login when your account is verified!","success":true}
+```
+
+Response gagal
+
+```json
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+
+{"message":"Missing field!","success":false}
 ```
 
 ```json
@@ -211,11 +282,20 @@ Content-Type: application/json
 ```
 
 ```json
-HTTP/1.1 500 Internal Server Error
+HTTP/1.1 400 Bad Request
 Content-Type: application/json
 
-{"message":"Sudah ada Dosen dengan nidn (1234567890) terdaftar di database kita!","success":false}
+{"message":"Sudah ada staff dengan nip (198001012345) terdaftar di database kita!","success":false}
 ```
+
+```json
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+
+{"message":"Username, email, atau nip sudah terdaftar di database kita!","success":false}
+```
+
+> `409` di atas untuk race duplikat yang lolos pre-check (MySQL error 1062). `500 Internal server error` murni hanya untuk kegagalan DB/hash di luar itu.
 
 #### - POST   /auth/login
 
@@ -512,9 +592,67 @@ Content-Type: application/json
 
 Response gagal: 400 limit, 401 unauthorized, 500 `Failed to get users`.
 
+#### - GET /admin/show_staff_pending?limit=10
+
+List staff yang belum diverifikasi (`staff` join `user` dengan `u.isVerified = 0`). Auth: admin. Business logic baru: staff sekarang sama seperti mhs/dosen (pending dulu, `isVerified=0`, `user_role=3`), tidak lagi langsung aktif.
+
+```curl
+curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
+-X GET "http://127.0.0.1:8080/admin/show_staff_pending?limit=10" \
+-H "Cookie: session_id=ADMIN_SESSION_ID"
+```
+
+Response sukses
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"data":[{"email":"staff01@gmail.com","id":1,"nama_lengkap":"Staff Satu","nip":"198001012345"}],"success":true}
+```
+
+Field tiap item: `id` (`staff.id`, bukan `user.id`), `nip`, `nama_lengkap`, `email`.
+
+Response gagal
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"Limit must be a positive number","success":false}
+```
+
+```json
+HTTP/1.1 500 Internal Server Error
+Content-Type: application/json
+
+{"message":"Failed to get users","success":false}
+```
+
+#### - GET /admin/show_staff?limit=10
+
+List staff terverifikasi (`staff` join `user` dengan `u.isVerified = 1`). Auth: admin.
+
+```curl
+curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
+-X GET "http://127.0.0.1:8080/admin/show_staff?limit=10" \
+-H "Cookie: session_id=ADMIN_SESSION_ID"
+```
+
+Response sukses
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"data":[{"email":"staff01@gmail.com","id":1,"nama_lengkap":"Staff Satu","nip":"198001012345"}],"success":true}
+```
+
+Response gagal: 400 limit, 401 unauthorized, 500 `Failed to get users`.
+
 #### - POST /admin/verifikasi_mhs
 
-Verifikasi satu mahasiswa pending: `UPDATE user SET isVerified=1`, pindah `mahasiswa_pending -> mahasiswa`, hapus pending. Auth: admin. Form: `id_mhs` (id di `mahasiswa_pending`, bukan nim).
+Verifikasi satu mahasiswa pending: `UPDATE user SET isVerified=1`, pindah `mahasiswa_pending -> mahasiswa`, hapus pending. Auth: admin. Form: `id_mhs` (id di `mahasiswa_pending`, bukan nim). `id` yang tidak ada dibalas `404` (bukan `500`), duplikat `nim` dibalas `409`.
 
 ```curl
 curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
@@ -524,13 +662,13 @@ curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
 -d "id_mhs=1"
 ```
 
-Response sukses (perhatikan `success:false` apa adanya dari code):
+Response sukses:
 
 ```json
 HTTP/1.1 200 OK
 Content-Type: application/json
 
-{"message":"Berhasil melakukan verifikasi user 1","success":false}
+{"message":"Berhasil melakukan verifikasi user mahasiswa 1","success":true}
 ```
 
 Response gagal
@@ -539,8 +677,17 @@ Response gagal
 HTTP/1.1 400 Bad Request
 Content-Type: application/json
 
-{"message":"You need id_mhs to peform this action!","success":false}
+{"message":"Sudah ada Dosen dengan nidn (1234567890) terdaftar di database kita!","success":false}
 ```
+
+```json
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+
+{"message":"Username, email, atau nidn sudah terdaftar di database kita!","success":false}
+```
+
+> `409` untuk race duplikat yang lolos pre-check (MySQL 1062).
 
 ```json
 HTTP/1.1 400 Bad Request
@@ -550,7 +697,14 @@ Content-Type: application/json
 ```
 
 ```json
-HTTP/1.1 403 Forbidden
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+
+{"message":"Data mahasiswa pending dengan id tersebut tidak ditemukan!","success":false}
+```
+
+```json
+HTTP/1.1 409 Conflict
 Content-Type: application/json
 
 {"message":"Nim tersebut sudah pernah terverifikasi!","success":false}
@@ -565,7 +719,7 @@ Content-Type: application/json
 
 #### - POST /admin/verifikasi_dosen
 
-Verifikasi satu dosen pending: `UPDATE user SET isVerified=1`, pindah `dosen_pending -> dosen`. Auth: admin. Form: `id_dosen` (id di `dosen_pending`).
+Verifikasi satu dosen pending: `UPDATE user SET isVerified=1`, pindah `dosen_pending -> dosen`. Auth: admin. Form: `id_dosen` (id di `dosen_pending`). `id` yang tidak ada dibalas `404` (bukan `500`), duplikat `nidn` dibalas `409`.
 
 ```curl
 curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
@@ -581,7 +735,7 @@ Response sukses
 HTTP/1.1 200 OK
 Content-Type: application/json
 
-{"message":"Berhasil melakukan verifikasi user 1","success":false}
+{"message":"Berhasil melakukan verifikasi user dosen 1","success":true}
 ```
 
 Response gagal
@@ -594,10 +748,89 @@ Content-Type: application/json
 ```
 
 ```json
-HTTP/1.1 403 Forbidden
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"You have to input a integer boskuh!","success":false}
+```
+
+```json
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+
+{"message":"Data dosen pending dengan id tersebut tidak ditemukan!","success":false}
+```
+
+```json
+HTTP/1.1 409 Conflict
 Content-Type: application/json
 
 {"message":"nidn tersebut sudah pernah terverifikasi!","success":false}
+```
+
+```json
+HTTP/1.1 500 Internal Server Error
+Content-Type: application/json
+
+{"message":"Internal server error!","success":false}
+```
+
+#### - POST /admin/verifikasi_staff
+
+Verifikasi satu staff: `UPDATE user SET isVerified = 1` berdasarkan `id` di tabel `staff` (tidak ada pindah tabel karena `staff` satu tabel untuk pending & aktif, dibedakan via `user.isVerified`). Auth: admin. Form: `id_staff` (id di tabel `staff`, sama seperti yang dikembalikan `GET /admin/show_staff_pending`). `id` yang tidak ada dibalas `404`, staff yang sudah terverifikasi dibalas `409`.
+
+```curl
+curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
+-X POST http://127.0.0.1:8080/admin/verifikasi_staff \
+-H "Content-Type: application/x-www-form-urlencoded" \
+-H "Cookie: session_id=ADMIN_SESSION_ID" \
+-d "id_staff=1"
+```
+
+Response sukses:
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Berhasil melakukan verifikasi user staff 1","success":true}
+```
+
+Response gagal
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"You need id_staff to peform this action!","success":false}
+```
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"You have to input a integer boskuh!","success":false}
+```
+
+```json
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+
+{"message":"Data staff dengan id tersebut tidak ditemukan!","success":false}
+```
+
+```json
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+
+{"message":"Staff tersebut sudah pernah terverifikasi!","success":false}
+```
+
+```json
+HTTP/1.1 500 Internal Server Error
+Content-Type: application/json
+
+{"message":"Internal server error!","success":false}
 ```
 
 #### - POST /admin/create_user/mhs
@@ -673,7 +906,7 @@ Content-Type: application/json
 
 #### - POST /admin/create_user/staff
 
-Admin membuat staff langsung terverifikasi (`user_tipe=Staff`, `user_role=3`, `isVerified=1` + tabel `staff`). Auth: admin.
+Admin membuat staff yang langsung aktif (`user_tipe=Staff`, `user_role=3`, `isVerified=1` + tabel `staff`, via `repositories.CreateSTAFFLangsung`). Auth: admin. Berbeda dengan registrasi mandiri (`POST /auth/create_account/staff`) yang menghasilkan akun pending (`isVerified=0`).
 
 ```curl
 curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
@@ -702,6 +935,86 @@ Content-Type: application/json
 
 {"message":"Sudah ada staff dengan nip (198001012345) terdaftar di database kita!","success":false}
 ```
+
+```json
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+
+{"message":"Username, email, atau nip sudah terdaftar di database kita!","success":false}
+```
+
+> `409` untuk race duplikat yang lolos pre-check (MySQL 1062).
+
+#### - POST /admin/create_user/petugas
+
+Admin membuat akun petugas (`user_role=2`, `isVerified=1`, `tipe_user=Petugas` via `repositories.CreatePetugas`). Auth: admin. Pastikan baris `Petugas` ada di tabel `user_tipe`; jika tidak, `INSERT` gagal menjadi `500`.
+
+```curl
+curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
+-X POST http://127.0.0.1:8080/admin/create_user/petugas \
+-H "Content-Type: application/x-www-form-urlencoded" \
+-H "Cookie: session_id=ADMIN_SESSION_ID" \
+-d "username=petugas01&email=petugas01@gmail.com&password=Test@123"
+```
+
+Field: `username` (min 5), `email`, `password` (`IsPasswordValid`). Semua wajib.
+
+Response sukses
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Successfully created account with username (petugas01)!","success":true}
+```
+
+Response gagal
+
+```json
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+
+{"message":"Missing field!","success":false}
+```
+
+```json
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+
+{"message":"Username atau email sudah exist sebelumnya!","success":false}
+```
+
+```json
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+
+{"message":"Username atau email sudah terdaftar di database kita!","success":false}
+```
+
+#### - POST /admin/create_user/admin
+
+Admin membuat akun admin (`user_role=1`, `isVerified=1`, `tipe_user=Admin`). Auth: admin. Pastikan baris `Admin` ada di tabel `user_tipe`; jika tidak, `INSERT` gagal menjadi `500`.
+
+```curl
+curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
+-X POST http://127.0.0.1:8080/admin/create_user/admin \
+-H "Content-Type: application/x-www-form-urlencoded" \
+-H "Cookie: session_id=ADMIN_SESSION_ID" \
+-d "username=admin02&email=admin02@gmail.com&password=Test@123"
+```
+
+Field: `username` (min 5), `email`, `password` (`IsPasswordValid`). Semua wajib.
+
+Response sukses
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Successfully created account with username (admin02)!","success":true}
+```
+
+Response gagal: `401 Missing field!`, `401 Username atau email sudah exist sebelumnya!`, `409 Username atau email sudah terdaftar di database kita!` (race duplikat), `500 Internal server error`.
 
 #### - POST /admin/create_fasilitas/kategori
 
@@ -855,17 +1168,17 @@ GET    /facilities/:id
 GET    /facilities/:id/availability
 POST   /facilities
 PATCH  /facilities/:id
-PATCH  /facilities/:id/status
+PATCH  /petugas/facilities/:id/status
 
-> Dari daftar di atas, yang sudah terimplementasi di backend hanya `PATCH /facilities/{id}/status`. Sisanya stub.
+> Dari daftar di atas, yang sudah terimplementasi di backend hanya `PATCH /petugas/facilities/{id}/status` (di-rename dari `PATCH /facilities/{id}/status` di `routes/router.go`). Path lama `/facilities/{id}/status` sekarang `404`. Sisanya stub.
 
-#### - PATCH /facilities/{id}/status
+#### - PATCH /petugas/facilities/{id}/status
 
 Update status ruangan/alat. Auth: login + role `petugas (2)` / `admin (1)`. `Content-Type: application/json`.
 
 ```curl
 curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
--X PATCH http://127.0.0.1:8080/facilities/1/status \
+-X PATCH http://127.0.0.1:8080/petugas/facilities/1/status \
 -H "Content-Type: application/json" \
 -H "Cookie: session_id=PETUGAS_SESSION_ID" \
 -d '{"status":"dalam_perbaikan","tipe":"ruangan"}'
@@ -1112,13 +1425,15 @@ Content-Type: application/json
 {"message":"Laporan tidak ditemukan","success":false}
 ```
 
-#### - GET /officer/reports
+#### - GET /petugas/reports
+
+> Di-rename dari `GET /officer/reports` di `routes/router.go` (handler pindah `controller/report` -> `controller/petugas`, tanpa perubahan logic). Path lama `/officer/reports` sekarang `404`.
 
 List semua laporan. Auth: login + role `petugas (2)` / `admin (1)`.
 
 ```curl
 curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
--X GET http://127.0.0.1:8080/officer/reports \
+-X GET http://127.0.0.1:8080/petugas/reports \
 -H "Cookie: session_id=PETUGAS_SESSION_ID"
 ```
 
@@ -1133,13 +1448,15 @@ Content-Type: application/json
 
 Response gagal: `401 Unauthorized` (belum login), `403 Forbidden` (role pengguna).
 
-#### - GET /officer/reports/{id}
+#### - GET /petugas/reports/{id}
+
+> Di-rename dari `GET /officer/reports/{id}`. Path lama sekarang `404`.
 
 Detail satu laporan untuk petugas (tanpa filter user). Auth: `petugas` / `admin`.
 
 ```curl
 curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
--X GET http://127.0.0.1:8080/officer/reports/1 \
+-X GET http://127.0.0.1:8080/petugas/reports/1 \
 -H "Cookie: session_id=PETUGAS_SESSION_ID"
 ```
 
@@ -1168,7 +1485,9 @@ Content-Type: application/json
 {"message":"Laporan tidak ditemukan","success":false}
 ```
 
-#### - PATCH /reports/{id}
+#### - PATCH /petugas/reports/{id}
+
+> Di-rename dari `PATCH /reports/{id}`. Path lama sekarang `404`.
 
 Update status laporan oleh petugas. Auth: login + role `petugas` / `admin`. `Content-Type: application/json`.
 
@@ -1176,7 +1495,7 @@ Transisi yang diizinkan: `baru -> diproses|selesai|ditolak`, `diproses -> selesa
 
 ```curl
 curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
--X PATCH http://127.0.0.1:8080/reports/1 \
+-X PATCH http://127.0.0.1:8080/petugas/reports/1 \
 -H "Content-Type: application/json" \
 -H "Cookie: session_id=PETUGAS_SESSION_ID" \
 -d '{"status":"diproses","catatan_resolusi":""}'
@@ -1186,7 +1505,7 @@ Contoh menutup laporan:
 
 ```curl
 curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
--X PATCH http://127.0.0.1:8080/reports/1 \
+-X PATCH http://127.0.0.1:8080/petugas/reports/1 \
 -H "Content-Type: application/json" \
 -H "Cookie: session_id=PETUGAS_SESSION_ID" \
 -d '{"status":"selesai","catatan_resolusi":"AC sudah diperbaiki"}'

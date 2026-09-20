@@ -1,9 +1,12 @@
 package utils
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 	"unicode"
+
+	"github.com/go-sql-driver/mysql"
 )
 
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,4}$`)
@@ -44,4 +47,15 @@ func IsPasswordValid(p string) bool {
 	}
 
 	return adaHurufBesar && adaSimbol
+}
+
+// IsDuplicateEntry melaporkan true jika err adalah MySQL
+// Duplicate entry (error 1062), mis. race duplikat username/email/nim
+// yang lolos dari pre-check IsUserExist/IsMhsExist/dll.
+func IsDuplicateEntry(err error) bool {
+	var mysqlErr *mysql.MySQLError
+	if errors.As(err, &mysqlErr) {
+		return mysqlErr.Number == 1062
+	}
+	return false
 }

@@ -4,6 +4,7 @@ import (
 	"backend-ppk/config"
 	utils "backend-ppk/utilities"
 	"database/sql"
+	"errors"
 	"log"
 )
 
@@ -261,6 +262,79 @@ func CreateMHSLangsung(username string, email string, password string, tipeUser 
 	return nil
 }
 
+func CreatePetugas(username string, email string, password string, tipeUser string) error {
+
+	tx, err := config.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Kalau ada error sebelum Commit(),
+	// semua perubahan di transaction dibatalkan.
+	defer tx.Rollback()
+
+	_, err = tx.Exec(`
+		INSERT INTO user (
+			username,
+			email,
+			password,
+			user_role,
+			isVerified,
+			tipe_user
+		)
+		VALUES (?, ?, ?, 2, 1, (
+			SELECT id
+			FROM user_tipe
+			WHERE tipe = ?
+		))
+	`, username, email, password, tipeUser)
+
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func CreateAdmin(username string, email string, password string, tipeUser string) error {
+
+	tx, err := config.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Kalau ada error sebelum Commit(),
+	// semua perubahan di transaction dibatalkan.
+	defer tx.Rollback()
+
+	_, err = tx.Exec(`
+		INSERT INTO user (
+			username,
+			email,
+			password,
+			user_role,
+			isVerified,
+			tipe_user
+		)
+		VALUES (?, ?, ?, 1, 1, (
+			SELECT id
+			FROM user_tipe
+			WHERE tipe = ?
+		))
+	`, username, email, password, tipeUser)
+
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
 func CreateSTAFF(username string, email string, password string, tipeUser string, nip string, namaLengkap string) error {
 
 	tx, err := config.DB.Begin()
@@ -281,7 +355,7 @@ func CreateSTAFF(username string, email string, password string, tipeUser string
 			isVerified,
 			tipe_user
 		)
-		VALUES (?, ?, ?, 3, 1, (
+		VALUES (?, ?, ?, 3, 0, (
 			SELECT id
 			FROM user_tipe
 			WHERE tipe = ?
@@ -721,6 +795,97 @@ func GetMhsPending(limit int) ([]tampung_mhs_pending, error) {
 	return users, nil
 }
 
+type tampung_staff_pending struct {
+	ID           int
+	Nip          string
+	Nama_lengkap string
+	Email        string
+}
+
+func GetStaff(limit int) ([]tampung_staff_pending, error) {
+
+	rows, err := config.Query(`
+		select s.id,s.nip, s.nama_lengkap,u.email
+		from user u 
+		join staff s on u.id = s.user_staff 
+		where u.isVerified = 1 
+		order by s.id,u.username
+		limit ?
+	`, limit)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []tampung_staff_pending
+
+	for rows.Next() {
+		var user tampung_staff_pending
+
+		err := rows.Scan(
+			&user.ID,
+			&user.Nip,
+			&user.Nama_lengkap,
+			&user.Email,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func GetStaffPending(limit int) ([]tampung_staff_pending, error) {
+
+	rows, err := config.Query(`
+		select s.id,s.nip, s.nama_lengkap,u.email
+		from user u 
+		join staff s on u.id = s.user_staff 
+		where u.isVerified = 0 
+		order by s.id,u.username
+		limit ?
+	`, limit)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []tampung_staff_pending
+
+	for rows.Next() {
+		var user tampung_staff_pending
+
+		err := rows.Scan(
+			&user.ID,
+			&user.Nip,
+			&user.Nama_lengkap,
+			&user.Email,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
 type tampung struct {
 	ID       int
 	Username string
@@ -879,6 +1044,118 @@ func IsNimExist(pendingID int) (bool, error) {
 	return true, nil
 }
 
+// ErrAlreadyVerified dikembalikan saat admin mencoba memverifikasi
+// user yang sudah isVerified = 1.
+var ErrAlreadyVerified = errors.New("user already verified")
+
+// Verifikasi_Staff memverifikasi staff berdasarkan id di tabel staff
+// (bukan user.id). Mengembalikan sql.ErrNoRows jika id staff tidak ada,
+// dan ErrAlreadyVerified jika staff sudah terverifikasi.
+func Verifikasi_Staff(staffID int) error {
+	tx, err := config.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+
+	var userID int
+	var isVerified int
+	err = tx.QueryRow(`
+		SELECT s.user_staff, u.isVerified
+		FROM staff s
+		JOIN user u ON u.id = s.user_staff
+		WHERE s.id = ?
+		FOR UPDATE
+	`, staffID).Scan(&userID, &isVerified)
+
+	if err != nil {
+		return err
+	}
+
+	if isVerified == 1 {
+		return ErrAlreadyVerified
+	}
+
+	res, err := tx.Exec(`
+		UPDATE user
+		SET isVerified = 1
+		WHERE id = ?
+	`, userID)
+
+	if err != nil {
+		return err
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return sql.ErrNoRows
+	}
+
+	return tx.Commit()
+}
+
+// CreateSTAFFLangsung dipakai admin untuk membuat staff yang langsung
+// aktif (isVerified = 1). Berbeda dengan CreateSTAFF yang membuat staff
+// pending (isVerified = 0) untuk registrasi mandiri.
+func CreateSTAFFLangsung(username string, email string, password string, tipeUser string, nip string, namaLengkap string) error {
+
+	tx, err := config.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Kalau ada error sebelum Commit(),
+	// semua perubahan di transaction dibatalkan.
+	defer tx.Rollback()
+
+	result, err := tx.Exec(`
+		INSERT INTO user (
+			username,
+			email,
+			password,
+			user_role,
+			isVerified,
+			tipe_user
+		)
+		VALUES (?, ?, ?, 3, 1, (
+			SELECT id
+			FROM user_tipe
+			WHERE tipe = ?
+		))
+	`, username, email, password, tipeUser)
+
+	if err != nil {
+		return err
+	}
+
+	// Ambil ID user yang baru dibuat
+	userID, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO staff (
+			nip,
+			nama_lengkap,
+			user_staff
+		)
+		VALUES (?, ?, ?)
+	`, nip, namaLengkap, userID)
+
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
 func Verif_MHS(userID int) error {
 	tx, err := config.DB.Begin()
 	if err != nil {

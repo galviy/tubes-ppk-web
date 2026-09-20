@@ -70,7 +70,7 @@ func Create_Account_Dosen(w http.ResponseWriter, r *http.Request) {
 
 	CheckExist := repositories.IsDosenExist(nidn)
 	if CheckExist {
-		utils.ResponseJSONMessage(w, "Sudah ada Dosen dengan nidn ("+nidn+") terdaftar di database kita!", http.StatusInternalServerError, false)
+		utils.ResponseJSONMessage(w, "Sudah ada Dosen dengan nidn ("+nidn+") terdaftar di database kita!", http.StatusBadRequest, false)
 		return
 	}
 
@@ -84,6 +84,10 @@ func Create_Account_Dosen(w http.ResponseWriter, r *http.Request) {
 	errCreate := repositories.CreateDosenPending(username, email, passwordHash, "dosen", nidn, nama_lengap, prodi_dosen)
 	if errCreate != nil {
 		log.Printf("Gagal membuat user: %v", errCreate)
+		if utils.IsDuplicateEntry(errCreate) {
+			utils.ResponseJSONMessage(w, "Username, email, atau nidn sudah terdaftar di database kita!", http.StatusConflict, false)
+			return
+		}
 		utils.ResponseJSONMessage(w, "Internal server error", http.StatusInternalServerError, false)
 		return
 	}
