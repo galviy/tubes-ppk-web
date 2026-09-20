@@ -7,6 +7,7 @@ import (
 	"backend-ppk/controller/admin/verifikasi"
 	"backend-ppk/controller/auth"
 	"backend-ppk/controller/facility"
+	petugas "backend-ppk/controller/petugas"
 	"backend-ppk/controller/report"
 	"backend-ppk/controller/user"
 	"backend-ppk/middleware"
@@ -19,6 +20,7 @@ func SetupRoutes() *http.ServeMux {
 	mux.HandleFunc("/auth/login", auth.Login)
 	mux.HandleFunc("/auth/create_account/dosen", auth.Create_Account_Dosen)
 	mux.HandleFunc("/auth/create_account/mhs", auth.Create_Account_MHS)
+	mux.HandleFunc("/auth/create_account/staff", auth.Create_account_Staff)
 
 	mux.Handle(
 		"GET /admin/show_user",
@@ -44,12 +46,26 @@ func SetupRoutes() *http.ServeMux {
 	)
 
 	mux.Handle(
+		"GET /admin/show_staff_pending",
+		middleware.AdminAuth(http.HandlerFunc(admin.Show_staff_pending)),
+	)
+
+	mux.Handle(
+		"GET /admin/show_staff",
+		middleware.AdminAuth(http.HandlerFunc(admin.Show_staff)),
+	)
+
+	mux.Handle(
 		"POST /admin/verifikasi_mhs",
 		middleware.AdminAuth(http.HandlerFunc(verifikasi.Verifikasi_MHS)),
 	)
 	mux.Handle(
 		"POST /admin/verifikasi_dosen",
 		middleware.AdminAuth(http.HandlerFunc(verifikasi.Verifikasi_dosen)),
+	)
+	mux.Handle(
+		"POST /admin/verifikasi_staff",
+		middleware.AdminAuth(http.HandlerFunc(verifikasi.Verifikasi_Staff)),
 	)
 
 	mux.Handle(
@@ -65,6 +81,15 @@ func SetupRoutes() *http.ServeMux {
 	mux.Handle(
 		"POST /admin/create_user/staff",
 		middleware.AdminAuth(http.HandlerFunc(createuser.Create_staff)),
+	)
+
+	mux.Handle(
+		"POST /admin/create_user/petugas",
+		middleware.AdminAuth(http.HandlerFunc(createuser.Create_Petugas)),
+	)
+	mux.Handle(
+		"POST /admin/create_user/admin",
+		middleware.AdminAuth(http.HandlerFunc(createuser.Create_Admin)),
 	)
 	///admin/create_fasilitas/fasilitas
 	mux.Handle(
@@ -97,28 +122,28 @@ func SetupRoutes() *http.ServeMux {
 		middleware.Auth(http.HandlerFunc(report.DetailLaporan)),
 	)
 	mux.Handle(
-		"GET /officer/reports",
+		"GET /petugas/reports",
 		middleware.Auth(middleware.RequireRole(
-			http.HandlerFunc(report.ListAllLaporan),
+			http.HandlerFunc(petugas.ListAllLaporan),
 			middleware.RolePetugas, middleware.RoleAdmin,
 		)),
 	)
 	mux.Handle(
-		"GET /officer/reports/{id}",
+		"GET /petugas/reports/{id}",
 		middleware.Auth(middleware.RequireRole(
-			http.HandlerFunc(report.DetailLaporanOfficer),
+			http.HandlerFunc(petugas.DetailLaporanOfficer),
 			middleware.RolePetugas, middleware.RoleAdmin,
 		)),
 	)
 	mux.Handle(
-		"PATCH /reports/{id}",
+		"PATCH /petugas/reports/{id}",
 		middleware.Auth(middleware.RequireRole(
-			http.HandlerFunc(report.UpdateLaporan),
+			http.HandlerFunc(petugas.UpdateLaporan),
 			middleware.RolePetugas, middleware.RoleAdmin,
 		)),
 	)
 	mux.Handle(
-		"PATCH /facilities/{id}/status",
+		"PATCH /petugas/facilities/{id}/status",
 		middleware.Auth(middleware.RequireRole(
 			http.HandlerFunc(facility.UpdateStatus),
 			middleware.RolePetugas, middleware.RoleAdmin,

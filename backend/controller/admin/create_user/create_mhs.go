@@ -79,6 +79,10 @@ func Create_MHS(w http.ResponseWriter, r *http.Request) {
 	errCreate := repositories.CreateMHSLangsung(username, email, passwordHash, "mhs", nim, angkatan, nama_lengkap, prodi)
 	if errCreate != nil {
 		log.Printf("Gagal membuat user: %v", errCreate)
+		if utils.IsDuplicateEntry(errCreate) {
+			utils.ResponseJSONMessage(w, "Username, email, atau nim sudah terdaftar di database kita!", http.StatusConflict, false)
+			return
+		}
 		utils.ResponseJSONMessage(w, "Internal server error", http.StatusInternalServerError, false)
 		return
 	}

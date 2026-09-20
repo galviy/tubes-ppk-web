@@ -75,7 +75,7 @@ func Create_Account_MHS(w http.ResponseWriter, r *http.Request) {
 	}
 	CheckExist := repositories.IsMhsExist(nim)
 	if CheckExist {
-		utils.ResponseJSONMessage(w, "Sudah ada mahasiswa dengan nim ("+nim+") terdaftar di database kita!", http.StatusInternalServerError, false)
+		utils.ResponseJSONMessage(w, "Sudah ada mahasiswa dengan nim ("+nim+") terdaftar di database kita!", http.StatusBadRequest, false)
 		return
 	}
 
@@ -83,6 +83,10 @@ func Create_Account_MHS(w http.ResponseWriter, r *http.Request) {
 	errCreate := repositories.CreateMahasiswaPending(username, email, passwordHash, "mhs", nim, angkatan, nama_lengkap, prodi)
 	if errCreate != nil {
 		log.Printf("Gagal membuat user: %v", errCreate)
+		if utils.IsDuplicateEntry(errCreate) {
+			utils.ResponseJSONMessage(w, "Username, email, atau nim sudah terdaftar di database kita!", http.StatusConflict, false)
+			return
+		}
 		utils.ResponseJSONMessage(w, "Internal server error", http.StatusInternalServerError, false)
 		return
 	}
