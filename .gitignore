@@ -3,3 +3,4 @@ backend/uploads/
 backend/cookies.txt
 backend/tmp/
 example.env
+AGENTS.md
