@@ -15,28 +15,28 @@ const SLIDES: FeatureSlide[] = [
     subtitle: 'SLOT WAKTU 30 MENIT (07.00 – 20.00)',
     description:
       'Peminjaman fasilitas menggunakan 26 slot waktu tetap berdurasi 30 menit yang dimulai dari pukul 07.00 hingga 20.00 WIB. Sistem memvalidasi rentang waktu secara ketat di sisi server dan client untuk mencegah bentrok jadwal pada fasilitas yang sama.',
-    image: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1600&q=85',
+    image: 'https://images.unsplash.com/photo-1541829070764-84a7d30dd3f3?auto=format&fit=crop&w=1600&q=85',
   },
   {
     title: 'BUILDING FEATURES',
     subtitle: 'PELAPORAN KERUSAKAN DENGAN FOTO BUKTI',
     description:
       'Mahasiswa dan dosen dapat melaporkan kendala pada fasilitas kampus dengan memilih kategori kerusakan, menuliskan deskripsi masalah, serta mengunggah foto bukti. Setiap laporan terpantau statusnya mulai dari baru, diproses, hingga selesai.',
-    image: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?auto=format&fit=crop&w=1600&q=85',
+    image: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1600&q=85',
   },
   {
     title: 'BUILDING FEATURES',
     subtitle: 'ANTREAN PETUGAS & STATUS PERBAIKAN',
     description:
       'Petugas memproses antrean reservasi dan laporan kerusakan secara terpusat dalam satu alur kerja. Petugas dapat menyetujui, menolak, membatalkan reservasi darurat dengan alasan resmi, serta menandai fasilitas berstatus "Dalam Perbaikan".',
-    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1600&q=85',
+    image: 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1600&q=85',
   },
   {
     title: 'BUILDING FEATURES',
     subtitle: 'DATA MASTER & EKSPOR REKAPITULASI ADMIN',
     description:
-      'Administrator mengelola data master 5 tipe fasilitas (ruang kelas, aula, laboratorium, alat, lapangan), mendaftarkan akun petugas, memverifikasi akun pengguna mandiri, serta mengekspor rekapitulasi okupansi dan frekuensi kerusakan ke CSV/Excel/PDF.',
-    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1600&q=85',
+      'Administrator mengelola data master seluruh tipe fasilitas kampus, memverifikasi akun civitas akademika, serta mengekspor rekapitulasi okupansi dan frekuensi kerusakan ke CSV/Excel/PDF.',
+    image: 'https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1600&q=85',
   },
 ];
 

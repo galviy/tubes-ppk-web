@@ -5,8 +5,13 @@ import { useAppData } from '@/context/AppDataContext';
 
 export default function RekapEksporPage() {
   const { facilities, reservations, reports } = useAppData();
-  const [filterFacility, setFilterFacility] = useState<string>('semua');
+  const [filterMode, setFilterMode] = useState<'semua' | 'fasilitas' | 'gedung'>('semua');
+  const [selectedGedung, setSelectedGedung] = useState<string>('— Pilih —');
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string>('— Pilih —');
   const [exportFormat, setExportFormat] = useState<'excel' | 'csv' | 'pdf'>('excel');
+
+  // Dynamic buildings extracted from active facilities
+  const buildingList = Array.from(new Set(facilities.map((f) => f.loc))).filter(Boolean);
 
   function calculateTotalHours(facilityId: string) {
     const approved = reservations.filter((r) => r.facilityId === facilityId && r.status === 'disetujui');
@@ -20,9 +25,24 @@ export default function RekapEksporPage() {
     return (totalMins / 60).toFixed(1);
   }
 
-  const filteredFacilities = filterFacility === 'semua'
-    ? facilities
-    : facilities.filter((f) => f.id === filterFacility);
+  const filteredFacilities = facilities.filter((f) => {
+    if (filterMode === 'gedung') {
+      if (!selectedGedung || selectedGedung === '— Pilih —') return true;
+      return f.loc === selectedGedung;
+    }
+    if (filterMode === 'fasilitas') {
+      if (!selectedFacilityId || selectedFacilityId === '— Pilih —') return true;
+      return f.id === selectedFacilityId;
+    }
+    return true;
+  });
+
+  const exportSuffix =
+    filterMode === 'gedung' && selectedGedung !== '— Pilih —'
+      ? selectedGedung.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+      : filterMode === 'fasilitas' && selectedFacilityId !== '— Pilih —'
+      ? selectedFacilityId
+      : 'semua-fasilitas';
 
   function handleExport() {
     if (exportFormat === 'pdf') {
@@ -49,7 +69,7 @@ export default function RekapEksporPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `rekap-okupansi-undip-${filterFacility}.csv`;
+    a.download = `rekap-okupansi-undip-${exportSuffix}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -69,7 +89,7 @@ export default function RekapEksporPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `rekap-fasilitas-universitas-diponegoro-${filterFacility}.xls`;
+    a.download = `rekap-fasilitas-undip-${exportSuffix}.xls`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -81,7 +101,7 @@ export default function RekapEksporPage() {
         <p>Ringkasan utilisasi fasilitas, durasi penggunaan, dan laporan kerusakan siap ekspor.</p>
       </div>
 
-      {/* Filter & Ekspor Data Bar matching Reference Image 1 */}
+      {/* Filter & Ekspor Data Bar matching Reference Images 1, 2, 3 */}
       <div
         className="panel"
         style={{
@@ -95,25 +115,92 @@ export default function RekapEksporPage() {
           Filter &amp; Ekspor Data
         </div>
 
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Dropdown 1: Filter berdasarkan */}
           <div>
             <label style={{ display: 'block', fontSize: 11, color: '#6B7280', marginBottom: 4, fontWeight: 600 }}>
               Filter berdasarkan
             </label>
             <select
-              value={filterFacility}
-              onChange={(e) => setFilterFacility(e.target.value)}
-              style={{ padding: '7px 12px', fontSize: 13, borderRadius: 6, border: '1px solid #D5D0C7', background: '#FFFFFF', minWidth: 200 }}
+              value={filterMode}
+              onChange={(e) => {
+                const mode = e.target.value as 'semua' | 'fasilitas' | 'gedung';
+                setFilterMode(mode);
+                setSelectedGedung('— Pilih —');
+                setSelectedFacilityId('— Pilih —');
+              }}
+              style={{
+                padding: '7px 12px',
+                fontSize: 13,
+                borderRadius: 6,
+                border: '1px solid #D5D0C7',
+                background: '#FFFFFF',
+                minWidth: 170,
+              }}
             >
-              <option value="semua">Semua Fasilitas ({facilities.length})</option>
-              {facilities.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name} ({f.loc})
-                </option>
-              ))}
+              <option value="semua">Semua Fasilitas</option>
+              <option value="fasilitas">Fasilitas Tertentu</option>
+              <option value="gedung">Gedung/Lokasi</option>
             </select>
           </div>
 
+          {/* Dropdown 2: Jika filter Gedung/Lokasi dipilih */}
+          {filterMode === 'gedung' && (
+            <div>
+              <label style={{ display: 'block', fontSize: 11, color: '#6B7280', marginBottom: 4, fontWeight: 600 }}>
+                Pilih Gedung
+              </label>
+              <select
+                value={selectedGedung}
+                onChange={(e) => setSelectedGedung(e.target.value)}
+                style={{
+                  padding: '7px 12px',
+                  fontSize: 13,
+                  borderRadius: 6,
+                  border: '1px solid #D5D0C7',
+                  background: '#FFFFFF',
+                  minWidth: 170,
+                }}
+              >
+                <option value="— Pilih —">— Pilih —</option>
+                {buildingList.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Dropdown 2: Jika filter Fasilitas Tertentu dipilih */}
+          {filterMode === 'fasilitas' && (
+            <div>
+              <label style={{ display: 'block', fontSize: 11, color: '#6B7280', marginBottom: 4, fontWeight: 600 }}>
+                Pilih Fasilitas
+              </label>
+              <select
+                value={selectedFacilityId}
+                onChange={(e) => setSelectedFacilityId(e.target.value)}
+                style={{
+                  padding: '7px 12px',
+                  fontSize: 13,
+                  borderRadius: 6,
+                  border: '1px solid #D5D0C7',
+                  background: '#FFFFFF',
+                  minWidth: 200,
+                }}
+              >
+                <option value="— Pilih —">— Pilih —</option>
+                {facilities.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Format Dokumen */}
           <div>
             <label style={{ display: 'block', fontSize: 11, color: '#6B7280', marginBottom: 4, fontWeight: 600 }}>
               Format Dokumen
@@ -121,7 +208,13 @@ export default function RekapEksporPage() {
             <select
               value={exportFormat}
               onChange={(e) => setExportFormat(e.target.value as any)}
-              style={{ padding: '7px 12px', fontSize: 13, borderRadius: 6, border: '1px solid #D5D0C7', background: '#FFFFFF' }}
+              style={{
+                padding: '7px 12px',
+                fontSize: 13,
+                borderRadius: 6,
+                border: '1px solid #D5D0C7',
+                background: '#FFFFFF',
+              }}
             >
               <option value="excel">Excel (.xlsx / .xls)</option>
               <option value="csv">CSV (.csv)</option>
@@ -142,8 +235,16 @@ export default function RekapEksporPage() {
         </div>
       </div>
 
-      {/* Table matching Reference Image 1 */}
+      {/* Table matching Reference Images 1 & 2 */}
       <div className="panel table-scroll" style={{ padding: 0 }}>
+        <div style={{ padding: '14px 20px 10px', borderBottom: '1px solid #E5E0D8' }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: '#181D24', margin: 0 }}>
+            Rekap Okupansi &amp; Kerusakan{' '}
+            <span style={{ fontWeight: 400, color: '#6B7280', fontSize: 13 }}>
+              ({filteredFacilities.length} fasilitas ditampilkan)
+            </span>
+          </h3>
+        </div>
         <table>
           <thead>
             <tr>

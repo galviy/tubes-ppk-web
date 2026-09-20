@@ -34,6 +34,13 @@ export default function FacilityDetailModal({ facility, onClose }: FacilityDetai
         </button>
 
         <span className={`badge-inline ${badge.cls}`}>{badge.label}</span>
+
+        {facility.image && (
+          <div style={{ width: '100%', height: 200, borderRadius: 6, overflow: 'hidden', margin: '12px 0 14px', border: '1px solid #E5E0D8' }}>
+            <img src={facility.image} alt={facility.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+        )}
+
         <h3>{facility.name}</h3>
         <div className="modal-meta">{facility.type} · {facility.loc}</div>
 

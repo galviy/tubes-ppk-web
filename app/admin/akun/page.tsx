@@ -163,7 +163,7 @@ export default function KelolaAkunPage() {
 
   // Search & Filter for Registered Accounts Table
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterRole, setFilterRole] = useState<'semua' | 'petugas' | 'admin' | 'pengguna'>('semua');
+  const [filterRole, setFilterRole] = useState<'semua' | 'pengguna' | 'mahasiswa' | 'dosen' | 'staf' | 'petugas' | 'admin'>('semua');
 
   // Modal State
   const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
@@ -260,14 +260,21 @@ export default function KelolaAkunPage() {
 
   // Filter registered accounts
   const filteredAccounts = registeredAccounts.filter((acc) => {
-    if (filterRole !== 'semua' && acc.role !== filterRole) return false;
+    if (filterRole === 'pengguna' && acc.role !== 'pengguna') return false;
+    if (filterRole === 'mahasiswa' && (acc.role !== 'pengguna' || (acc.jabatan && acc.jabatan !== 'Mahasiswa'))) return false;
+    if (filterRole === 'dosen' && (acc.role !== 'pengguna' || acc.jabatan !== 'Dosen')) return false;
+    if (filterRole === 'staf' && (acc.role !== 'pengguna' || acc.jabatan !== 'Staf')) return false;
+    if (filterRole === 'petugas' && acc.role !== 'petugas') return false;
+    if (filterRole === 'admin' && acc.role !== 'admin') return false;
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const matchName = acc.nama.toLowerCase().includes(q);
       const matchEmail = acc.email.toLowerCase().includes(q);
       const matchNip = acc.nip?.toLowerCase().includes(q);
       const matchUnit = acc.unit?.toLowerCase().includes(q);
-      return matchName || matchEmail || matchNip || matchUnit;
+      const matchJabatan = acc.jabatan?.toLowerCase().includes(q);
+      return matchName || matchEmail || matchNip || matchUnit || matchJabatan;
     }
     return true;
   });
@@ -460,12 +467,12 @@ export default function KelolaAkunPage() {
               <h3 style={{ fontSize: 16, fontWeight: 700, color: '#181D24', margin: 0 }}>
                 {targetTipe === 'petugas'
                   ? 'Formulir Pendaftaran Akun Petugas Baru'
-                  : 'Formulir Pendaftaran Akun Pengguna Baru (Mahasiswa / Dosen)'}
+                  : 'Formulir Pendaftaran Akun Pengguna Baru (Mahasiswa / Dosen / Staf)'}
               </h3>
               <p style={{ fontSize: 13, color: '#6B7280', marginTop: 4 }}>
                 {targetTipe === 'petugas'
                   ? 'Daftarkan akun petugas atau admin pengelola fasilitas kampus Undip.'
-                  : 'Daftarkan akun mahasiswa atau dosen secara langsung dengan fakultas dan identitas yang valid.'}
+                  : 'Daftarkan akun mahasiswa, dosen, atau staf secara langsung dengan unit/fakultas dan identitas yang valid.'}
               </p>
             </div>
 
@@ -480,6 +487,8 @@ export default function KelolaAkunPage() {
                         ? 'Contoh: Agus Supriyono, S.Kom.'
                         : peran === 'Dosen'
                         ? 'Contoh: Dr. Ir. Budi Santoso, M.T.'
+                        : peran === 'Staf'
+                        ? 'Contoh: Dewi Lestari, S.Kom.'
                         : 'Contoh: Sinta Rahmawati'
                     }
                     value={nama}
@@ -490,14 +499,14 @@ export default function KelolaAkunPage() {
 
                 {/* NIP / NIM */}
                 <div className="fgroup">
-                  <label>{targetTipe === 'petugas' || peran === 'Dosen' ? 'NIP *' : 'NIM *'}</label>
+                  <label>{targetTipe === 'petugas' || peran === 'Dosen' || peran === 'Staf' ? 'NIP / Identitas *' : 'NIM *'}</label>
                   <input
                     placeholder={
                       targetTipe === 'petugas'
                         ? 'Contoh: 198604152010121002'
-                        : peran === 'Dosen'
-                        ? 'Contoh: 197405121999031001'
-                        : 'Contoh: 24060122140123'
+                        : peran === 'Mahasiswa'
+                        ? 'Contoh: 24060122140123'
+                        : 'Contoh: 198904122015042001'
                     }
                     value={nip}
                     onChange={(e) => setNip(e.target.value)}
@@ -515,6 +524,8 @@ export default function KelolaAkunPage() {
                         ? 'nama.petugas@undip.ac.id'
                         : peran === 'Dosen'
                         ? 'nama.dosen@lecturer.undip.ac.id'
+                        : peran === 'Staf'
+                        ? 'nama.staf@staff.undip.ac.id'
                         : 'nama.mhs@students.undip.ac.id'
                     }
                     value={email}
@@ -535,7 +546,7 @@ export default function KelolaAkunPage() {
 
                 {/* Peran Sistem (Dropdown ke bawah) */}
                 <DownwardSelect
-                  label={targetTipe === 'petugas' ? 'Peran Hak Akses *' : 'Peran *'}
+                  label={targetTipe === 'petugas' ? 'Peran Hak Akses *' : 'Peran Pengguna *'}
                   value={peran}
                   onChange={(val) => {
                     setPeran(val);
@@ -549,6 +560,7 @@ export default function KelolaAkunPage() {
                       : [
                           { value: 'Mahasiswa', label: 'Mahasiswa' },
                           { value: 'Dosen', label: 'Dosen' },
+                          { value: 'Staf', label: 'Staf' },
                         ]
                   }
                 />
@@ -558,13 +570,15 @@ export default function KelolaAkunPage() {
                   label={
                     targetTipe === 'petugas'
                       ? 'Unit Kerja / Lokasi Penugasan *'
-                      : peran === 'Dosen'
-                      ? 'Fakultas / Departemen Homebase *'
-                      : 'Fakultas / Program Studi *'
+                      : 'Fakultas *'
                   }
                   value={unit}
                   onChange={setUnit}
-                  options={targetTipe === 'petugas' ? (UNIT_PETUGAS as unknown as string[]) : (FAKULTAS_UNDIP as unknown as string[])}
+                  options={
+                    targetTipe === 'petugas'
+                      ? (UNIT_PETUGAS as unknown as string[])
+                      : (FAKULTAS_UNDIP as unknown as string[])
+                  }
                 />
 
                 {/* Kata Sandi Awal */}
@@ -657,7 +671,10 @@ export default function KelolaAkunPage() {
               <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                 {[
                   { key: 'semua', label: `Semua (${registeredAccounts.length})` },
-                  { key: 'pengguna', label: `Pengguna (${registeredAccounts.filter((a) => a.role === 'pengguna').length})` },
+                  { key: 'pengguna', label: `Semua Pengguna (${registeredAccounts.filter((a) => a.role === 'pengguna').length})` },
+                  { key: 'mahasiswa', label: `Mahasiswa (${registeredAccounts.filter((a) => a.role === 'pengguna' && (!a.jabatan || a.jabatan === 'Mahasiswa')).length})` },
+                  { key: 'dosen', label: `Dosen (${registeredAccounts.filter((a) => a.role === 'pengguna' && a.jabatan === 'Dosen').length})` },
+                  { key: 'staf', label: `Staf (${registeredAccounts.filter((a) => a.role === 'pengguna' && a.jabatan === 'Staf').length})` },
                   { key: 'petugas', label: `Petugas (${registeredAccounts.filter((a) => a.role === 'petugas').length})` },
                   { key: 'admin', label: `Admin (${registeredAccounts.filter((a) => a.role === 'admin').length})` },
                 ].map((chip) => (

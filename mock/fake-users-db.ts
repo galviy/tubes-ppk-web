@@ -75,4 +75,17 @@ export const FAKE_USERS_DB: FakeUserRecord[] = [
     status: 'aktif',
     createdAt: '2026-02-20',
   },
+  {
+    id: 'u-pengguna-3',
+    email: 'staf@sipinjam.ac.id',
+    password: 'staf123',
+    nama: 'Dewi (Staf)',
+    role: 'pengguna',
+    nip: '198904122015042001',
+    phone: '085811223344',
+    unit: 'Fakultas Sains dan Matematika (FSM)',
+    jabatan: 'Staf',
+    status: 'aktif',
+    createdAt: '2026-03-05',
+  },
 ];

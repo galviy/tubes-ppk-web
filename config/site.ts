@@ -20,7 +20,7 @@ export const SITE_CONFIG = {
   // Peran Aktor & Halaman Utama
   roles: {
     pengguna: {
-      label: 'Pengguna (Mahasiswa / Dosen)',
+      label: 'Pengguna (Mahasiswa / Dosen / Staf)',
       home: '/pengguna',
     },
     petugas: {

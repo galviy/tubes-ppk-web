@@ -1,80 +1,66 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { useAppData } from '@/context/AppDataContext';
 
-interface FloorPlanItem {
-  id: string;
-  tabLabel: string;
+interface SpaceOverview {
+  type: string;
   category: string;
   dimensions: string;
-  capacity: string;
   description: string;
   bookingUrl: string;
 }
 
-const FLOOR_PLANS: FloorPlanItem[] = [
-  {
-    id: 'ruang-kelas',
-    tabLabel: 'RUANG KELAS',
+const DEFAULT_OVERVIEWS: Record<string, Omit<SpaceOverview, 'type'>> = {
+  'Ruang Kelas': {
     category: 'Ruang Perkuliahan & Seminar',
     dimensions: '10.5m × 7.8m (81.9 m²)',
-    capacity: '40 - 50 Kursi',
     description:
       'Ruang kelas akademik modern ber-AC dengan tata pencahayaan alami, whiteboard, dan smart display interaktif. Tersedia untuk perkuliahan reguler, ujian, seminar, maupun diskusi kelompok dengan slot waktu 30 menit (jam operasional 07.00–20.00).',
     bookingUrl: '/jadwal?facility=b201',
   },
-  {
-    id: 'aula',
-    tabLabel: 'AULA',
+  'Aula': {
     category: 'Gedung Serbaguna & Seremonial',
     dimensions: '22.0m × 14.5m (319 m²)',
-    capacity: '250 - 300 Kursi',
     description:
       'Aula serbaguna dengan panggung utama representatif, ruang persiapan backstage, sound system berdaya tinggi, dan proyektor resolusi tinggi. Ideal untuk wisuda mini, seminar nasional, orasi ilmiah, dan perhelatan akbar organisasi mahasiswa.',
     bookingUrl: '/jadwal?facility=aula',
   },
-  {
-    id: 'laboratorium',
-    tabLabel: 'LABORATORIUM',
+  'Laboratorium': {
     category: 'Laboratorium Komputer & Riset',
     dimensions: '14.0m × 8.5m (119 m²)',
-    capacity: '40 Unit PC Workstation',
     description:
-      'Laboratorium komputer berpendingin ganda dilengkapi 40 unit PC berkecepatan tinggi, koneksi internet gigabit dedicated, dan server lokal. Siap digunakan untuk praktikum pemrograman, komputasi numerik, dan ujian berbasis komputer.',
-    bookingUrl: '/jadwal?facility=lab1',
+      'Laboratorium komputer berpendingin ganda dilengkapi unit PC berkecepatan tinggi, koneksi internet gigabit dedicated, dan server lokal. Siap digunakan untuk praktikum pemrograman, komputasi numerik, dan riset akademik.',
+    bookingUrl: '/jadwal?facility=lab-ti',
   },
-  {
-    id: 'lapangan',
-    tabLabel: 'LAPANGAN',
+  'Lapangan': {
     category: 'Sarana Olahraga Outdoor / Indoor',
     dimensions: '30.0m × 18.0m (540 m²)',
-    capacity: 'Lapangan + 100 Penonton',
     description:
       'Lapangan olahraga multifungsi (futsal, basket, bulutangkis) dengan permukaan taraflex anti-slip, garis lapangan standar turnamen, lampu sorot penerangan malam, dan bangku pemain cadangan untuk kegiatan ekstrakurikuler serta kompetisi.',
     bookingUrl: '/jadwal?facility=futsal',
   },
-  {
-    id: 'alat',
-    tabLabel: 'ALAT',
+  'Alat': {
     category: 'Peralatan Audio Visual & Presentasi',
     dimensions: 'Unit Box Portable (Flight Case)',
-    capacity: '1 Paket Lengkap',
     description:
       'Peralatan penunjang kegiatan akademik portabel mencakup proyektor resolusi tinggi, mikrofon nirkabel (wireless mic), active speaker portable, dan kabel gulung. Tersedia untuk dipinjam dosen maupun mahasiswa dengan verifikasi petugas.',
-    bookingUrl: '/jadwal?facility=proj',
+    bookingUrl: '/jadwal?facility=proj3',
   },
-];
+};
 
-/* Architectural 2D Floor Plan Drawings matching the 5 study case facility types */
-function ArchitecturalPlan({ index }: { index: number }) {
-  if (index === 0) {
-    // 1. Ruang Kelas
+/* Architectural 2D Floor Plan Drawings */
+function ArchitecturalPlan({ type, label }: { type: string; label: string }) {
+  const typeLower = type.toLowerCase();
+
+  // 1. Ruang Kelas
+  if (typeLower.includes('kelas') || typeLower.includes('kuliah')) {
     return (
       <svg viewBox="0 0 540 380" fill="none" xmlns="http://www.w3.org/2000/svg" className="ochoco-fp-svg">
         <rect width="540" height="380" fill="#FCFCFC" rx="4" />
         <rect x="50" y="30" width="440" height="300" stroke="#222" strokeWidth="6" fill="#FFF" />
-        
+
         {/* Door with 90-degree swing arc */}
         <line x1="50" y1="270" x2="50" y2="330" stroke="#FFF" strokeWidth="8" />
         <path d="M50 330 A 50 50 0 0 1 100 280" stroke="#777" strokeWidth="1.5" strokeDasharray="3 3" fill="none" />
@@ -125,8 +111,8 @@ function ArchitecturalPlan({ index }: { index: number }) {
     );
   }
 
-  if (index === 1) {
-    // 2. Aula
+  // 2. Aula
+  if (typeLower.includes('aula') || typeLower.includes('serbaguna')) {
     return (
       <svg viewBox="0 0 540 380" fill="none" xmlns="http://www.w3.org/2000/svg" className="ochoco-fp-svg">
         <rect width="540" height="380" fill="#FCFCFC" rx="4" />
@@ -187,8 +173,8 @@ function ArchitecturalPlan({ index }: { index: number }) {
     );
   }
 
-  if (index === 2) {
-    // 3. Laboratorium
+  // 3. Laboratorium
+  if (typeLower.includes('lab')) {
     return (
       <svg viewBox="0 0 540 380" fill="none" xmlns="http://www.w3.org/2000/svg" className="ochoco-fp-svg">
         <rect width="540" height="380" fill="#FCFCFC" rx="4" />
@@ -236,8 +222,8 @@ function ArchitecturalPlan({ index }: { index: number }) {
     );
   }
 
-  if (index === 3) {
-    // 4. Lapangan
+  // 4. Lapangan
+  if (typeLower.includes('lapangan') || typeLower.includes('olahraga')) {
     return (
       <svg viewBox="0 0 540 380" fill="none" xmlns="http://www.w3.org/2000/svg" className="ochoco-fp-svg">
         <rect width="540" height="380" fill="#FCFCFC" rx="4" />
@@ -245,7 +231,7 @@ function ArchitecturalPlan({ index }: { index: number }) {
 
         {/* Court Floor */}
         <rect x="80" y="55" width="380" height="240" rx="4" fill="#FDFBF7" stroke="#b59876" strokeWidth="2.5" />
-        
+
         {/* Halfway line & Center Circle */}
         <line x1="270" y1="55" x2="270" y2="295" stroke="#b59876" strokeWidth="2" />
         <circle cx="270" cy="175" r="40" stroke="#b59876" strokeWidth="2" fill="none" />
@@ -268,72 +254,156 @@ function ArchitecturalPlan({ index }: { index: number }) {
     );
   }
 
-  // 5. Alat (Peralatan Audio Visual & Proyektor Portable)
+  // 5. Alat
+  if (typeLower.includes('alat') || typeLower.includes('proyektor')) {
+    return (
+      <svg viewBox="0 0 540 380" fill="none" xmlns="http://www.w3.org/2000/svg" className="ochoco-fp-svg">
+        <rect width="540" height="380" fill="#FCFCFC" rx="4" />
+        {/* Outer Case / Storage Shelf */}
+        <rect x="50" y="30" width="440" height="300" stroke="#222" strokeWidth="5" rx="8" fill="#FFF" />
+
+        {/* Main Flight Case Header */}
+        <rect x="60" y="40" width="420" height="32" rx="4" fill="#181D24" />
+        <text x="270" y="60" fontSize="11" fontWeight="700" fill="#b59876" textAnchor="middle" fontFamily="var(--font)">
+          UNIT PENYIMPANAN & KOPER ALAT MULTIMEDIA (AV KIT)
+        </text>
+
+        {/* Compartment 1: Proyektor Portable */}
+        <rect x="75" y="90" width="170" height="110" rx="6" fill="#F8F8F8" stroke="#b59876" strokeWidth="2" />
+        <rect x="95" y="110" width="130" height="60" rx="4" fill="#181D24" />
+        <circle cx="160" cy="140" r="20" stroke="#b59876" strokeWidth="3" fill="#333" />
+        <circle cx="160" cy="140" r="10" fill="#0ea5e9" />
+        <text x="160" y="188" fontSize="9" fontWeight="600" fill="#181D24" textAnchor="middle" fontFamily="var(--font)">
+          PROYEKTOR LASER 4500 LUMENS
+        </text>
+
+        {/* Compartment 2: Wireless Mic Station */}
+        <rect x="275" y="90" width="190" height="110" rx="6" fill="#F8F8F8" stroke="#555" strokeWidth="1.5" />
+        <rect x="295" y="110" width="150" height="24" rx="3" fill="#EAEAEA" stroke="#444" strokeWidth="1.2" />
+        <circle cx="315" cy="122" r="5" fill="#16a34a" />
+        <circle cx="330" cy="122" r="5" fill="#16a34a" />
+        <line x1="295" y1="122" x2="280" y2="105" stroke="#222" strokeWidth="2" />
+        <line x1="445" y1="122" x2="460" y2="105" stroke="#222" strokeWidth="2" />
+        <rect x="310" y="145" width="50" height="12" rx="4" fill="#333" />
+        <rect x="380" y="145" width="50" height="12" rx="4" fill="#333" />
+        <text x="370" y="188" fontSize="9" fontWeight="600" fill="#181D24" textAnchor="middle" fontFamily="var(--font)">
+          RECEIVER + 2x WIRELESS MIC UHF
+        </text>
+
+        {/* Compartment 3: Portable Speaker Active */}
+        <rect x="75" y="215" width="170" height="95" rx="6" fill="#F8F8F8" stroke="#555" strokeWidth="1.5" />
+        <rect x="105" y="225" width="110" height="60" rx="4" fill="#181D24" />
+        <circle cx="160" cy="255" r="18" stroke="#777" strokeWidth="2" fill="#222" />
+        <circle cx="160" cy="255" r="8" fill="#b59876" />
+        <text x="160" y="298" fontSize="8.5" fill="#555" textAnchor="middle" fontFamily="var(--font)">
+          PORTABLE ACTIVE SPEAKER
+        </text>
+
+        {/* Compartment 4: Cables & Tripod Accessories */}
+        <rect x="275" y="215" width="190" height="95" rx="6" fill="#F8F8F8" stroke="#555" strokeWidth="1.5" />
+        <circle cx="330" cy="255" r="18" stroke="#444" strokeWidth="3" strokeDasharray="4 2" fill="none" />
+        <text x="330" y="258" fontSize="7" fill="#666" textAnchor="middle">HDMI 20M</text>
+        <circle cx="410" cy="255" r="18" stroke="#444" strokeWidth="3" strokeDasharray="4 2" fill="none" />
+        <text x="410" y="258" fontSize="7" fill="#666" textAnchor="middle">POWER 30M</text>
+        <text x="370" y="298" fontSize="8.5" fill="#555" textAnchor="middle" fontFamily="var(--font)">
+          KABEL HDMI, AUDIO JACK & TRIPOD
+        </text>
+      </svg>
+    );
+  }
+
+  // 6. Dynamic CAD Blueprint for custom newly added room types
   return (
     <svg viewBox="0 0 540 380" fill="none" xmlns="http://www.w3.org/2000/svg" className="ochoco-fp-svg">
       <rect width="540" height="380" fill="#FCFCFC" rx="4" />
-      {/* Outer Case / Storage Shelf */}
-      <rect x="50" y="30" width="440" height="300" stroke="#222" strokeWidth="5" rx="8" fill="#FFF" />
+      <rect x="45" y="25" width="450" height="315" stroke="#181D24" strokeWidth="6" fill="#FFF" />
 
-      {/* Main Flight Case Header */}
-      <rect x="60" y="40" width="420" height="32" rx="4" fill="#181D24" />
-      <text x="270" y="60" fontSize="11" fontWeight="700" fill="#b59876" textAnchor="middle" fontFamily="var(--font)">
-        UNIT PENYIMPANAN & KOPER ALAT MULTIMEDIA (AV KIT)
+      {/* Door arc */}
+      <line x1="45" y1="265" x2="45" y2="325" stroke="#FFF" strokeWidth="8" />
+      <path d="M45 325 A 48 48 0 0 1 93 277" stroke="#888" strokeWidth="1.5" strokeDasharray="3 3" fill="none" />
+      <line x1="45" y1="325" x2="93" y2="277" stroke="#181D24" strokeWidth="2.5" />
+      <text x="55" y="312" fontSize="9" fill="#888" fontFamily="var(--font)">PINTU MASUK</text>
+
+      {/* Windows */}
+      <line x1="120" y1="25" x2="250" y2="25" stroke="#0ea5e9" strokeWidth="4" />
+      <line x1="290" y1="25" x2="420" y2="25" stroke="#0ea5e9" strokeWidth="4" />
+      <text x="185" y="20" fontSize="8" fill="#0ea5e9" fontFamily="var(--font)">JENDELA UTARA</text>
+
+      {/* Header Plaque */}
+      <rect x="110" y="55" width="320" height="32" rx="4" fill="#F5EFEB" stroke="#b59876" strokeWidth="1.5" />
+      <text x="270" y="75" fontSize="11" fontWeight="700" fill="#b59876" textAnchor="middle" fontFamily="var(--font)">
+        {label.toUpperCase()}
       </text>
 
-      {/* Compartment 1: Proyektor Portable */}
-      <rect x="75" y="90" width="170" height="110" rx="6" fill="#F8F8F8" stroke="#b59876" strokeWidth="2" />
-      <rect x="95" y="110" width="130" height="60" rx="4" fill="#181D24" />
-      <circle cx="160" cy="140" r="20" stroke="#b59876" strokeWidth="3" fill="#333" />
-      <circle cx="160" cy="140" r="10" fill="#0ea5e9" />
-      <text x="160" y="188" fontSize="9" fontWeight="600" fill="#181D24" textAnchor="middle" fontFamily="var(--font)">
-        PROYEKTOR LASER 4500 LUMENS
+      {/* Center Table */}
+      <rect x="130" y="115" width="280" height="120" rx="8" fill="#F8F8F8" stroke="#444" strokeWidth="1.5" />
+      <text x="270" y="178" fontSize="10" fontWeight="600" fill="#666" textAnchor="middle" fontFamily="var(--font)">
+        ZONA MODULAR ARSITEKTURAL
       </text>
 
-      {/* Compartment 2: Wireless Mic Station */}
-      <rect x="275" y="90" width="190" height="110" rx="6" fill="#F8F8F8" stroke="#555" strokeWidth="1.5" />
-      <rect x="295" y="110" width="150" height="24" rx="3" fill="#EAEAEA" stroke="#444" strokeWidth="1.2" />
-      <circle cx="315" cy="122" r="5" fill="#16a34a" />
-      <circle cx="330" cy="122" r="5" fill="#16a34a" />
-      <line x1="295" y1="122" x2="280" y2="105" stroke="#222" strokeWidth="2" />
-      <line x1="445" y1="122" x2="460" y2="105" stroke="#222" strokeWidth="2" />
-      {/* 2 Microphones */}
-      <rect x="310" y="145" width="50" height="12" rx="4" fill="#333" />
-      <rect x="380" y="145" width="50" height="12" rx="4" fill="#333" />
-      <text x="370" y="188" fontSize="9" fontWeight="600" fill="#181D24" textAnchor="middle" fontFamily="var(--font)">
-        RECEIVER + 2x WIRELESS MIC UHF
-      </text>
+      {/* Chairs */}
+      {[0, 1, 2, 3].map((i) => (
+        <g key={`top-${i}`}>
+          <circle cx={165 + i * 70} cy={102} r="7" fill="#FFF" stroke="#444" strokeWidth="1.5" />
+          <circle cx={165 + i * 70} cy={248} r="7" fill="#FFF" stroke="#444" strokeWidth="1.5" />
+        </g>
+      ))}
 
-      {/* Compartment 3: Portable Speaker Active */}
-      <rect x="75" y="215" width="170" height="95" rx="6" fill="#F8F8F8" stroke="#555" strokeWidth="1.5" />
-      <rect x="105" y="225" width="110" height="60" rx="4" fill="#181D24" />
-      <circle cx="160" cy="255" r="18" stroke="#777" strokeWidth="2" fill="#222" />
-      <circle cx="160" cy="255" r="8" fill="#b59876" />
-      <text x="160" y="298" fontSize="8.5" fill="#555" textAnchor="middle" fontFamily="var(--font)">
-        PORTABLE ACTIVE SPEAKER
-      </text>
-
-      {/* Compartment 4: Cables & Tripod Accessories */}
-      <rect x="275" y="215" width="190" height="95" rx="6" fill="#F8F8F8" stroke="#555" strokeWidth="1.5" />
-      <circle cx="330" cy="255" r="18" stroke="#444" strokeWidth="3" strokeDasharray="4 2" fill="none" />
-      <text x="330" y="258" fontSize="7" fill="#666" textAnchor="middle">HDMI 20M</text>
-      <circle cx="410" cy="255" r="18" stroke="#444" strokeWidth="3" strokeDasharray="4 2" fill="none" />
-      <text x="410" y="258" fontSize="7" fill="#666" textAnchor="middle">POWER 30M</text>
-      <text x="370" y="298" fontSize="8.5" fill="#555" textAnchor="middle" fontFamily="var(--font)">
-        KABEL HDMI, AUDIO JACK & TRIPOD
+      {/* Dimension Line */}
+      <line x1="45" y1="355" x2="495" y2="355" stroke="#b59876" strokeWidth="1" />
+      <line x1="45" y1="350" x2="45" y2="360" stroke="#b59876" strokeWidth="1" />
+      <line x1="495" y1="350" x2="495" y2="360" stroke="#b59876" strokeWidth="1" />
+      <text x="270" y="370" fontSize="10" fontWeight="600" fill="#b59876" textAnchor="middle" fontFamily="var(--font)">
+        ◄─── TATA RUANG MODULAR KAMPUS ───►
       </text>
     </svg>
   );
 }
 
 export default function FacilityTabs() {
+  const { facilities } = useAppData();
+
+  // Dynamic types derived from master data (automatically includes new types added in Admin)
+  const types = useMemo(() => {
+    const list = Array.from(new Set(facilities.map((f) => f.type))).filter(Boolean);
+    return list.length > 0 ? list : ['Ruang Kelas', 'Aula', 'Laboratorium', 'Lapangan', 'Alat'];
+  }, [facilities]);
+
   const [activeTab, setActiveTab] = useState(0);
-  const plan = FLOOR_PLANS[activeTab];
+
+  // Guard against activeTab out of range
+  const safeTab = activeTab < types.length ? activeTab : 0;
+  const currentType = types[safeTab] || 'Ruang Kelas';
+
+  // Construct high-level general space overview
+  const overview = useMemo<SpaceOverview>(() => {
+    // If standard default type with pre-configured architectural dimensions:
+    if (DEFAULT_OVERVIEWS[currentType]) {
+      const matchingFacility = facilities.find((f) => f.type === currentType);
+      return {
+        type: currentType,
+        ...DEFAULT_OVERVIEWS[currentType],
+        bookingUrl: matchingFacility ? `/jadwal?facility=${matchingFacility.id}` : DEFAULT_OVERVIEWS[currentType].bookingUrl,
+      };
+    }
+
+    // For any custom facility type added/edited from admin dashboard
+    const matchingFacility = facilities.find((f) => f.type === currentType);
+    return {
+      type: currentType,
+      category: currentType,
+      dimensions: matchingFacility?.loc || 'Gedung Kampus Undip',
+      description:
+        matchingFacility?.desc ||
+        `Fasilitas ${currentType.toLowerCase()} modern Universitas Diponegoro untuk menunjang kegiatan perkuliahan, kolaborasi, dan kemahasiswaan.`,
+      bookingUrl: matchingFacility ? `/jadwal?facility=${matchingFacility.id}` : '/jadwal',
+    };
+  }, [currentType, facilities]);
 
   return (
     <section className="ochoco-fp-section" id="floor-plans">
       <div className="ochoco-fp-container">
-        {/* Header Row: Title left, tabs right */}
+        {/* Header Row: Title left, dynamic space tabs right */}
         <div className="ochoco-fp-header">
           <h2 className="ochoco-fp-title">
             <span style={{ color: '#b59876' }}>FLOOR</span>
@@ -342,34 +412,36 @@ export default function FacilityTabs() {
           </h2>
 
           <ul className="ochoco-fp-tabs-list" role="tablist">
-            {FLOOR_PLANS.map((item, i) => (
-              <li key={item.id}>
+            {types.map((type, i) => (
+              <li key={type}>
                 <button
                   type="button"
                   role="tab"
-                  className={`ochoco-fp-tab-btn ${i === activeTab ? 'active' : ''}`}
+                  className={`ochoco-fp-tab-btn ${i === safeTab ? 'active' : ''}`}
                   onClick={() => setActiveTab(i)}
-                  aria-selected={i === activeTab}
+                  aria-selected={i === safeTab}
                 >
-                  {item.tabLabel}
+                  {type.toUpperCase()}
                 </button>
               </li>
             ))}
           </ul>
         </div>
 
-        {/* Content Row: 2 columns */}
+        {/* Content Row: 2 columns matching initial elegant architectural style */}
         <div className="ochoco-fp-content">
           {/* Left: Architectural Floor Plan Graphic */}
           <div className="ochoco-fp-visual">
-            <ArchitecturalPlan index={activeTab} />
+            <ArchitecturalPlan type={currentType} label={currentType} />
           </div>
 
-          {/* Right: Description & Schedule CTA */}
+          {/* Right: High-level category, general overview description & Schedule CTA */}
           <div className="ochoco-fp-info">
-            <div className="ochoco-fp-meta-tag">{plan.category} • {plan.dimensions}</div>
-            <p className="ochoco-fp-desc">{plan.description}</p>
-            <Link href={plan.bookingUrl} className="ochoco-fp-schedule-btn">
+            <div className="ochoco-fp-meta-tag">
+              {overview.category} • {overview.dimensions}
+            </div>
+            <p className="ochoco-fp-desc">{overview.description}</p>
+            <Link href={overview.bookingUrl} className="ochoco-fp-schedule-btn">
               SCHEDULE
             </Link>
           </div>

@@ -16,6 +16,7 @@ const DEMO_ACCOUNTS = [
   { role: 'petugas', label: 'Petugas', email: 'petugas@sipinjam.ac.id', pass: 'petugas123' },
   { role: 'pengguna', label: 'Mahasiswa', email: 'mahasiswa@sipinjam.ac.id', pass: 'mhs12345' },
   { role: 'pengguna', label: 'Dosen', email: 'dosen@sipinjam.ac.id', pass: 'dosen123' },
+  { role: 'pengguna', label: 'Staf', email: 'staf@sipinjam.ac.id', pass: 'staf123' },
 ];
 
 export default function Hero() {
@@ -278,7 +279,7 @@ export default function Hero() {
 
                   {/* Quick Demo Credentials Box (Auto-fill) */}
                   <div className="ochoco-demo-box">
-                    <div className="ochoco-demo-title">AKUN DEMO (KLIK UNTUK ISI OTOMATIS)</div>
+                    <div className="ochoco-demo-title">AKUN DEMO</div>
                     <div className="ochoco-demo-list">
                       {DEMO_ACCOUNTS.map((u) => (
                         <button
@@ -336,7 +337,13 @@ export default function Hero() {
                           <input
                             id="reg-name"
                             type="text"
-                            placeholder={regPeran === 'Dosen' ? 'Contoh: Dr. Ir. Budi Santoso, M.T.' : 'Contoh: Sinta Rahmawati'}
+                            placeholder={
+                              regPeran === 'Dosen'
+                                ? 'Contoh: Dr. Ir. Budi Santoso, M.T.'
+                                : regPeran === 'Staf'
+                                ? 'Contoh: Dewi Lestari, S.Kom.'
+                                : 'Contoh: Sinta Rahmawati'
+                            }
                             value={regNama}
                             onChange={(e) => setRegNama(e.target.value)}
                             required
@@ -353,11 +360,12 @@ export default function Hero() {
                             >
                               <option value="Mahasiswa">Mahasiswa</option>
                               <option value="Dosen">Dosen</option>
+                              <option value="Staf">Staf</option>
                             </select>
                           </div>
 
                           <div className="ochoco-underline-field">
-                            <label htmlFor="reg-fakultas">FAKULTAS / SEKOLAH KAMPUS</label>
+                            <label htmlFor="reg-fakultas">FAKULTAS</label>
                             <select
                               id="reg-fakultas"
                               value={regFakultas}
@@ -373,12 +381,20 @@ export default function Hero() {
                         <div className="ochoco-field-grid">
                           <div className="ochoco-underline-field">
                             <label htmlFor="reg-nim">
-                              {regPeran === 'Dosen' ? 'NIP PEGAWAI DOSEN' : 'NIM MAHASISWA'}
+                              {regPeran === 'Mahasiswa'
+                                ? 'NIM MAHASISWA'
+                                : regPeran === 'Dosen'
+                                ? 'NIP PEGAWAI DOSEN'
+                                : 'NIP / NIK PEGAWAI STAF'}
                             </label>
                             <input
                               id="reg-nim"
                               type="text"
-                              placeholder={regPeran === 'Dosen' ? 'Contoh: 197405121999031001' : 'Contoh: 24060122140123'}
+                              placeholder={
+                                regPeran === 'Mahasiswa'
+                                  ? 'Contoh: 24060122140123'
+                                  : 'Contoh: 198904122015042001'
+                              }
                               value={regNim}
                               onChange={(e) => setRegNim(e.target.value)}
                               required
@@ -401,7 +417,13 @@ export default function Hero() {
                           <input
                             id="reg-email"
                             type="email"
-                            placeholder={regPeran === 'Dosen' ? 'nama@lecturer.undip.ac.id' : 'nama@students.undip.ac.id'}
+                            placeholder={
+                              regPeran === 'Dosen'
+                                ? 'nama@lecturer.undip.ac.id'
+                                : regPeran === 'Staf'
+                                ? 'nama@staff.undip.ac.id'
+                                : 'nama@students.undip.ac.id'
+                            }
                             value={regEmail}
                             onChange={(e) => setRegEmail(e.target.value)}
                             required

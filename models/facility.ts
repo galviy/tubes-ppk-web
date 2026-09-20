@@ -3,12 +3,7 @@
 // Dipisah dari komponen tampilan supaya struktur data konsisten
 // di seluruh aplikasi dan mudah diganti sumbernya (mock -> API/DB).
 
-export type FacilityType =
-  | 'Ruang Kelas'
-  | 'Aula'
-  | 'Laboratorium'
-  | 'Lapangan'
-  | 'Alat';
+export type FacilityType = string;
 
 export type FacilityStatus = 'avail' | 'busy' | 'repair';
 
@@ -21,6 +16,7 @@ export interface Facility {
   desc: string;
   amenities: string[];
   status: FacilityStatus;
+  image?: string;
 }
 
 export type SlotState = 'passed' | 'avail' | 'booked' | 'maint';

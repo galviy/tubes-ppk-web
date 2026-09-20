@@ -43,12 +43,22 @@ interface SchedulePreviewProps {
 export default function SchedulePreview({ activeFacilityId, onSelectFacility }: SchedulePreviewProps) {
   const { facilities, reservations } = useAppData();
   const [now, setNow] = useState<Date | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
 
   useEffect(() => {
     setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(id);
   }, []);
+
+  const categories = useMemo(() => {
+    return ['Semua', ...Array.from(new Set(facilities.map((f) => f.type))).filter(Boolean)];
+  }, [facilities]);
+
+  const filteredFacilities = useMemo(() => {
+    if (selectedCategory === 'Semua') return facilities;
+    return facilities.filter((f) => f.type === selectedCategory);
+  }, [facilities, selectedCategory]);
 
   const facility = facilities.find((f) => f.id === activeFacilityId) ?? facilities[0];
 
@@ -83,8 +93,51 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
         </div>
       </div>
 
+      {/* Toolbar: Category filter + Quick Select dropdown for large datasets */}
+      <div className="sched-toolbar">
+        <div className="sched-cat-filter">
+          {categories.map((cat) => {
+            const count = cat === 'Semua' ? facilities.length : facilities.filter((f) => f.type === cat).length;
+            const isActive = selectedCategory === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                className={`sched-cat-btn ${isActive ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(cat)}
+              >
+                {cat} ({count})
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="sched-quick-select-wrap">
+          <label className="sched-quick-label">Pilih Fasilitas:</label>
+          <select
+            className="sched-quick-select"
+            value={activeFacilityId}
+            onChange={(e) => {
+              const nextId = e.target.value;
+              onSelectFacility(nextId);
+              const targetFac = facilities.find((f) => f.id === nextId);
+              if (targetFac && selectedCategory !== 'Semua' && targetFac.type !== selectedCategory) {
+                setSelectedCategory('Semua');
+              }
+            }}
+          >
+            {facilities.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name} ({f.loc}) • {f.status === 'repair' ? 'Perbaikan' : 'Tersedia'}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Facility buttons wrap naturally into neat rows without awkward horizontal scroll */}
       <div className="sched-fac-tabs">
-        {facilities.map((f) => (
+        {filteredFacilities.map((f) => (
           <button
             key={f.id}
             className={`sched-fac-tab${f.id === activeFacilityId ? ' active' : ''}`}

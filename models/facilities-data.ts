@@ -7,58 +7,96 @@ import { Facility } from './facility';
 
 export const FACILITIES: Facility[] = [
   {
+    id: 'a101',
+    name: 'Ruang Kuliah A101',
+    type: 'Ruang Kelas',
+    loc: 'Gedung A',
+    cap: 45,
+    desc: 'Ruang kuliah representatif dengan pendingin udara, proyektor ganda, dan whiteboard lebar.',
+    amenities: ['AC Sentral', 'Proyektor HD', 'Whiteboard', 'Mikrofon Nirkabel'],
+    status: 'avail',
+    image: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&q=80',
+  },
+  {
+    id: 'b204',
+    name: 'Ruang Kuliah B204',
+    type: 'Ruang Kelas',
+    loc: 'Gedung B',
+    cap: 50,
+    desc: 'Ruang perkuliahan interaktif dengan sound system ruang, AC, dan proyektor gantung.',
+    amenities: ['AC', 'Proyektor', 'Sound System', 'Koneksi HDMI'],
+    status: 'avail',
+    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80',
+  },
+  {
     id: 'aula',
     name: 'Aula Utama',
     type: 'Aula',
-    loc: 'Gedung A',
-    cap: 300,
-    desc: 'Aula serbaguna untuk acara besar.',
-    amenities: ['Sound system', 'Proyektor'],
+    loc: 'Gedung Rektorat',
+    cap: 350,
+    desc: 'Aula serbaguna dengan panggung teater, sound system profesional, dan pendingin sentral.',
+    amenities: ['Panggung Utama', 'Sound System Konser', 'AC Sentral', 'Kamera Live Streaming'],
     status: 'avail',
+    image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&q=80',
   },
   {
-    id: 'lab1',
-    name: 'Lab Komputer 1',
+    id: 'lab-ti',
+    name: 'Lab Komputer TI-01',
+    type: 'Laboratorium',
+    loc: 'Gedung TI',
+    cap: 40,
+    desc: 'Laboratorium komputer spesifikasi tinggi dengan 40 unit PC desktop, gigabit LAN, dan AC.',
+    amenities: ['40 PC High-Spec', 'Gigabit LAN', 'AC Sentral', 'Proyektor Epson'],
+    status: 'avail',
+    image: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=800&q=80',
+  },
+  {
+    id: 'lab-bahasa',
+    name: 'Lab Bahasa',
     type: 'Laboratorium',
     loc: 'Gedung C',
-    cap: 40,
-    desc: 'Laboratorium komputer dengan 40 unit PC.',
-    amenities: ['40 unit PC', 'AC'],
-    status: 'busy',
+    cap: 35,
+    desc: 'Laboratorium bahasa multimedia dengan headset peredam bising dan master audio console.',
+    amenities: ['Headset Multimedia', 'Audio Console Guru', 'AC', 'Partisi Akustik'],
+    status: 'avail',
+    image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&q=80',
+  },
+  {
+    id: 'basket',
+    name: 'Lapangan Basket Indoor',
+    type: 'Lapangan',
+    loc: 'Gedung Olahraga',
+    cap: 60,
+    desc: 'Gelanggang basket indoor berstandar dengan lantai parquet, ring hidrolik, dan tribun.',
+    amenities: ['Lantai Kayu Parquet', 'Papan Skor Digital', 'Tribun Penonton', 'Ruang Ganti'],
+    status: 'avail',
+    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&q=80',
   },
   {
     id: 'futsal',
     name: 'Lapangan Futsal',
     type: 'Lapangan',
-    loc: 'Area Timur',
-    cap: 20,
-    desc: 'Lapangan futsal outdoor.',
-    amenities: ['Lampu sorot'],
+    loc: 'Outdoor',
+    cap: 25,
+    desc: 'Lapangan futsal outdoor dengan rumput sintetis standar dan lampu sorot malam hari.',
+    amenities: ['Rumput Sintetis', 'Lampu Sorot LED', 'Jaring Pengaman', 'Bench Pemain'],
     status: 'avail',
+    image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=80',
   },
   {
-    id: 'b201',
-    name: 'Ruang Kelas B-201',
-    type: 'Ruang Kelas',
-    loc: 'Gedung B',
-    cap: 50,
-    desc: 'Ruang kelas ber-AC dengan proyektor.',
-    amenities: ['AC', 'Proyektor'],
-    status: 'avail',
-  },
-  {
-    id: 'proj',
-    name: 'Proyektor Portable P-01',
+    id: 'proj3',
+    name: 'Proyektor Portable #3',
     type: 'Alat',
-    loc: 'Unit AV',
+    loc: 'Gedung Rektorat',
     cap: 1,
-    desc: 'Proyektor portable untuk peminjaman.',
-    amenities: ['Portable'],
+    desc: 'Unit proyektor portable 4000 lumens dengan kabel HDMI, pointer nirkabel, dan flight case.',
+    amenities: ['Tas Flight Case', 'Pointer Nirkabel', 'Kabel HDMI 15m', 'Tripod Screen'],
     status: 'repair',
+    image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&q=80',
   },
 ];
 
-export const FACILITY_CATEGORIES: Array<FacilityCategory> = [
+export const FACILITY_CATEGORIES: string[] = [
   'Semua Jenis',
   'Ruang Kelas',
   'Aula',
@@ -67,7 +105,7 @@ export const FACILITY_CATEGORIES: Array<FacilityCategory> = [
   'Alat',
 ];
 
-export type FacilityCategory = Facility['type'] | 'Semua Jenis';
+export type FacilityCategory = string;
 
 // Data awal (seed) untuk reservasi & laporan — dipakai untuk mengisi
 // AppDataContext saat aplikasi pertama kali dimuat. Pada implementasi
@@ -76,13 +114,13 @@ import { Reservation } from './reservation';
 import { Report, PendingAccount } from './report';
 
 export const SEED_RESERVATIONS: Reservation[] = [
-  { id: 101, facilityId: 'aula', pemohon: 'Rangga (Mahasiswa)', tanggal: '2026-09-18', start: '16:00', end: '17:00', tujuan: 'Wisuda mini himpunan', peserta: 120, status: 'menunggu', createdAt: '2026-09-15T09:12:00.000Z' },
-  { id: 102, facilityId: 'lab1', pemohon: 'Bu Sari (Dosen)', tanggal: '2026-09-18', start: '09:00', end: '10:30', tujuan: 'Praktikum basis data', peserta: 35, status: 'disetujui', createdAt: '2026-09-14T07:40:00.000Z' },
-  { id: 103, facilityId: 'b201', pemohon: 'Dimas (Mahasiswa)', tanggal: '2026-09-18', start: '10:30', end: '11:00', tujuan: 'Rapat panitia lomba', peserta: 18, status: 'menunggu', createdAt: '2026-09-16T14:05:00.000Z' },
+  { id: 101, facilityId: 'a101', pemohon: 'Rangga (Mahasiswa)', tanggal: '2026-09-18', start: '16:00', end: '17:00', tujuan: 'Wisuda mini himpunan', peserta: 40, status: 'menunggu', createdAt: '2026-09-15T09:12:00.000Z' },
+  { id: 102, facilityId: 'lab-ti', pemohon: 'Bu Sari (Dosen)', tanggal: '2026-09-18', start: '09:00', end: '10:30', tujuan: 'Praktikum basis data', peserta: 35, status: 'disetujui', createdAt: '2026-09-14T07:40:00.000Z' },
+  { id: 103, facilityId: 'b204', pemohon: 'Dimas (Mahasiswa)', tanggal: '2026-09-18', start: '10:30', end: '11:00', tujuan: 'Rapat panitia lomba', peserta: 18, status: 'menunggu', createdAt: '2026-09-16T14:05:00.000Z' },
 ];
 
 export const SEED_REPORTS: Report[] = [
-  { id: 201, facilityId: 'proj', pelapor: 'Dr. Sinta (Dosen)', kategori: 'Kelistrikan', deskripsi: 'Lampu proyektor redup, kemungkinan mendekati akhir usia pakai.', foto: 'IMG_4021.jpg', status: 'diproses', catatan: '', createdAt: '2026-09-17T08:30:00.000Z' },
+  { id: 201, facilityId: 'proj3', pelapor: 'Dr. Sinta (Dosen)', kategori: 'Kelistrikan', deskripsi: 'Lampu proyektor redup, kemungkinan mendekati akhir usia pakai.', foto: 'IMG_4021.jpg', status: 'diproses', catatan: '', createdAt: '2026-09-17T08:30:00.000Z' },
   { id: 202, facilityId: 'futsal', pelapor: 'Andi (Mahasiswa)', kategori: 'Lainnya', deskripsi: 'Gawang sedikit goyang di sisi timur lapangan.', status: 'baru', catatan: '', createdAt: '2026-09-18T10:15:00.000Z' },
 ];
 
@@ -95,6 +133,16 @@ export const SEED_PENDING_ACCOUNTS: PendingAccount[] = [
     phone: '081234567891',
     peran: 'Mahasiswa',
     fakultas: 'Fakultas Sains dan Matematika (FSM)',
+    status: 'menunggu',
+  },
+  {
+    id: 302,
+    nama: 'Bambang Irawan, S.E.',
+    email: 'bambang@staff.undip.ac.id',
+    nim: '198705142012051002',
+    phone: '081390123456',
+    peran: 'Staf',
+    fakultas: 'Fakultas Teknik (FT)',
     status: 'menunggu',
   },
 ];

@@ -64,7 +64,13 @@ export default function PanduanPage() {
             </svg>
             <span>KEMBALI KE HOME</span>
           </Link>
-          <div className="ochoco-sub-header-title">PANDUAN SISTEM SIPINJAM</div>
+          <div className="ochoco-breadcrumb">
+            <span>Home</span>
+            <span>/</span>
+            <span style={{ color: '#b59876' }}>Panduan Sistem</span>
+            <span>/</span>
+            <span>Universitas Diponegoro</span>
+          </div>
         </div>
       </div>
 
@@ -73,7 +79,7 @@ export default function PanduanPage() {
         {/* Banner Section */}
         <div style={{ maxWidth: 840, marginBottom: 48 }}>
           <div className="ochoco-hero-badge" style={{ marginBottom: 12 }}>
-            PANDUAN PENGGUNA (USER STORY US-03)
+            PANDUAN PENGGUNA
           </div>
           <h1 style={{ fontFamily: 'var(--font)', fontSize: 36, fontWeight: 600, color: '#181D24', letterSpacing: '-0.01em', lineHeight: 1.2, margin: '0 0 14px 0' }}>
             Tata Cara Reservasi & Pelaporan Fasilitas Kampus

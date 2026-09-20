@@ -1,6 +1,6 @@
 'use client';
 
-import { FACILITY_CATEGORIES, FacilityCategory } from '@/models/facilities-data';
+import { useAppData } from '@/context/AppDataContext';
 import { FacilityFilters } from '@/lib/filter-facilities';
 
 interface FacilityFilterBarProps {
@@ -9,6 +9,16 @@ interface FacilityFilterBarProps {
 }
 
 export default function FacilityFilterBar({ filters, onChange }: FacilityFilterBarProps) {
+  const { facilities } = useAppData();
+
+  // Dynamic types derived from current facilities
+  const dynamicTypes = Array.from(new Set(facilities.map((f) => f.type))).filter(Boolean);
+  const typeOptions = ['Semua Jenis', ...dynamicTypes];
+
+  // Dynamic buildings/locations derived from current facilities
+  const dynamicBuildings = Array.from(new Set(facilities.map((f) => f.loc))).filter(Boolean);
+  const buildingOptions = ['Semua Gedung', ...dynamicBuildings];
+
   return (
     <div className="filter-card">
       <div className="f-head">Pencarian fasilitas</div>
@@ -17,9 +27,9 @@ export default function FacilityFilterBar({ filters, onChange }: FacilityFilterB
         <label>Tipe fasilitas</label>
         <select
           value={filters.category}
-          onChange={(e) => onChange({ ...filters, category: e.target.value as FacilityCategory })}
+          onChange={(e) => onChange({ ...filters, category: e.target.value })}
         >
-          {FACILITY_CATEGORIES.map((cat) => (
+          {typeOptions.map((cat) => (
             <option key={cat} value={cat}>{cat}</option>
           ))}
         </select>
@@ -28,12 +38,9 @@ export default function FacilityFilterBar({ filters, onChange }: FacilityFilterB
       <div className="fgroup">
         <label>Tipe gedung</label>
         <select value={filters.lokasi} onChange={(e) => onChange({ ...filters, lokasi: e.target.value })}>
-          <option>Semua Gedung</option>
-          <option>Area Timur</option>
-          <option>Gedung A</option>
-          <option>Gedung B</option>
-          <option>Gedung C</option>
-          <option>Unit AV</option>
+          {buildingOptions.map((b) => (
+            <option key={b} value={b}>{b}</option>
+          ))}
         </select>
       </div>
 

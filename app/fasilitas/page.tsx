@@ -13,7 +13,7 @@ import { useAppData } from '@/context/AppDataContext';
 import { DEFAULT_FILTERS, FacilityFilters, filterFacilities } from '@/lib/filter-facilities';
 import { FacilityCategory } from '@/models/facilities-data';
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 9;
 
 function FasilitasContent() {
   const searchParams = useSearchParams();
@@ -27,6 +27,7 @@ function FasilitasContent() {
   });
   const [detailId, setDetailId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [columns, setColumns] = useState<2 | 3 | 4>(3);
 
   const list = filterFacilities(facilities, filters);
   const visibleList = list.slice(0, visibleCount);
@@ -42,7 +43,7 @@ function FasilitasContent() {
 
       {/* Top Breadcrumb & Back Navigation Bar */}
       <div className="ochoco-sub-header-bar">
-        <div className="wrap ochoco-sub-header-row">
+        <div className="wrap ochoco-catalog-wrap ochoco-sub-header-row">
           <Link href="/" className="ochoco-back-button">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -61,7 +62,7 @@ function FasilitasContent() {
       </div>
 
       <main className="ochoco-main-content">
-        <div className="wrap">
+        <div className="wrap ochoco-catalog-wrap">
           <div className="ochoco-page-head">
             <div className="ochoco-page-eyebrow">FACILITIES • UNIVERSITAS DIPONEGORO</div>
             <h1 className="ochoco-page-title">
@@ -75,9 +76,39 @@ function FasilitasContent() {
 
           <FacilityFilterBar filters={filters} onChange={setFilters} />
 
-          <div className="facility-count">
-            Menampilkan {visibleList.length} dari {list.length} fasilitas
-            {list.length !== facilities.length && ` (total ${facilities.length} fasilitas Universitas Diponegoro)`}
+          <div className="facility-count-bar">
+            <div className="facility-count">
+              Menampilkan <b>{visibleList.length}</b> dari {list.length} fasilitas
+              {list.length !== facilities.length && ` (total ${facilities.length} fasilitas Universitas Diponegoro)`}
+            </div>
+
+            <div className="facility-view-switcher">
+              <span className="view-switcher-label">Tampilan Grid:</span>
+              <button
+                type="button"
+                className={`view-btn ${columns === 2 ? 'active' : ''}`}
+                onClick={() => setColumns(2)}
+                title="2 Kolom per baris (Besar)"
+              >
+                2 Kolom
+              </button>
+              <button
+                type="button"
+                className={`view-btn ${columns === 3 ? 'active' : ''}`}
+                onClick={() => setColumns(3)}
+                title="3 Kolom per baris (Standar)"
+              >
+                3 Kolom
+              </button>
+              <button
+                type="button"
+                className={`view-btn ${columns === 4 ? 'active' : ''}`}
+                onClick={() => setColumns(4)}
+                title="4 Kolom per baris (Kompak)"
+              >
+                4 Kolom
+              </button>
+            </div>
           </div>
 
           <div className="facility-layout">
@@ -87,7 +118,7 @@ function FasilitasContent() {
             />
 
             <div>
-              <div className="grid">
+              <div className={`grid grid-cols-${columns}`}>
                 {visibleList.map((f) => (
                   <FacilityCard key={f.id} facility={f} onOpenDetail={setDetailId} />
                 ))}

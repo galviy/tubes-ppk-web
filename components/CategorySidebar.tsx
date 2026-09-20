@@ -13,9 +13,12 @@ export default function CategorySidebar({ active, selected, onSelect }: Category
   const { facilities } = useAppData();
   const currentActive = active || selected || 'Semua Jenis';
 
+  const dynamicTypes = Array.from(new Set(facilities.map((f) => f.type))).filter(Boolean);
+  const categories = ['Semua Jenis', ...dynamicTypes];
+
   return (
     <div className="cat-sidebar">
-      {FACILITY_CATEGORIES.map((cat) => {
+      {categories.map((cat) => {
         const count = cat === 'Semua Jenis' ? facilities.length : facilities.filter((f) => f.type === cat).length;
         const isActive = currentActive === cat;
         return (

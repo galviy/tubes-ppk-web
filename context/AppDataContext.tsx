@@ -76,6 +76,7 @@ interface AppDataValue {
   registeredAccounts: FakeUserRecord[];
   addFacility: (input: Omit<Facility, 'id' | 'status'>) => void;
   updateFacility: (id: string, input: Omit<Facility, 'id' | 'status'>) => void;
+  deleteFacility: (id: string) => void;
   registerAccountDirectly: (input: DirectRegisterInput) => { ok: boolean; message?: string; account?: FakeUserRecord };
   toggleAccountStatus: (id: string) => void;
   verifyPendingAccount: (id: number, approve: boolean) => void;
@@ -204,6 +205,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       },
       updateFacility: (id, input) => {
         setFacilities((prev) => prev.map((f) => (f.id === id ? { ...f, ...input } : f)));
+      },
+      deleteFacility: (id) => {
+        setFacilities((prev) => prev.filter((f) => f.id !== id));
       },
       registerAccountDirectly: (input: DirectRegisterInput) => {
         const exists = registeredAccounts.some(
