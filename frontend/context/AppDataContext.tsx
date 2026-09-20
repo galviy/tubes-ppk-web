@@ -125,7 +125,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         isSlotBooked(reservations, facilityId, slotStart, excludeId),
 
       login: async (email, password) => {
-        const result = await apiLogin(email, password);
+        const result = await apiLogin(email, password, registeredAccounts);
         if (result.ok && result.user) setCurrentUser(result.user);
         return result;
       },

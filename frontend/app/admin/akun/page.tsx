@@ -324,7 +324,7 @@ export default function KelolaAkunPage() {
 
   function handleCopyCredentials() {
     if (!createdCredential) return;
-    const text = `KREDENSIAL AKUN SIPINJAM UNDIP\nNama: ${createdCredential.nama}\nUsername: ${createdCredential.username}\nNIP/NIM/NIDN: ${createdCredential.nip}\nEmail: ${createdCredential.email}\nPeran: ${createdCredential.peran}\nUnit/Prodi: ${createdCredential.unit}\nKata Sandi: ${createdCredential.password}\nPortal: http://localhost:3000/#auth`;
+    const text = `KREDENSIAL AKUN SIPINJAM UNDIP\nNama: ${createdCredential.nama}\nUsername: ${createdCredential.username}\nNIP/NIM/NIDN: ${createdCredential.nip}\nEmail: ${createdCredential.email}\nPeran: ${createdCredential.peran}\nUnit/Prodi: ${createdCredential.unit}\nKata Sandi: ${createdCredential.password}\nPortal: http://localhost:3000/login`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
@@ -770,9 +770,9 @@ export default function KelolaAkunPage() {
                   />
                 </div>
 
-                {/* Kata Sandi Awal */}
+                {/* Kata Sandi */}
                 <div className="fgroup full">
-                  <label>Kata Sandi Awal (Sinkron Validasi IsPasswordValid Backend) *</label>
+                  <label>Kata Sandi *</label>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                     <div style={{ position: 'relative', flex: '1 1 240px' }}>
                       <input
@@ -819,7 +819,7 @@ export default function KelolaAkunPage() {
                     </button>
                   </div>
                   <div style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>
-                    Kata sandi default: <code>Sipinjam2026!</code>. Syarat backend: minimal 5 karakter, 1 huruf besar, dan 1 simbol khusus.
+                    Kata sandi default: <code>Sipinjam2026!</code> (minimal 5 karakter, 1 huruf besar, dan 1 simbol).
                   </div>
                 </div>
               </div>

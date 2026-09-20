@@ -83,6 +83,7 @@ export default function PetugasLaporanPage() {
           { key: 'baru', label: `Baru (${reports.filter((r) => r.status === 'baru').length})` },
           { key: 'diproses', label: `Diproses (${reports.filter((r) => r.status === 'diproses').length})` },
           { key: 'selesai', label: `Selesai (${reports.filter((r) => r.status === 'selesai').length})` },
+          { key: 'ditolak', label: `Ditolak (${reports.filter((r) => r.status === 'ditolak').length})` },
         ].map((tab) => (
           <button
             key={tab.key}

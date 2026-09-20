@@ -10,7 +10,7 @@ const STATUS_CONFIG: Record<ReservationStatus, { pillClass: string; label: strin
   menunggu: { pillClass: 'busy', label: 'Menunggu' },
   disetujui: { pillClass: 'avail', label: 'Disetujui' },
   ditolak: { pillClass: 'danger', label: 'Ditolak' },
-  dibatalkan: { pillClass: 'danger', label: 'Dibatalkan' },
+  dibatalkan: { pillClass: 'neutral', label: 'Dibatalkan' },
 };
 
 export default function PetugasReservasiPage() {

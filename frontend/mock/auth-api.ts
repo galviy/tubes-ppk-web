@@ -24,9 +24,13 @@ function delay<T>(value: T, ms = 300): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
 }
 
-export async function login(identifier: string, password: string): Promise<AuthResult> {
+export async function login(
+  identifier: string,
+  password: string,
+  users: FakeUserRecord[] = FAKE_USERS_DB
+): Promise<AuthResult> {
   const cleanId = identifier.trim().toLowerCase();
-  const match = FAKE_USERS_DB.find(
+  const match = users.find(
     (u) =>
       (u.email.toLowerCase() === cleanId || (u.username && u.username.toLowerCase() === cleanId)) &&
       u.password === password
