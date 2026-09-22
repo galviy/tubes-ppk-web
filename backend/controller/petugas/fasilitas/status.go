@@ -1,4 +1,4 @@
-package facility
+package fasilitas
 
 import (
 	"backend-ppk/repositories"
@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 )
-
 
 const (
 	StatusAktif          = "aktif"
@@ -23,9 +22,8 @@ const (
 
 type updateStatusBody struct {
 	Status string `json:"status"`
-	Tipe string `json:"tipe"`
+	Tipe   string `json:"tipe"`
 }
-
 
 func UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
