@@ -138,10 +138,10 @@ export default function LoginPage() {
             /* Single Dedicated Login Form (No Tabs) */
             <div>
               <div className="ochoco-card-eyebrow">AKSES SISTEM</div>
-              <h2 className="ochoco-waiting-title" style={{ fontSize: 23, marginBottom: 8 }}>
+              <h2 className="ochoco-waiting-title" style={{ fontSize: 24, marginBottom: 8 }}>
                 <span style={{ color: '#b59876' }}>MASUK</span>
               </h2>
-              <p className="ochoco-card-subtitle" style={{ fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>
+              <p className="ochoco-card-subtitle" style={{ fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>
                 Gunakan akun resmi civitas akademika Universitas Diponegoro untuk mengelola peminjaman dan pelaporan fasilitas.
               </p>
 

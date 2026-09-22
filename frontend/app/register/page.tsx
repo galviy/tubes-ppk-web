@@ -175,7 +175,7 @@ export default function RegisterPage() {
 
       {/* Main Container: Centered Large Ochoco Register Card */}
       <main className="ochoco-auth-container">
-        <div className="ochoco-waiting-card ochoco-auth-standalone-card" style={{ maxWidth: 640 }}>
+        <div className="ochoco-waiting-card ochoco-auth-standalone-card">
           {regSuccess ? (
             <div className="ochoco-waiting-success" style={{ padding: '36px 20px' }}>
               <div className="ochoco-success-check" style={{ width: 64, height: 64, fontSize: 32 }}>✓</div>
@@ -195,10 +195,10 @@ export default function RegisterPage() {
           ) : (
             <div>
               <div className="ochoco-card-eyebrow">REGISTRASI AKUN PENGGUNA</div>
-              <h2 className="ochoco-waiting-title" style={{ fontSize: 23, marginBottom: 8 }}>
+              <h2 className="ochoco-waiting-title" style={{ fontSize: 24, marginBottom: 8 }}>
                 <span style={{ color: '#b59876' }}>DAFTAR</span> AKUN BARU
               </h2>
-              <p className="ochoco-card-subtitle" style={{ fontSize: 13, marginBottom: 18, lineHeight: 1.5 }}>
+              <p className="ochoco-card-subtitle" style={{ fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>
                 Pendaftaran akun civitas akademika Universitas Diponegoro (Mahasiswa, Dosen, dan Staf).
               </p>
 
