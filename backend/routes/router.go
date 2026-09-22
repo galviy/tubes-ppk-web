@@ -6,7 +6,7 @@ import (
 	fasilitas "backend-ppk/controller/admin/fasilitas"
 	"backend-ppk/controller/admin/verifikasi"
 	"backend-ppk/controller/auth"
-	"backend-ppk/controller/facility"
+	petugas_fasilitas "backend-ppk/controller/petugas/fasilitas"
 	petugas_report "backend-ppk/controller/petugas/report"
 	"backend-ppk/controller/report"
 	"backend-ppk/controller/reservasi"
@@ -150,7 +150,7 @@ func SetupRoutes() *http.ServeMux {
 	mux.Handle(
 		"PATCH /petugas/facilities/{id}/status",
 		middleware.Auth(middleware.RequireRole(
-			http.HandlerFunc(facility.UpdateStatus),
+			http.HandlerFunc(petugas_fasilitas.UpdateStatus),
 			middleware.RolePetugas, middleware.RoleAdmin,
 		)),
 	)
