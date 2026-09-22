@@ -9,7 +9,6 @@ import (
 	"strconv"
 )
 
-
 func ListAllLaporan(w http.ResponseWriter, r *http.Request) {
 	list, err := repositories.ListAllReports()
 	if err != nil {
@@ -22,7 +21,6 @@ func ListAllLaporan(w http.ResponseWriter, r *http.Request) {
 		"data":    list,
 	})
 }
-
 
 func DetailLaporanOfficer(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))

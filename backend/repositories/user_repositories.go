@@ -2,18 +2,18 @@ package repositories
 
 import (
 	"backend-ppk/config"
-	utils "backend-ppk/utilities"
 	"database/sql"
 	"errors"
 	"log"
 )
 
 type User struct {
-	ID       int
-	Username string
-	Email    string
-	Role     string
-	Password string
+	ID         int
+	Username   string
+	Email      string
+	Role       string
+	Password   string
+	IsVerified bool
 }
 
 /*func NewUser(email, role, username string) *Session {
@@ -33,32 +33,36 @@ type User struct {
 +------------+--------------+------+-----+---------+----------------+
 */
 
-func IsLoginCorrect(email string, password string, user *User) bool {
+// GetUserByEmail mengembalikan user berdasarkan email, atau nil bila
+// tidak ada. Verifikasi password dan status akun dilakukan di service.
+func GetUserByEmail(email string) (*User, error) {
+	var (
+		user       User
+		isVerified int
+	)
 
-	row := config.QueryRow(`
-		SELECT id,username,email,user_role,password
+	err := config.QueryRow(`
+		SELECT id, username, email, user_role, password, isVerified
 		FROM user
-		WHERE email = ? and isVerified = 1
-	`, email)
-
-	err := row.Scan(
+		WHERE email = ?
+	`, email).Scan(
 		&user.ID,
 		&user.Username,
 		&user.Email,
 		&user.Role,
 		&user.Password,
+		&isVerified,
 	)
 
 	if err == sql.ErrNoRows {
-		return false
+		return nil, nil
 	}
-
 	if err != nil {
-		log.Println("Terjadi error pada database:", err)
-		return false
+		return nil, err
 	}
 
-	return utils.CheckPassword(password, user.Password)
+	user.IsVerified = isVerified == 1
+	return &user, nil
 }
 
 func IsNamaAlatExist(kategori string) bool {

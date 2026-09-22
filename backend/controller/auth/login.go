@@ -2,7 +2,7 @@ package auth
 
 import (
 	session "backend-ppk/models"
-	"backend-ppk/repositories"
+	"backend-ppk/services"
 	utils "backend-ppk/utilities"
 
 	"net/http"
@@ -38,9 +38,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user_login repositories.User
-
-	isCorrect := repositories.IsLoginCorrect(email, password, &user_login)
+	user_login, isCorrect := services.VerifyLogin(email, password)
 	if !isCorrect {
 		utils.ResponseJSONMessage(w, "Make sure your account has been verified or you type a invalid username or password", http.StatusUnauthorized, false)
 		return
