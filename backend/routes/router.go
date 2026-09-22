@@ -6,6 +6,7 @@ import (
 	fasilitas "backend-ppk/controller/admin/fasilitas"
 	"backend-ppk/controller/admin/verifikasi"
 	"backend-ppk/controller/auth"
+	publik_fasilitas "backend-ppk/controller/fasilitas"
 	petugas_fasilitas "backend-ppk/controller/petugas/fasilitas"
 	petugas_report "backend-ppk/controller/petugas/report"
 	"backend-ppk/controller/report"
@@ -92,7 +93,6 @@ func SetupRoutes() *http.ServeMux {
 		"POST /admin/create_user/admin",
 		middleware.AdminAuth(http.HandlerFunc(createuser.Create_Admin)),
 	)
-	///admin/create_fasilitas/fasilitas
 	mux.Handle(
 		"POST /admin/create_fasilitas/kategori",
 		middleware.AdminAuth(http.HandlerFunc(fasilitas.Create_Kategori)),
@@ -105,6 +105,8 @@ func SetupRoutes() *http.ServeMux {
 		"POST /admin/create_fasilitas/alat",
 		middleware.AdminAuth(http.HandlerFunc(fasilitas.Create_Alat)),
 	)
+	mux.HandleFunc("GET /fasilitas", publik_fasilitas.ListFasilitas)
+
 	mux.Handle(
 		"GET /user/me",
 		middleware.Auth(http.HandlerFunc(user.Me)),
