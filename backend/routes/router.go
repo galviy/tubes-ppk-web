@@ -6,9 +6,10 @@ import (
 	fasilitas "backend-ppk/controller/admin/fasilitas"
 	"backend-ppk/controller/admin/verifikasi"
 	"backend-ppk/controller/auth"
-	"backend-ppk/controller/facility"
-	petugas "backend-ppk/controller/petugas"
+	petugas_fasilitas "backend-ppk/controller/petugas/fasilitas"
+	petugas_report "backend-ppk/controller/petugas/report"
 	"backend-ppk/controller/report"
+	"backend-ppk/controller/reservasi"
 	"backend-ppk/controller/user"
 	"backend-ppk/middleware"
 	"net/http"
@@ -122,30 +123,34 @@ func SetupRoutes() *http.ServeMux {
 		middleware.Auth(http.HandlerFunc(report.DetailLaporan)),
 	)
 	mux.Handle(
+		"POST /reservasi/create_reservasi",
+		middleware.Auth(http.HandlerFunc(reservasi.Create_reservasi)),
+	)
+	mux.Handle(
 		"GET /petugas/reports",
 		middleware.Auth(middleware.RequireRole(
-			http.HandlerFunc(petugas.ListAllLaporan),
+			http.HandlerFunc(petugas_report.ListAllLaporan),
 			middleware.RolePetugas, middleware.RoleAdmin,
 		)),
 	)
 	mux.Handle(
 		"GET /petugas/reports/{id}",
 		middleware.Auth(middleware.RequireRole(
-			http.HandlerFunc(petugas.DetailLaporanOfficer),
+			http.HandlerFunc(petugas_report.DetailLaporanOfficer),
 			middleware.RolePetugas, middleware.RoleAdmin,
 		)),
 	)
 	mux.Handle(
 		"PATCH /petugas/reports/{id}",
 		middleware.Auth(middleware.RequireRole(
-			http.HandlerFunc(petugas.UpdateLaporan),
+			http.HandlerFunc(petugas_report.UpdateLaporan),
 			middleware.RolePetugas, middleware.RoleAdmin,
 		)),
 	)
 	mux.Handle(
 		"PATCH /petugas/facilities/{id}/status",
 		middleware.Auth(middleware.RequireRole(
-			http.HandlerFunc(facility.UpdateStatus),
+			http.HandlerFunc(petugas_fasilitas.UpdateStatus),
 			middleware.RolePetugas, middleware.RoleAdmin,
 		)),
 	)

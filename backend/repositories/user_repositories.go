@@ -124,6 +124,22 @@ func IsUserExist(email string, username string) bool {
 	return true
 }
 
+func IsUserIDExist(idUser int) bool {
+	var hasilAngka int
+	err := config.QueryRow(`
+		select 1 
+		from user
+		where id = ? 
+	`, idUser).Scan(&hasilAngka)
+	if err == sql.ErrNoRows {
+		return false
+	} else if err != nil {
+		log.Println("Terjadi error pada database:", err)
+		return false
+	}
+	return true
+}
+
 func IsDosenExist(nidn string) bool {
 	var hasilAngka int
 	err := config.QueryRow(`
