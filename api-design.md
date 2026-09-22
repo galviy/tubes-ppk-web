@@ -34,44 +34,6 @@
 
 ### AUTHENTICATION
 
-#### - POST   /auth/register
-
-```curl
-curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
--X POST http://127.0.0.1:8080/auth/create_account \
--H "Content-Type: application/x-www-form-urlencoded" \
--d "username=bjorka&password=Test@123&email=bjorka@gmail.com"
-```
-
-Response sukses
-
-```json
-HTTP/1.1 200 OK
-Content-Type: application/json
-Date: Sun, 13 Sep 2026 22:59:14 GMT
-Content-Length: 83
-
-{"message":"Successfully created account with username (bjorkaa)!","success":true}
-
-
-[INFO] Waktu Total Respons: 0.054513 detik
-```
-
-Response gagal
-
-```json
-HTTP/1.1 401 Unauthorized
-Content-Type: application/json
-Date: Sun, 13 Sep 2026 22:59:06 GMT
-Content-Length: 74
-
-{"message":"Username atau email sudah exist sebelumnya!","success":false}
-
-
-[INFO] Waktu Total Respons: 0.001167 detik
-```
-
-> Catatan: route generik `/auth/create_account` di atas sudah dipecah menjadi dua route aktual di bawah. Dokumentasi di bawah mengikuti `routes/router.go`, `controller/auth/*`.
 
 #### - POST   /auth/create_account/mhs
 
@@ -1259,7 +1221,124 @@ GET    /reservations/:id
 POST   /reservations
 PATCH  /reservations/:id
 
-> Belum terimplementasi di backend (tidak ada route reservasi di `routes/router.go`). Stub.
+> Dari daftar di atas, yang sudah terimplementasi di backend hanya `POST /reservasi/create_reservasi` (`controller/reservasi/create_reservasi.go` via `routes/router.go`). Sisanya stub.
+
+#### - POST /reservasi/create_reservasi
+
+Buat reservasi ruangan. Auth: login semua role (`middleware.Auth`, `user_reservasi` diambil dari session `session_id`). `Content-Type: application/x-www-form-urlencoded`. Status awal selalu `PENDING`. Cek bentrok hanya terhadap reservasi berstatus `APPROVED` (`repositories.IsReservasiBentrok`).
+
+```curl
+curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
+-X POST http://127.0.0.1:8080/reservasi/create_reservasi \
+-H "Content-Type: application/x-www-form-urlencoded" \
+-H "Cookie: session_id=USER_SESSION_ID" \
+-d "ruangan_reservasi=1&waktu_peminjaman=2026-09-23+08%3A00%3A00&waktu_peminjaman_selesai=2026-09-23+09%3A00%3A00"
+```
+
+Field form:
+
+| Field | Wajib | Validasi |
+|---|---|---|
+| `ruangan_reservasi` | ya | integer, harus exist di `ruangan` (`CheckRuanganById`) |
+| `waktu_peminjaman` | ya | format `YYYY-MM-DD HH:MM:SS`, menit `00`/`30`, detik `00`, jam 07:00-20:00 |
+| `waktu_peminjaman_selesai` | ya | format `YYYY-MM-DD HH:MM:SS`, menit `00`/`30`, detik `00`, jam 07:00-20:00, harus setelah `waktu_peminjaman` |
+
+Jam operasional: `07:00 - 20:00` (`operasionalMulai = 7*60`, `operasionalSelesai = 20*60`). Slot valid hanya kelipatan 30 menit.
+
+Response sukses
+
+```json
+HTTP/1.1 201 Created
+Content-Type: application/json
+
+{"message":"Reservasi berhasil dibuat!","success":true}
+```
+
+Response gagal
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"Missing field!","success":false}
+```
+
+```json
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+
+{"message":"ID Ruangan tidak Valid!!","success":false}
+```
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"Format waktu peminjaman tidak valid! Gunakan YYYY-MM-DD HH:MM:SS","success":false}
+```
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"Format waktu selesai tidak valid! Gunakan YYYY-MM-DD HH:MM:SS","success":false}
+```
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"Reservasi hanya dapat dilakukan pada jam 07:00 - 20:00!","success":false}
+```
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"Waktu reservasi harus menggunakan slot 30 menit!","success":false}
+```
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"Waktu selesai harus setelah waktu mulai!","success":false}
+```
+
+```json
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+
+{"message":"Ruangan tidak ditemukan!","success":false}
+```
+
+```json
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+
+{"message":"User tidak ditemukan!","success":false}
+```
+
+```json
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+
+{"message":"Ruangan sudah digunakan pada waktu tersebut!","success":false}
+```
+
+```json
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+
+{"message":"Unauthorized","success":false}
+```
+
+```json
+HTTP/1.1 500 Internal Server Error
+Content-Type: application/json
+
+{"message":"Internal server error","success":false}
+```
 
 #### REPORTS
 
