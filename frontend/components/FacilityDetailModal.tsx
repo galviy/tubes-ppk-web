@@ -48,13 +48,16 @@ export default function FacilityDetailModal({ facility, onClose }: FacilityDetai
         <p className="modal-desc">{facility.desc}</p>
 
         <div className="modal-info-grid">
-          <div><span className="lbl-sm">Kapasitas</span><div>{facility.cap} orang</div></div>
-          <div><span className="lbl-sm">Kelengkapan</span><div>{facility.amenities.join(', ') || '—'}</div></div>
+          <div>
+            <span className="lbl-sm">{facility.type?.toLowerCase() === 'alat' ? 'Jumlah Tersedia' : 'Kapasitas'}</span>
+            <div>{facility.cap} {facility.type?.toLowerCase() === 'alat' ? 'unit' : 'orang'}</div>
+          </div>
+          <div><span className="lbl-sm">Kelengkapan</span><div>{facility.amenities.join(', ') || '-'}</div></div>
         </div>
 
         {!currentUser && (
           <div className="alert info" style={{ marginTop: 18 }}>
-            Kamu belum masuk. Untuk mengajukan reservasi atau melaporkan kerusakan, silakan login dulu —
+            Kamu belum masuk. Untuk mengajukan reservasi atau melaporkan kerusakan, silakan login dulu,
             tapi jadwal ketersediaannya bisa kamu cek tanpa login.
           </div>
         )}

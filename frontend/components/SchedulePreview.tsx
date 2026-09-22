@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { generateTimeSlots, getSlotState } from '@/lib/slots';
 import { SlotState } from '@/models/facility';
@@ -26,8 +26,7 @@ const STATUS_LABEL: Record<SlotState, string> = {
   maint: 'Tidak Aktif',
 };
 
-// Slot dikelompokkan per periode waktu supaya lebih cepat dipindai —
-// bukan cuma satu grid rata seperti kebanyakan referensi.
+// Slot dikelompokkan per periode waktu supaya lebih cepat dipindai
 const PERIODS = [
   { label: 'Pagi', from: '07:00', to: '10:00' },
   { label: 'Siang', from: '10:00', to: '13:00' },
@@ -44,12 +43,32 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
   const { facilities, reservations } = useAppData();
   const [now, setNow] = useState<Date | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
+  const tabsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(id);
   }, []);
+
+  // Auto-scroll active chip into view horizontally when active facility changes
+  useEffect(() => {
+    if (tabsRef.current) {
+      const activeEl = tabsRef.current.querySelector('.sched-fac-tab.active') as HTMLElement | null;
+      if (activeEl) {
+        activeEl.scrollIntoView({ inline: 'nearest', behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }, [activeFacilityId]);
+
+  const scrollTabs = (direction: 'left' | 'right') => {
+    if (tabsRef.current) {
+      tabsRef.current.scrollBy({
+        left: direction === 'left' ? -220 : 220,
+        behavior: 'smooth',
+      });
+    }
+  };
 
   const categories = useMemo(() => {
     return ['Semua', ...Array.from(new Set(facilities.map((f) => f.type))).filter(Boolean)];
@@ -82,7 +101,7 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           </div>
           <div>
             <div className="sched-title">
-              Pratinjau Ketersediaan Jadwal{now && ` — ${formatToday(now)}`}
+              Pratinjau Ketersediaan Jadwal{now && ` (${formatToday(now)})`}
             </div>
             <p className="sched-sub">Pilih fasilitas untuk melihat jam ketersediaan publik secara real-time.</p>
           </div>
@@ -135,9 +154,17 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
         </div>
       </div>
 
-      {/* Architectural facility selector bar */}
+      {/* Facility selector chips - horizontally scrollable */}
       <div className="sched-fac-tabs-wrapper">
-        <div className="sched-fac-tabs">
+        <button
+          type="button"
+          className="sched-fac-scroll-btn left"
+          onClick={() => scrollTabs('left')}
+          aria-label="Scroll kiri"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </button>
+        <div className="sched-fac-tabs" ref={tabsRef}>
           {filteredFacilities.map((f) => {
             const isActive = f.id === activeFacilityId;
             const isRepair = f.status === 'repair' || f.status === 'nonaktif';
@@ -150,11 +177,18 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
               >
                 <span className={`fac-dot ${isRepair ? 'repair' : 'avail'}`} />
                 <span className="sched-fac-name">{f.name}</span>
-                <span className="sched-fac-type">{f.type}</span>
               </button>
             );
           })}
         </div>
+        <button
+          type="button"
+          className="sched-fac-scroll-btn right"
+          onClick={() => scrollTabs('right')}
+          aria-label="Scroll kanan"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </button>
       </div>
 
       <div className="sched-info-row">
@@ -163,8 +197,12 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           <b>{facility.name}</b>
         </div>
         <div className="sched-info-cell">
+          <span className="lbl-sm">{facility.type?.toLowerCase() === 'alat' ? 'Jumlah Tersedia' : 'Kapasitas'}</span>
+          <b>{facility.cap} {facility.type?.toLowerCase() === 'alat' ? 'unit' : 'orang'}</b>
+        </div>
+        <div className="sched-info-cell">
           <span className="lbl-sm">Zona Operasional</span>
-          <b>07.00 – 20.00 WIB</b>
+          <b>07.00 - 20.00 WIB</b>
         </div>
         <div className="sched-info-cell sched-avail-meter">
           <span className="lbl-sm">Slot Tersedia Hari Ini</span>
@@ -188,7 +226,7 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
                 <div key={slot.start} className={`slot-lg ${state}`}>
                   <span className="slot-bar" />
                   <div className="slot-lg-body">
-                    <div className="t">{slot.start}–{slot.end}</div>
+                    <div className="t">{slot.start} - {slot.end}</div>
                     <div className="s">{STATUS_LABEL[state]}</div>
                   </div>
                 </div>

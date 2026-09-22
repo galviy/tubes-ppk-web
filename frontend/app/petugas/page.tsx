@@ -88,7 +88,7 @@ export default function PetugasRingkasanPage() {
       {/* Notice Banner */}
       <div className="dash-notice-banner">
         <span>
-          Ada <strong>{resMenunggu} reservasi</strong> dan <strong>{lapAktif} laporan</strong> yang masih menunggu diproses — cek{' '}
+          Ada <strong>{resMenunggu} reservasi</strong> dan <strong>{lapAktif} laporan</strong> yang masih menunggu diproses. Silakan cek{' '}
           <Link href="/petugas/reservasi" style={{ color: '#b59876', fontWeight: 600, textDecoration: 'underline' }}>
             Antrian Reservasi
           </Link>{' '}

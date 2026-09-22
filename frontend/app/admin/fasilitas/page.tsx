@@ -214,24 +214,28 @@ export default function KelolaFasilitasPage() {
             />
           </div>
 
-          {/* Kapasitas */}
+          {/* Kapasitas / Jumlah Tersedia */}
           <div className="fgroup">
-            <label>Kapasitas (orang) *</label>
-            <input
-              type="number"
-              min={1}
-              value={form.kapasitas}
-              onChange={(e) => setForm((f) => ({ ...f, kapasitas: e.target.value }))}
-              placeholder="Contoh: 45"
-            />
+            {(() => {
+              const isFormAlat = (form.tipeSelect === '+baru' ? form.tipeCustom : form.tipeSelect)?.toLowerCase() === 'alat';
+              return (
+                <>
+                  <label>{isFormAlat ? 'Jumlah Tersedia (unit) *' : 'Kapasitas (orang) *'}</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={form.kapasitas}
+                    onChange={(e) => setForm((f) => ({ ...f, kapasitas: e.target.value }))}
+                    placeholder={isFormAlat ? 'Contoh: 5' : 'Contoh: 45'}
+                  />
+                </>
+              );
+            })()}
           </div>
 
           {/* Kelengkapan Fasilitas (Amenities) */}
           <div className="fgroup full">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <label style={{ margin: 0 }}>Kelengkapan Fasilitas (Fasilitas Pendukung)</label>
-              <span style={{ fontSize: 11, color: '#6B7280' }}>Pisahkan dengan koma</span>
-            </div>
+            <label>Kelengkapan Fasilitas (Fasilitas Pendukung)</label>
             <input
               placeholder="Contoh: AC Sentral, Proyektor HD, Whiteboard, Sound System, Mikrofon Nirkabel"
               value={form.kelengkapan}
@@ -425,7 +429,7 @@ export default function KelolaFasilitasPage() {
               <th>Fasilitas</th>
               <th>Tipe</th>
               <th>Lokasi</th>
-              <th>Kapasitas</th>
+              <th>Kapasitas / Jumlah</th>
               <th>Status Operasional</th>
               <th style={{ textAlign: 'left' }}>Tindakan</th>
             </tr>
@@ -504,7 +508,7 @@ export default function KelolaFasilitasPage() {
                   <span style={{ fontWeight: 600, color: '#b59876', fontSize: 13 }}>{f.type}</span>
                 </td>
                 <td>{f.loc}</td>
-                <td>{f.cap} orang</td>
+                <td>{f.cap} {f.type?.toLowerCase() === 'alat' ? 'unit' : 'orang'}</td>
                 <td>
                   <span
                     className={`pill ${

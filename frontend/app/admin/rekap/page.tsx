@@ -6,8 +6,8 @@ import { useAppData } from '@/context/AppDataContext';
 export default function RekapEksporPage() {
   const { facilities, reservations, reports } = useAppData();
   const [filterMode, setFilterMode] = useState<'semua' | 'fasilitas' | 'gedung'>('semua');
-  const [selectedGedung, setSelectedGedung] = useState<string>('— Pilih —');
-  const [selectedFacilityId, setSelectedFacilityId] = useState<string>('— Pilih —');
+  const [selectedGedung, setSelectedGedung] = useState<string>('Pilih');
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string>('Pilih');
   const [exportFormat, setExportFormat] = useState<'excel' | 'csv' | 'pdf'>('excel');
 
   // Dynamic buildings extracted from active facilities
@@ -27,20 +27,20 @@ export default function RekapEksporPage() {
 
   const filteredFacilities = facilities.filter((f) => {
     if (filterMode === 'gedung') {
-      if (!selectedGedung || selectedGedung === '— Pilih —') return true;
+      if (!selectedGedung || selectedGedung === 'Pilih') return true;
       return f.loc === selectedGedung;
     }
     if (filterMode === 'fasilitas') {
-      if (!selectedFacilityId || selectedFacilityId === '— Pilih —') return true;
+      if (!selectedFacilityId || selectedFacilityId === 'Pilih') return true;
       return f.id === selectedFacilityId;
     }
     return true;
   });
 
   const exportSuffix =
-    filterMode === 'gedung' && selectedGedung !== '— Pilih —'
+    filterMode === 'gedung' && selectedGedung !== 'Pilih'
       ? selectedGedung.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-      : filterMode === 'fasilitas' && selectedFacilityId !== '— Pilih —'
+      : filterMode === 'fasilitas' && selectedFacilityId !== 'Pilih'
       ? selectedFacilityId
       : 'semua-fasilitas';
 
@@ -126,8 +126,8 @@ export default function RekapEksporPage() {
               onChange={(e) => {
                 const mode = e.target.value as 'semua' | 'fasilitas' | 'gedung';
                 setFilterMode(mode);
-                setSelectedGedung('— Pilih —');
-                setSelectedFacilityId('— Pilih —');
+                setSelectedGedung('Pilih');
+                setSelectedFacilityId('Pilih');
               }}
               style={{
                 padding: '7px 12px',
@@ -162,7 +162,7 @@ export default function RekapEksporPage() {
                   minWidth: 170,
                 }}
               >
-                <option value="— Pilih —">— Pilih —</option>
+                <option value="Pilih">Pilih Gedung</option>
                 {buildingList.map((b) => (
                   <option key={b} value={b}>
                     {b}
@@ -190,7 +190,7 @@ export default function RekapEksporPage() {
                   minWidth: 200,
                 }}
               >
-                <option value="— Pilih —">— Pilih —</option>
+                <option value="Pilih">Pilih Fasilitas</option>
                 {facilities.map((f) => (
                   <option key={f.id} value={f.id}>
                     {f.name}
@@ -250,11 +250,11 @@ export default function RekapEksporPage() {
             <tr>
               <th>Fasilitas</th>
               <th>Tipe</th>
-              <th>Lokasi / Gedung</th>
+              <th>Lokasi</th>
               <th>Status</th>
-              <th>Reservasi</th>
-              <th>Total Jam</th>
-              <th>Laporan</th>
+              <th style={{ textAlign: 'center' }}>Reservasi</th>
+              <th style={{ textAlign: 'center' }}>Jam Terpakai</th>
+              <th style={{ textAlign: 'center' }}>Kerusakan</th>
             </tr>
           </thead>
           <tbody>
@@ -266,8 +266,11 @@ export default function RekapEksporPage() {
               </tr>
             ) : (
               filteredFacilities.map((f) => {
-                const totalReservasi = reservations.filter((r) => r.facilityId === f.id).length;
-                const disetujui = reservations.filter((r) => r.facilityId === f.id && r.status === 'disetujui').length;
+                const facilityReservations = reservations.filter((r) => r.facilityId === f.id);
+                const totalReservasi = facilityReservations.length;
+                const disetujui = facilityReservations.filter((r) => r.status === 'disetujui').length;
+                const menunggu = facilityReservations.filter((r) => r.status === 'menunggu').length;
+                const ditolak = facilityReservations.filter((r) => r.status === 'ditolak').length;
                 const laporan = reports.filter((r) => r.facilityId === f.id).length;
                 const totalJam = calculateTotalHours(f.id);
 
@@ -288,28 +291,59 @@ export default function RekapEksporPage() {
                       {f.loc}
                     </td>
 
-                    {/* Status */}
+                    {/* Status Fasilitas */}
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <span className={`pill ${f.status === 'repair' ? 'busy' : 'avail'}`}>
                         {f.status === 'repair' ? 'Perbaikan' : 'Aktif'}
                       </span>
                     </td>
 
-                    {/* Reservasi Disetujui / Total */}
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <b>{disetujui}</b> <span style={{ fontSize: 11, color: '#6B7280' }}>/ {totalReservasi} total</span>
+                    {/* Status Reservasi */}
+                    <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
+                      {totalReservasi === 0 ? (
+                        <span style={{ color: '#9CA3AF', fontSize: 13 }}>-</span>
+                      ) : (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+                          {disetujui > 0 && (
+                            <span style={{ color: '#16A34A', fontWeight: 600 }}>
+                              {disetujui} Disetujui
+                            </span>
+                          )}
+                          {disetujui > 0 && menunggu > 0 && (
+                            <span style={{ color: '#D1D5DB' }}>•</span>
+                          )}
+                          {menunggu > 0 && (
+                            <span style={{ color: '#D97706', fontWeight: 600 }}>
+                              {menunggu} Menunggu
+                            </span>
+                          )}
+                          {disetujui === 0 && menunggu === 0 && ditolak > 0 && (
+                            <span style={{ color: '#DC2626', fontWeight: 600 }}>
+                              {ditolak} Ditolak
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </td>
 
-                    {/* Total Jam */}
-                    <td style={{ whiteSpace: 'nowrap', fontWeight: 600, color: '#181D24' }}>
-                      {totalJam} jam
+                    {/* Total Jam Terpakai */}
+                    <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
+                      {parseFloat(totalJam) > 0 ? (
+                        <span style={{ fontWeight: 600, color: '#181D24' }}>
+                          {parseFloat(totalJam) % 1 === 0 ? parseInt(totalJam) : totalJam} jam
+                        </span>
+                      ) : (
+                        <span style={{ color: '#9CA3AF', fontSize: 13 }}>-</span>
+                      )}
                     </td>
 
                     {/* Laporan Kerusakan */}
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <span style={{ color: laporan > 0 ? '#DC2626' : '#6B7280', fontWeight: laporan > 0 ? 700 : 400 }}>
-                        {laporan}
-                      </span>
+                    <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
+                      {laporan > 0 ? (
+                        <span style={{ color: '#DC2626', fontWeight: 700 }}>{laporan} laporan</span>
+                      ) : (
+                        <span style={{ color: '#9CA3AF', fontSize: 13 }}>-</span>
+                      )}
                     </td>
                   </tr>
                 );

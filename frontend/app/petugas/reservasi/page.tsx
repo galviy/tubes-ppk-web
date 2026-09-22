@@ -134,7 +134,7 @@ export default function PetugasReservasiPage() {
               <th>Pemohon</th>
               <th>Fasilitas</th>
               <th>Jadwal</th>
-              <th>Peserta</th>
+              <th>Peserta / Unit</th>
               <th>Tujuan</th>
               <th>Status</th>
               <th style={{ textAlign: 'left' }}>Tindakan</th>
@@ -170,12 +170,12 @@ export default function PetugasReservasiPage() {
                     {/* JADWAL */}
                     <td style={{ whiteSpace: 'nowrap', fontSize: 13 }}>
                       <div>{r.tanggal}</div>
-                      <div style={{ color: '#6B7280', fontSize: 12 }}>{r.start}–{r.end}</div>
+                      <div style={{ color: '#6B7280', fontSize: 12 }}>{r.start} - {r.end}</div>
                     </td>
 
-                    {/* PESERTA */}
+                    {/* PESERTA / UNIT */}
                     <td style={{ whiteSpace: 'nowrap', fontSize: 13 }}>
-                      {r.peserta ? `${r.peserta} orang` : '—'}
+                      {r.peserta ? `${r.peserta} ${fac?.type?.toLowerCase() === 'alat' ? 'unit' : 'orang'}` : '-'}
                     </td>
 
                     {/* TUJUAN */}

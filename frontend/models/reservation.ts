@@ -11,6 +11,6 @@ export interface Reservation {
   tujuan: string;
   peserta?: number;
   status: ReservationStatus;
-  createdAt: string; // ISO timestamp — kapan reservasi ini diajukan
+  createdAt: string; // ISO timestamp - kapan reservasi ini diajukan
   catatanBatal?: string;
 }

@@ -126,7 +126,7 @@ function LaporKerusakanContent() {
             <select value={facilityId} onChange={(e) => setFacilityId(e.target.value)}>
               {facilities.map((f) => (
                 <option key={f.id} value={f.id}>
-                  {f.name} — {f.loc}
+                  {f.name} ({f.loc})
                 </option>
               ))}
             </select>
@@ -134,7 +134,7 @@ function LaporKerusakanContent() {
           <div className="fgroup full">
             <label>Kategori kerusakan</label>
             <select value={kategori} onChange={(e) => setKategori(e.target.value)}>
-              <option value="">— Pilih kategori kerusakan —</option>
+              <option value="">Pilih kategori kerusakan</option>
               {KATEGORI_OPTIONS.map((k) => (
                 <option key={k.value} value={k.value}>
                   {k.label}

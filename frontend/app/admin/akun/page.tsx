@@ -918,17 +918,17 @@ export default function KelolaAkunPage() {
                         )}
                         <div style={{ fontSize: 11, color: '#6B7280', fontFamily: 'monospace' }}>
                           {acc.jabatan === 'Mahasiswa'
-                            ? `NIM: ${acc.nim || acc.nip || '—'}${acc.angkatan ? ` (${acc.angkatan})` : ''}`
+                            ? `NIM: ${acc.nim || acc.nip || '-'}${acc.angkatan ? ` (${acc.angkatan})` : ''}`
                             : acc.jabatan === 'Dosen'
-                            ? `NIDN: ${acc.nidn || acc.nip || '—'}`
-                            : `NIP: ${acc.nip || '—'}`}
+                            ? `NIDN: ${acc.nidn || acc.nip || '-'}`
+                            : `NIP: ${acc.nip || '-'}`}
                         </div>
                       </td>
 
                       {/* Kontak */}
                       <td style={{ whiteSpace: 'nowrap', fontSize: 13 }}>
                         <div>{acc.email}</div>
-                        <div style={{ fontSize: 11, color: '#6B7280' }}>{acc.phone || '—'}</div>
+                        <div style={{ fontSize: 11, color: '#6B7280' }}>{acc.phone || '-'}</div>
                       </td>
 
                       {/* Peran & Unit */}
@@ -949,7 +949,7 @@ export default function KelolaAkunPage() {
                       {/* Tindakan (Role Admin tidak ada tindakan) */}
                       <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
                         {acc.role === 'admin' ? (
-                          <span style={{ color: '#9CA3AF', fontSize: 15, fontWeight: 500, display: 'inline-block' }}>—</span>
+                          <span style={{ color: '#9CA3AF', fontSize: 15, fontWeight: 500, display: 'inline-block' }}>-</span>
                         ) : (
                           <button
                             type="button"
@@ -1011,13 +1011,13 @@ export default function KelolaAkunPage() {
                   </td>
                   <td style={{ fontSize: 13 }}>
                     <div>{a.email}</div>
-                    <div style={{ fontSize: 11, color: '#6B7280' }}>{a.phone || '—'}</div>
+                    <div style={{ fontSize: 11, color: '#6B7280' }}>{a.phone || '-'}</div>
                   </td>
                   <td>
                     {a.peran === 'Mahasiswa' ? (
                       <div>
                         <div style={{ fontWeight: 600, fontSize: 12, fontFamily: 'monospace' }}>
-                          NIM: {a.nim || '—'}
+                          NIM: {a.nim || '-'}
                         </div>
                         {a.angkatan && (
                           <div style={{ fontSize: 11, color: '#6B7280' }}>
@@ -1027,11 +1027,11 @@ export default function KelolaAkunPage() {
                       </div>
                     ) : a.peran === 'Dosen' ? (
                       <div style={{ fontWeight: 600, fontSize: 12, fontFamily: 'monospace' }}>
-                        NIDN: {a.nidn || a.nim || '—'}
+                        NIDN: {a.nidn || a.nim || '-'}
                       </div>
                     ) : (
                       <div style={{ fontWeight: 600, fontSize: 12, fontFamily: 'monospace' }}>
-                        NIP: {a.nip || a.nim || '—'}
+                        NIP: {a.nip || a.nim || '-'}
                       </div>
                     )}
                   </td>
@@ -1067,7 +1067,7 @@ export default function KelolaAkunPage() {
                         <option value="tolak">Tolak</option>
                       </select>
                     ) : (
-                      <span style={{ color: '#9CA3AF', fontSize: 12 }}>—</span>
+                      <span style={{ color: '#9CA3AF', fontSize: 12 }}>-</span>
                     )}
                   </td>
                 </tr>

@@ -17,7 +17,7 @@ const DEFAULT_OVERVIEWS: Record<string, Omit<SpaceOverview, 'type'>> = {
     category: 'Ruang Perkuliahan & Seminar',
     dimensions: '10.5m × 7.8m (81.9 m²)',
     description:
-      'Ruang kelas akademik modern ber-AC dengan tata pencahayaan alami, whiteboard, dan smart display interaktif. Tersedia untuk perkuliahan reguler, ujian, seminar, maupun diskusi kelompok dengan slot waktu 30 menit (jam operasional 07.00–20.00).',
+      'Ruang kelas akademik modern ber-AC dengan tata pencahayaan alami, whiteboard, dan smart display interaktif. Tersedia untuk perkuliahan reguler, ujian, seminar, maupun diskusi kelompok dengan slot waktu 30 menit (jam operasional 07.00 - 20.00).',
     bookingUrl: '/jadwal?facility=b201',
   },
   'Aula': {

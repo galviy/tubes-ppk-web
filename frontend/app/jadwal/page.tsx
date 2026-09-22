@@ -46,7 +46,7 @@ function JadwalContent() {
       <main className="ochoco-main-content">
         <div className="wrap ochoco-catalog-wrap">
           <div className="ochoco-page-head">
-            <div className="ochoco-page-eyebrow">SLOT WAKTU 30 MENIT (07.00 – 20.00 WIB) • UNIVERSITAS DIPONEGORO</div>
+            <div className="ochoco-page-eyebrow">SLOT WAKTU 30 MENIT (07.00 - 20.00 WIB) • UNIVERSITAS DIPONEGORO</div>
             <h1 className="ochoco-page-title">
               AVAILABILITY <span style={{ color: '#b59876' }}>SCHEDULE</span>
             </h1>

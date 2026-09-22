@@ -1,10 +1,149 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
 import { FAKULTAS_UNDIP, PRODI_UNDIP } from '@/config/site';
+
+function DownwardUnderlineSelect({
+  label,
+  value,
+  onChange,
+  options,
+  styleTrigger,
+}: {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  options: readonly string[] | string[];
+  styleTrigger?: React.CSSProperties;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="ochoco-underline-field"
+      style={{ position: 'relative', width: '100%' }}
+    >
+      <label>{label}</label>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        style={{
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          border: 'none',
+          borderBottom: open ? '1.5px solid #b59876' : '1px solid #C9CDD4',
+          borderRadius: 0,
+          background: 'transparent',
+          padding: '6px 0 7px',
+          fontFamily: 'var(--font)',
+          fontSize: '13.5px',
+          color: '#181D24',
+          cursor: 'pointer',
+          textAlign: 'left',
+          outline: 'none',
+          transition: 'border-color 0.2s ease',
+          ...styleTrigger,
+        }}
+      >
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 6 }}>
+          {value}
+        </span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{
+            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.15s ease',
+            color: '#6B7280',
+            flexShrink: 0,
+          }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            right: 0,
+            maxHeight: 220,
+            overflowY: 'auto',
+            background: '#FFFFFF',
+            border: '1px solid #D5D0C7',
+            borderRadius: 6,
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+            zIndex: 150,
+          }}
+        >
+          {options.map((opt) => {
+            const isSelected = opt === value;
+            return (
+              <div
+                key={opt}
+                onClick={() => {
+                  onChange(opt);
+                  setOpen(false);
+                }}
+                style={{
+                  padding: '9px 12px',
+                  fontSize: 13,
+                  color: isSelected ? '#181D24' : '#4B5563',
+                  fontWeight: isSelected ? 600 : 400,
+                  cursor: 'pointer',
+                  borderBottom: '1px solid #F3F0EB',
+                  background: isSelected ? '#FAF8F5' : '#FFFFFF',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  transition: 'background 0.1s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#F9FAFB';
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#FFFFFF';
+                }}
+              >
+                <span>{opt}</span>
+                {isSelected && (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b59876" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -208,22 +347,16 @@ export default function RegisterPage() {
 
               <form onSubmit={handleRegisterSubmit} className="ochoco-waiting-form">
                 {/* Peran Akademik */}
-                <div className="ochoco-underline-field">
-                  <label htmlFor="reg-peran">PERAN CIVITAS AKADEMIKA</label>
-                  <select
-                    id="reg-peran"
-                    value={regPeran}
-                    onChange={(e) => {
-                      setRegPeran(e.target.value as 'Mahasiswa' | 'Dosen' | 'Staf');
-                      setRegError('');
-                    }}
-                    style={{ fontWeight: 600, color: '#b59876' }}
-                  >
-                    <option value="Mahasiswa">Mahasiswa</option>
-                    <option value="Dosen">Dosen</option>
-                    <option value="Staf">Staf Tenaga Kependidikan</option>
-                  </select>
-                </div>
+                <DownwardUnderlineSelect
+                  label="PERAN CIVITAS AKADEMIKA"
+                  value={regPeran}
+                  onChange={(val) => {
+                    setRegPeran(val as 'Mahasiswa' | 'Dosen' | 'Staf');
+                    setRegError('');
+                  }}
+                  options={['Mahasiswa', 'Dosen', 'Staf']}
+                  styleTrigger={{ fontWeight: 600, color: '#b59876' }}
+                />
 
                 {/* Username & Nama Lengkap */}
                 <div className="ochoco-field-grid">
@@ -320,18 +453,12 @@ export default function RegisterPage() {
                 {/* Program Studi (Mahasiswa & Dosen) & Fakultas */}
                 <div className="ochoco-field-grid">
                   {regPeran !== 'Staf' ? (
-                    <div className="ochoco-underline-field">
-                      <label htmlFor="reg-prodi">PROGRAM STUDI (PRODI)</label>
-                      <select
-                        id="reg-prodi"
-                        value={regProdi}
-                        onChange={(e) => setRegProdi(e.target.value)}
-                      >
-                        {PRODI_UNDIP.map((p) => (
-                          <option key={p} value={p}>{p}</option>
-                        ))}
-                      </select>
-                    </div>
+                    <DownwardUnderlineSelect
+                      label="PROGRAM STUDI (PRODI)"
+                      value={regProdi}
+                      onChange={setRegProdi}
+                      options={PRODI_UNDIP}
+                    />
                   ) : (
                     <div className="ochoco-underline-field">
                       <label htmlFor="reg-phone">NO. TELEPON / WHATSAPP</label>
@@ -345,18 +472,12 @@ export default function RegisterPage() {
                     </div>
                   )}
 
-                  <div className="ochoco-underline-field">
-                    <label htmlFor="reg-fakultas">FAKULTAS / UNIT ASAL</label>
-                    <select
-                      id="reg-fakultas"
-                      value={regFakultas}
-                      onChange={(e) => setRegFakultas(e.target.value)}
-                    >
-                      {FAKULTAS_UNDIP.map((f) => (
-                        <option key={f} value={f}>{f}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <DownwardUnderlineSelect
+                    label="FAKULTAS / UNIT ASAL"
+                    value={regFakultas}
+                    onChange={setRegFakultas}
+                    options={FAKULTAS_UNDIP}
+                  />
                 </div>
 
                 {/* Email Resmi Undip */}

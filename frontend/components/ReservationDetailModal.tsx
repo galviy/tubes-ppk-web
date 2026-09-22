@@ -45,8 +45,11 @@ export default function ReservationDetailModal({ reservation, facility, onClose,
           <div><span>Fasilitas</span><b>{facility?.name}</b></div>
           <div><span>Lokasi</span><b>{facility?.loc}</b></div>
           <div><span>Tanggal</span><b>{reservation.tanggal}</b></div>
-          <div><span>Waktu</span><b>{reservation.start} – {reservation.end}</b></div>
-          <div><span>Jumlah peserta</span><b>{reservation.peserta ? `${reservation.peserta} orang` : '—'}</b></div>
+          <div><span>Waktu</span><b>{reservation.start} - {reservation.end}</b></div>
+          <div>
+            <span>{facility?.type?.toLowerCase() === 'alat' ? 'Jumlah unit' : 'Jumlah peserta'}</span>
+            <b>{reservation.peserta ? `${reservation.peserta} ${facility?.type?.toLowerCase() === 'alat' ? 'unit' : 'orang'}` : '-'}</b>
+          </div>
           <div><span>Tujuan</span><b>{reservation.tujuan}</b></div>
           <div><span>Status</span><b>{label}</b></div>
           <div><span>Tanggal pengajuan</span><b>{formatDateTime(reservation.createdAt)}</b></div>
@@ -59,7 +62,7 @@ export default function ReservationDetailModal({ reservation, facility, onClose,
           <div className={`deadline-box ${deadlinePassed ? 'passed' : ''}`}>
             <b>Batas waktu pembatalan:</b> {formatDeadline(deadline)}
             <div className="deadline-note">
-              ⚠ Batas pembatalan adalah {2} jam sebelum mulai{deadlinePassed ? ' — sudah lewat' : ''}
+              ⚠ Batas pembatalan adalah 2 jam sebelum mulai{deadlinePassed ? ' (sudah lewat)' : ''}
             </div>
           </div>
         )}

@@ -27,7 +27,16 @@ export default function FacilityFilterBar({ filters, onChange }: FacilityFilterB
         <label>Tipe fasilitas</label>
         <select
           value={filters.category}
-          onChange={(e) => onChange({ ...filters, category: e.target.value })}
+          onChange={(e) => {
+            const nextCat = e.target.value;
+            let nextKap = filters.kapasitas;
+            if (nextCat.toLowerCase() === 'alat' && (nextKap.includes('orang') || nextKap === 'Semua Kapasitas')) {
+              nextKap = 'Semua Jumlah';
+            } else if (nextCat.toLowerCase() !== 'alat' && (nextKap.includes('unit') || nextKap === 'Semua Jumlah')) {
+              nextKap = 'Semua Kapasitas';
+            }
+            onChange({ ...filters, category: nextCat, kapasitas: nextKap });
+          }}
         >
           {typeOptions.map((cat) => (
             <option key={cat} value={cat}>{cat}</option>
@@ -45,12 +54,42 @@ export default function FacilityFilterBar({ filters, onChange }: FacilityFilterB
       </div>
 
       <div className="fgroup">
-        <label>Kapasitas</label>
-        <select value={filters.kapasitas} onChange={(e) => onChange({ ...filters, kapasitas: e.target.value })}>
-          <option>Semua Kapasitas</option>
-          <option>&lt; 40 orang</option>
-          <option>40 – 100 orang</option>
-          <option>&gt; 100 orang</option>
+        <label>
+          {filters.category?.toLowerCase() === 'alat'
+            ? 'Jumlah Unit'
+            : filters.category === 'Semua Jenis'
+            ? 'Kapasitas / Jumlah'
+            : 'Kapasitas Ruangan'}
+        </label>
+        <select
+          value={filters.kapasitas}
+          onChange={(e) => onChange({ ...filters, kapasitas: e.target.value })}
+        >
+          {filters.category?.toLowerCase() === 'alat' ? (
+            <>
+              <option>Semua Jumlah</option>
+              <option>&lt; 5 unit</option>
+              <option>5 - 10 unit</option>
+              <option>&gt; 10 unit</option>
+            </>
+          ) : filters.category === 'Semua Jenis' ? (
+            <>
+              <option>Semua Kapasitas / Jumlah</option>
+              <option>&lt; 40 orang (Ruangan)</option>
+              <option>40 - 100 orang (Ruangan)</option>
+              <option>&gt; 100 orang (Ruangan)</option>
+              <option>&lt; 5 unit (Alat)</option>
+              <option>5 - 10 unit (Alat)</option>
+              <option>&gt; 10 unit (Alat)</option>
+            </>
+          ) : (
+            <>
+              <option>Semua Kapasitas</option>
+              <option>&lt; 40 orang</option>
+              <option>40 - 100 orang</option>
+              <option>&gt; 100 orang</option>
+            </>
+          )}
         </select>
       </div>
 

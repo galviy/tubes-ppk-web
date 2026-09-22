@@ -5,7 +5,7 @@ import { AppDataProvider } from '@/context/AppDataContext';
 export const metadata: Metadata = {
   title: 'SiPinjam - Sistem Reservasi & Pelaporan Fasilitas Undip',
   description:
-    'Sistem Reservasi & Pelaporan Fasilitas Kampus — temukan fasilitas, cek ketersediaan jadwal, dan ajukan reservasi.',
+    'Sistem Reservasi & Pelaporan Fasilitas Kampus. Temukan fasilitas, cek ketersediaan jadwal, dan ajukan reservasi.',
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',
