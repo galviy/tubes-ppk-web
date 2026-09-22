@@ -76,7 +76,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
       {/* Ochoco Subheader Bar with Breadcrumb & Back Link */}
       <div className="ochoco-sub-header-bar">
-        <div className="wrap ochoco-sub-header-row">
+        <div className="wrap ochoco-catalog-wrap ochoco-sub-header-row">
           <Link href="/" className="ochoco-back-button">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -94,9 +94,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         </div>
       </div>
 
-      {/* Ochoco Subnav Bar */}
+      {/* Ochoco Dashboard Underline Subnav */}
       <div className="ochoco-dash-subnav">
-        <div className="wrap ochoco-dash-subnav-row">
+        <div className="wrap ochoco-catalog-wrap ochoco-dash-subnav-row">
           <span className="ochoco-dash-role-chip">
             <span className="ochoco-dash-role-icon">{SECTION_ICONS[group.section]}</span>
             {group.label}
@@ -133,7 +133,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
       {/* Main Dashboard Content */}
       <div className="dash-page">
-        <div className="wrap">{children}</div>
+        <div className="wrap ochoco-catalog-wrap">{children}</div>
       </div>
 
       <Footer />

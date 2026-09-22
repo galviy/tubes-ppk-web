@@ -135,18 +135,26 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
         </div>
       </div>
 
-      {/* Facility buttons wrap naturally into neat rows without awkward horizontal scroll */}
-      <div className="sched-fac-tabs">
-        {filteredFacilities.map((f) => (
-          <button
-            key={f.id}
-            className={`sched-fac-tab${f.id === activeFacilityId ? ' active' : ''}`}
-            onClick={() => onSelectFacility(f.id)}
-          >
-            <span className={`fac-dot ${f.status === 'repair' || f.status === 'nonaktif' ? 'repair' : 'avail'}`} />
-            {f.name}
-          </button>
-        ))}
+      {/* Architectural facility selector bar */}
+      <div className="sched-fac-tabs-wrapper">
+        <div className="sched-fac-tabs">
+          {filteredFacilities.map((f) => {
+            const isActive = f.id === activeFacilityId;
+            const isRepair = f.status === 'repair' || f.status === 'nonaktif';
+            return (
+              <button
+                key={f.id}
+                type="button"
+                className={`sched-fac-tab ${isActive ? 'active' : ''}`}
+                onClick={() => onSelectFacility(f.id)}
+              >
+                <span className={`fac-dot ${isRepair ? 'repair' : 'avail'}`} />
+                <span className="sched-fac-name">{f.name}</span>
+                <span className="sched-fac-type">{f.type}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="sched-info-row">

@@ -25,9 +25,9 @@ function JadwalContent() {
 
       {/* Top Breadcrumb & Back Navigation Bar */}
       <div className="ochoco-sub-header-bar">
-        <div className="wrap ochoco-sub-header-row">
+        <div className="wrap ochoco-catalog-wrap ochoco-sub-header-row">
           <Link href="/" className="ochoco-back-button">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
             <span>KEMBALI KE HOME</span>
@@ -44,7 +44,7 @@ function JadwalContent() {
       </div>
 
       <main className="ochoco-main-content">
-        <div className="wrap">
+        <div className="wrap ochoco-catalog-wrap">
           <div className="ochoco-page-head">
             <div className="ochoco-page-eyebrow">SLOT WAKTU 30 MENIT (07.00 – 20.00 WIB) • UNIVERSITAS DIPONEGORO</div>
             <h1 className="ochoco-page-title">
