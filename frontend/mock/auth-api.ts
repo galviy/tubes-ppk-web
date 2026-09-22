@@ -68,7 +68,7 @@ export async function registerSelf(input: SelfRegisterInput): Promise<SelfRegist
   if (FAKE_USERS_DB.some((u) => u.email.toLowerCase() === input.email.trim().toLowerCase())) {
     return delay({ ok: false, message: 'Email sudah terdaftar.' });
   }
-  // Registrasi mandiri TIDAK langsung membuat akun aktif — masuk ke
+  // Registrasi mandiri TIDAK langsung membuat akun aktif - masuk ke
   // antrean verifikasi admin dulu (lihat AppDataContext.submitSelfRegistration
   // yang menaruhnya di pendingAccounts). role sistem ('pengguna') baru
   // diberikan setelah admin memverifikasi.

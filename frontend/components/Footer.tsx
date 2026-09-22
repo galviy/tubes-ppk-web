@@ -25,7 +25,7 @@ export default function Footer() {
         <div className="ochoco-footer-bottom-row">
           {/* Left: Copyright */}
           <div className="ochoco-footer-copy">
-            © 2026 SiPinjam — Sistem Reservasi & Pelaporan Fasilitas Kampus.
+            © 2026 SiPinjam · Sistem Reservasi & Pelaporan Fasilitas Kampus.
           </div>
 
           {/* Center: Navigation Links */}

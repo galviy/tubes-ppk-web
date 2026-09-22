@@ -216,7 +216,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (conflict) {
           return {
             ok: false,
-            message: `Bentrok dengan reservasi '${conflict.pemohon}' (${conflict.start}–${conflict.end} WIB) yang sudah disetujui sebelumnya.`,
+            message: `Bentrok dengan reservasi '${conflict.pemohon}' (${conflict.start} - ${conflict.end} WIB) yang sudah disetujui sebelumnya.`,
           };
         }
         setReservations((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'disetujui' } : r)));

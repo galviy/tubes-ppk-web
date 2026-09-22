@@ -311,7 +311,7 @@ function AjukanReservasiContent() {
     });
 
     const bookedFacilityName = facility.name;
-    const bookedTime = `${tanggal}, ${startTime}–${endTime} WIB`;
+    const bookedTime = `${tanggal}, ${startTime} - ${endTime} WIB`;
 
     setStartTime('');
     setEndTime('');
@@ -368,10 +368,13 @@ function AjukanReservasiContent() {
       return;
     }
     if (overCapacity) {
+      const isAlat = facility.type?.toLowerCase() === 'alat';
       setModalConfig({
         isOpen: true,
-        title: 'Kapasitas Melebihi Standar',
-        subtitle: `Estimasi peserta (${pesertaNum} orang) melebihi kapasitas standar fasilitas (${facility.cap} orang). Apakah Anda ingin tetap melanjutkan pengajuan?`,
+        title: isAlat ? 'Jumlah Melebihi Stok Tersedia' : 'Kapasitas Melebihi Standar',
+        subtitle: isAlat
+          ? `Permintaan (${pesertaNum} unit) melebihi jumlah unit yang tersedia (${facility.cap} unit). Apakah Anda ingin tetap melanjutkan pengajuan?`
+          : `Estimasi peserta (${pesertaNum} orang) melebihi kapasitas standar fasilitas (${facility.cap} orang). Apakah Anda ingin tetap melanjutkan pengajuan?`,
         confirmText: 'Tetap Ajukan',
         cancelText: 'Sesuaikan Data',
         confirmVariant: 'warning',
@@ -388,13 +391,14 @@ function AjukanReservasiContent() {
 
   return (
     <div>
-      <div className="content-head">
+      <div className="ochoco-page-header">
+        <div className="ochoco-page-eyebrow">FORMULIR PERMOHONAN • UNIVERSITAS DIPONEGORO</div>
         <h2>AJUKAN RESERVASI FASILITAS</h2>
         <p>Isi formulir untuk permohonan peminjaman fasilitas Universitas Diponegoro. Verifikasi dilakukan oleh petugas sarpras.</p>
       </div>
 
       <div className="alert info">
-        Jam operasional kampus: <b>07.00 – 20.00 WIB</b> · Durasi kelipatan <b>30 menit</b> · Slot dikunci sementara selama pengisian formulir.
+        Jam operasional kampus: <b>07.00 - 20.00 WIB</b> · Durasi kelipatan <b>30 menit</b> · Slot dikunci sementara selama pengisian formulir.
       </div>
 
       <div className="panel">
@@ -405,7 +409,7 @@ function AjukanReservasiContent() {
             <select value={facilityId} onChange={(e) => handleFacilityChange(e.target.value)}>
               {availableFacilities.map((f) => (
                 <option key={f.id} value={f.id}>
-                  {f.name} — {f.loc} (maks. {f.cap} orang)
+                  {f.name} ({f.loc}) ({f.type?.toLowerCase() === 'alat' ? `tersedia ${f.cap} unit` : `maks. ${f.cap} orang`})
                 </option>
               ))}
             </select>
@@ -421,7 +425,7 @@ function AjukanReservasiContent() {
           <DownwardTimeSelect
             label="Jam Mulai"
             value={startTime}
-            placeholder="— Pilih Jam Mulai —"
+            placeholder="Pilih Jam Mulai"
             options={START_OPTIONS}
             onChange={handleStartChange}
           />
@@ -430,7 +434,7 @@ function AjukanReservasiContent() {
           <DownwardTimeSelect
             label="Jam Selesai (Hingga 20:00 WIB)"
             value={endTime}
-            placeholder="— Pilih Jam Selesai —"
+            placeholder="Pilih Jam Selesai"
             options={END_OPTIONS}
             onChange={handleEndChange}
           />
@@ -440,7 +444,7 @@ function AjukanReservasiContent() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
               <div>
                 <label style={{ margin: 0, fontSize: 13, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#181D24' }}>
-                  PILIH SLOT WAKTU (07.00 – 20.00 WIB)
+                  PILIH SLOT WAKTU (07.00 - 20.00 WIB)
                 </label>
                 <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
                   Klik slot untuk memilih waktu mulai dan waktu selesai secara berurutan.
@@ -475,7 +479,7 @@ function AjukanReservasiContent() {
                   onClick={applyFullDay}
                   style={{ fontSize: 11, padding: '5px 11px', borderRadius: 4, border: '1px solid #b59876', background: '#15171a', color: '#b59876', cursor: 'pointer', fontWeight: 700 }}
                 >
-                  Seharian (07:00 – 20:00)
+                  Seharian (07:00 - 20:00)
                 </button>
                 {(startTime || endTime) && (
                   <button
@@ -521,11 +525,11 @@ function AjukanReservasiContent() {
                             className={`slot-lg ${stateClass}`}
                             disabled={isTaken}
                             onClick={() => handleSlotClick(slot)}
-                            title={isTaken ? 'Slot sudah terpakai' : `${slot.start} – ${slot.end} WIB (Klik untuk memilih)`}
+                            title={isTaken ? 'Slot sudah terpakai' : `${slot.start} - ${slot.end} WIB (Klik untuk memilih)`}
                           >
                             <span className="slot-bar" />
                             <div className="slot-lg-body">
-                              <div className="t">{slot.start}–{slot.end}</div>
+                              <div className="t">{slot.start} - {slot.end}</div>
                               <div className="s">{statusText}</div>
                             </div>
                           </button>
@@ -564,7 +568,7 @@ function AjukanReservasiContent() {
                   <span style={{ fontSize: 13, color: '#1F2937' }}>
                     Jadwal Terpilih:{' '}
                     <strong style={{ fontSize: 15, color: hasConflict ? '#DC2626' : '#15803D' }}>
-                      {startTime} – {endTime} WIB
+                      {startTime} - {endTime} WIB
                     </strong>{' '}
                     ({pickedSlots.length} slot · {(pickedSlots.length * 0.5).toFixed(1)} jam)
                   </span>
@@ -593,19 +597,28 @@ function AjukanReservasiContent() {
             />
           </div>
 
-          {/* Number of participants */}
+          {/* Number of participants / units */}
           <div className="fgroup">
-            <label>Estimasi Jumlah Peserta <span className="opt">(opsional)</span></label>
+            <label>
+              {facility?.type?.toLowerCase() === 'alat' ? 'Jumlah Unit' : 'Estimasi Jumlah Peserta'}{' '}
+              <span className="opt">(opsional)</span>
+            </label>
             <input
               type="number"
               min={1}
               value={peserta}
               onChange={(e) => setPeserta(e.target.value)}
-              placeholder="Perkiraan jumlah orang yang hadir"
+              placeholder={
+                facility?.type?.toLowerCase() === 'alat'
+                  ? 'Jumlah unit yang dipinjam'
+                  : 'Perkiraan jumlah orang yang hadir'
+              }
             />
             {overCapacity && (
               <span className="field-hint" style={{ color: '#DC2626', fontWeight: 600 }}>
-                Jumlah peserta ({pesertaNum} org) melebihi kapasitas fasilitas ({facility?.cap} org).
+                {facility?.type?.toLowerCase() === 'alat'
+                  ? `Jumlah unit (${pesertaNum} unit) melebihi stok yang tersedia (${facility?.cap} unit).`
+                  : `Jumlah peserta (${pesertaNum} org) melebihi kapasitas fasilitas (${facility?.cap} org).`}
               </span>
             )}
           </div>

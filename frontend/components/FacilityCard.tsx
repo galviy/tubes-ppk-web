@@ -48,7 +48,13 @@ export default function FacilityCard({ facility, onOpenDetail }: FacilityCardPro
           ))}
         </div>
         <div className="card-foot">
-          <div className="capacity">Kapasitas <b>{facility.cap} orang</b></div>
+          <div className="capacity">
+            {facility.type?.toLowerCase() === 'alat' ? (
+              <>Jumlah tersedia <b>{facility.cap} unit</b></>
+            ) : (
+              <>Kapasitas <b>{facility.cap} orang</b></>
+            )}
+          </div>
           <span className="card-btn">Lihat detail</span>
         </div>
       </div>

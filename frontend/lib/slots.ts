@@ -1,5 +1,5 @@
 // lib/slots.ts
-// Logika slot waktu 30 menit (07.00–20.00, total 26 slot) dan
+// Logika slot waktu 30 menit (07.00-20.00, total 26 slot) dan
 // penentuan status tiap slot. Dipisah dari komponen supaya bisa
 // diuji (unit test) atau dipindah ke server tanpa menyentuh UI.
 

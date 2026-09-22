@@ -12,7 +12,7 @@ export interface FakeUserRecord {
   id: string;
   email: string;
   username?: string;
-  password: string; // teks biasa — HANYA untuk demo, jangan pernah begini di backend asli
+  password: string; // teks biasa - HANYA untuk demo, jangan pernah begini di backend asli
   nama: string;
   role: UserRole;
   nip?: string;

@@ -9,7 +9,7 @@ const STEPS = [
     num: '01',
     title: 'Cari Fasilitas & Cek Slot Waktu',
     tag: 'Eksplorasi Publik',
-    desc: 'Buka katalog fasilitas untuk melihat denah lantai, kapasitas ruangan, serta fasilitas penunjang. Periksa matriks jadwal 30 menit (07.00–20.00 WIB) untuk memastikan slot waktu yang Anda inginkan masih berstatus Tersedia.',
+    desc: 'Buka katalog fasilitas untuk melihat denah lantai, kapasitas ruangan, serta fasilitas penunjang. Periksa matriks jadwal 30 menit (07.00 - 20.00 WIB) untuk memastikan slot waktu yang Anda inginkan masih berstatus Tersedia.',
     link: '/jadwal',
     linkText: 'Cek Matriks Jadwal →',
   },

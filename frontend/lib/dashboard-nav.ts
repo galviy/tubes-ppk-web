@@ -52,7 +52,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-// Setiap role HANYA mengakses section miliknya sendiri — sesuai user
+// Setiap role HANYA mengakses section miliknya sendiri - sesuai user
 // story masing-masing aktor di PDF (admin ya fitur admin saja, tidak
 // perlu bisa buka halaman petugas/pengguna, begitu juga sebaliknya).
 export const SECTION_ACCESS: Record<UserRole, UserRole[]> = {

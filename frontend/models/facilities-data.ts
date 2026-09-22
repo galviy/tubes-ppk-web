@@ -107,7 +107,7 @@ export const FACILITY_CATEGORIES: string[] = [
 
 export type FacilityCategory = string;
 
-// Data awal (seed) untuk reservasi & laporan — dipakai untuk mengisi
+// Data awal (seed) untuk reservasi & laporan - dipakai untuk mengisi
 // AppDataContext saat aplikasi pertama kali dimuat. Pada implementasi
 // produksi, ini diganti dengan hasil fetch dari API/database.
 import { Reservation } from './reservation';

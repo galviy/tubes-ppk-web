@@ -20,7 +20,7 @@ export default function PetugasFasilitasPage() {
               <th>Fasilitas</th>
               <th>Kategori</th>
               <th>Lokasi</th>
-              <th>Kapasitas</th>
+              <th>Kapasitas / Jumlah</th>
               <th>Status</th>
               <th style={{ textAlign: 'left' }}>Tindakan</th>
             </tr>
@@ -31,7 +31,7 @@ export default function PetugasFasilitasPage() {
                 <td style={{ fontWeight: 600, color: '#181D24' }}>{f.name}</td>
                 <td style={{ color: '#4B5563', fontSize: 13 }}>{f.type}</td>
                 <td style={{ color: '#4B5563', fontSize: 13 }}>{f.loc}</td>
-                <td style={{ color: '#4B5563', fontSize: 13 }}>{f.cap ? `${f.cap} orang` : '—'}</td>
+                <td style={{ color: '#4B5563', fontSize: 13 }}>{f.cap ? `${f.cap} ${f.type?.toLowerCase() === 'alat' ? 'unit' : 'orang'}` : '-'}</td>
                 <td>
                   <span
                     className={`pill ${

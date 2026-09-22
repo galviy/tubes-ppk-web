@@ -48,7 +48,7 @@ export default function Hero() {
             <h3 className="ochoco-hub-title">Peminjaman &amp; Layanan Kampus</h3>
             <div className="ochoco-hub-status">
               <span className="ochoco-hub-dot" />
-              <span>Layanan Aktif • 07.00 – 20.00 WIB</span>
+              <span>Layanan Aktif • 07.00 - 20.00 WIB</span>
             </div>
           </div>
 

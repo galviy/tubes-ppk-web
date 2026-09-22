@@ -12,7 +12,7 @@ interface FeatureSlide {
 const SLIDES: FeatureSlide[] = [
   {
     title: 'BUILDING FEATURES',
-    subtitle: 'SLOT WAKTU 30 MENIT (07.00 – 20.00)',
+    subtitle: 'SLOT WAKTU 30 MENIT (07.00 - 20.00)',
     description:
       'Peminjaman fasilitas menggunakan 26 slot waktu tetap berdurasi 30 menit yang dimulai dari pukul 07.00 hingga 20.00 WIB. Sistem memvalidasi rentang waktu secara ketat di sisi server dan client untuk mencegah bentrok jadwal pada fasilitas yang sama.',
     image: 'https://images.unsplash.com/photo-1541829070764-84a7d30dd3f3?auto=format&fit=crop&w=1600&q=85',
