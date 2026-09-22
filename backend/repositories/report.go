@@ -179,7 +179,6 @@ func UpdateRuanganStatus(id int, status string) error {
 	return err
 }
 
-
 func GetAlatBanyak(id int) (total int, ok bool) {
 	err := config.QueryRow(
 		`SELECT banyak_alat FROM alat WHERE id = ?`, id).Scan(&total)

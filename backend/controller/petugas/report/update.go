@@ -12,7 +12,6 @@ import (
 	"strings"
 )
 
-
 var allowedTransitions = map[string][]string{
 	models.StatusBaru:     {models.StatusDiproses, models.StatusSelesai, models.StatusDitolak},
 	models.StatusDiproses: {models.StatusSelesai, models.StatusDitolak},
