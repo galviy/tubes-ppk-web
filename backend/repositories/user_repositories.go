@@ -715,6 +715,63 @@ func IsProdiExist(prodi string) bool {
 	return true
 }
 
+type tampung_reservasi struct {
+	ID                       int
+	Waktu_reservasi_dibuat   string
+	Waktu_peminjaman         string
+	Waktu_peminjaman_selesai string
+	Status_reservasi         string
+	Ruangan_reservasi        int
+	Alasan_penolakan         string
+	Alasan_peminjaman        string
+}
+
+func GetReservasiByID(idUser int, limit int) ([]tampung_reservasi, error) {
+
+	rows, err := config.Query(`
+		select r.id,r.waktu_reservasi_dibuat,r.waktu_peminjaman,r.waktu_peminjaman_selesai,r.status_reservasi,r.ruangan_reservasi,COALESCE(tr.alasan_penolakan, '') AS alasan_penolakan,r.alasan_peminjaman
+		from reservasi r 
+		left join tolak_reservasi tr on r.id = tr.id_reservasi
+		where r.user_reservasi = ?
+		order by r.waktu_reservasi_dibuat 
+		limit ?
+	`, idUser, limit)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []tampung_reservasi
+
+	for rows.Next() {
+		var user tampung_reservasi
+
+		err := rows.Scan(
+			&user.ID,
+			&user.Waktu_reservasi_dibuat,
+			&user.Waktu_peminjaman,
+			&user.Waktu_peminjaman_selesai,
+			&user.Status_reservasi,
+			&user.Ruangan_reservasi,
+			&user.Alasan_penolakan,
+			&user.Alasan_peminjaman,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
 type tampung_mhs_pending struct {
 	ID           int
 	Nim          string
