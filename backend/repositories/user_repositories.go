@@ -80,6 +80,31 @@ func IsNamaAlatExist(kategori string) bool {
 	}
 	return true
 }
+func CheckAlatByID(id int) bool {
+	var idRuangan int
+	err := config.QueryRow(
+		`SELECT 1 FROM alat where id = ?`, id).Scan(&idRuangan)
+	if err == sql.ErrNoRows {
+		return false
+	} else if err != nil {
+		log.Printf("Failed to get ruangan: %v\n", err)
+		return false
+	}
+	return true
+}
+func IsAlatAvailable(id int) bool {
+	var idRuangan int
+	err := config.QueryRow(
+		`SELECT 1 FROM alat 
+		where id = ? and jumlah_tersedia > 0 and status = 1`, id).Scan(&idRuangan)
+	if err == sql.ErrNoRows {
+		return false
+	} else if err != nil {
+		log.Printf("Failed to get ruangan: %v\n", err)
+		return false
+	}
+	return true
+}
 
 func IsNamaRuanganExist(kategori string) bool {
 	var hasilAngka int
@@ -732,7 +757,7 @@ func GetReservasiByID(idUser int, limit int) ([]tampung_reservasi, error) {
 		select r.id,r.waktu_reservasi_dibuat,r.waktu_peminjaman,r.waktu_peminjaman_selesai,r.status_reservasi,r.ruangan_reservasi,COALESCE(tr.alasan_penolakan, '') AS alasan_penolakan,r.alasan_peminjaman
 		from reservasi r 
 		left join tolak_reservasi tr on r.id = tr.id_reservasi
-		where r.user_reservasi = ?
+		where r.user_reservasi = ? and r.ruangan_reservasi is not null
 		order by r.waktu_reservasi_dibuat 
 		limit ?
 	`, idUser, limit)
@@ -754,6 +779,75 @@ func GetReservasiByID(idUser int, limit int) ([]tampung_reservasi, error) {
 			&user.Waktu_peminjaman_selesai,
 			&user.Status_reservasi,
 			&user.Ruangan_reservasi,
+			&user.Alasan_penolakan,
+			&user.Alasan_peminjaman,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+type tampung_reservasi_alat struct {
+	ID                       int
+	Waktu_reservasi_dibuat   string
+	Waktu_peminjaman         string
+	Waktu_peminjaman_selesai string
+	Status_reservasi         string
+	Alat_reservasi           int
+	Jumlah                   int
+	Alasan_penolakan         string
+	Alasan_peminjaman        string
+}
+
+func GetReservasiAlatByID(idUser int, limit int) ([]tampung_reservasi_alat, error) {
+
+	rows, err := config.Query(`
+		select
+			r.id,
+			r.waktu_reservasi_dibuat,
+			r.waktu_peminjaman,
+			r.waktu_peminjaman_selesai,
+			r.status_reservasi,
+			ar.id_alat,
+			ar.jumlah,
+			COALESCE(tr.alasan_penolakan, '') AS alasan_penolakan,
+			r.alasan_peminjaman
+		from reservasi r
+		join alat_reservasi ar on r.id = ar.id_reservasi
+		left join tolak_reservasi tr on r.id = tr.id_reservasi
+		where r.user_reservasi = ? and r.ruangan_reservasi is null
+		order by r.waktu_reservasi_dibuat
+		limit ?
+	`, idUser, limit)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []tampung_reservasi_alat
+
+	for rows.Next() {
+		var user tampung_reservasi_alat
+
+		err := rows.Scan(
+			&user.ID,
+			&user.Waktu_reservasi_dibuat,
+			&user.Waktu_peminjaman,
+			&user.Waktu_peminjaman_selesai,
+			&user.Status_reservasi,
+			&user.Alat_reservasi,
+			&user.Jumlah,
 			&user.Alasan_penolakan,
 			&user.Alasan_peminjaman,
 		)
