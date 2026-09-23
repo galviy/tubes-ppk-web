@@ -1,169 +1,227 @@
-# SiPinjam — Sistem Reservasi & Pelaporan Fasilitas Kampus Universitas Diponegoro
+# SiPinjam: Sistem Reservasi & Pelaporan Fasilitas Kampus Universitas Diponegoro
 
-Sistem informasi berbasis web modern untuk pengelolaan izin reservasi ruangan/alat dan pelaporan kendala sarana prasarana akademik di lingkungan Universitas Diponegoro. Dibangun menggunakan **Next.js 16** (App Router, **Webpack** — lihat catatan bundler di bawah), **React 19**, TypeScript, dan Vanilla CSS dengan design system elegan bertema arsitektural kampus (*The Reserve at Ochoco*).
+Sistem informasi berbasis web modern untuk pengelolaan izin reservasi ruangan/alat dan pelaporan kendala sarana prasarana akademik di lingkungan Universitas Diponegoro. Proyek ini dibangun menggunakan **Next.js 16** (App Router, **Webpack**), **React 19**, **TypeScript**, dan **Vanilla CSS** dengan arsitektur desain yang elegan, modular, serta aksesibel (*The Reserve at Ochoco*).
 
 ---
 
-## 🚀 Menjalankan Aplikasi
+## ⚡ Ringkasan Status Kesiapan Aplikasi
+
+| Kategori | Status | Keterangan |
+| :--- | :---: | :--- |
+| **TypeScript Typecheck** | ✅ Lulus | `npx tsc --noEmit` bersih tanpa ada kesalahan tipe data (0 errors). |
+| **Production Build** | ✅ Lulus | `npm run build` sukses mengompilasi dan meng-export 26 rute statis (`output: 'export'`). |
+| **Interaktivitas UI** | ✅ Aman | Menggunakan Webpack (`--webpack`) dan `AppDataContext` client-side state management terpadu. |
+| **Akses Jaringan LAN** | ✅ Siap | Didukung konfigurasi `allowedDevOrigins` pada `next.config.js` untuk pengetesan lintas perangkat. |
+| **User Stories** | ✅ Lengkap | Mencakup hak akses Publik, Pengguna (Mhs/Dosen/Staf), Petugas Sarpras, dan Admin. |
+
+---
+
+## 🚀 Panduan Menjalankan Aplikasi
+
+### 1. Prasyarat Sistem
+- **Node.js**: v18.18.0 atau versi yang lebih baru (disarankan LTS v20+)
+- **npm**: v9.0.0 atau lebih baru
+
+### 2. Instalasi & Eksekusi
 
 ```bash
+# 1. Pasang dependensi proyek
 npm install
-npm run dev      # Menjalankan development server di http://localhost:3000
-npm run build    # Kompilasi produksi Next.js & static export
-npx serve out    # Pratinjau hasil build statis lokal (opsional)
+
+# 2. Jalankan server pengembangan (Development Mode)
+npm run dev
+# Buka peramban di: http://localhost:3000
+
+# 3. Validasi typecheck TypeScript
+npx tsc --noEmit
+
+# 4. Bangun bundel produksi (Static Site Export ke folder /out)
+npm run build
+
+# 5. (Opsional) Pratinjau hasil build statis secara lokal
+npx serve out
 ```
 
-> **Catatan bundler:** Next.js 16 secara bawaan mendukung Turbopack, namun proyek ini dikonfigurasikan menggunakan **Webpack** (melalui flag `--webpack` pada script `package.json`). Hal ini bertujuan menjaga keandalan *hydration* event handler pada form interaktif dan modal kustom di lingkungan peramban.
+> **Catatan Bundler Webpack:**  
+> Skrip `npm run dev` dan `npm run build` secara eksplisit menambahkan flag `--webpack`. Konfigurasi ini menjamin keandalan *hydration* event handler form interaktif, date picker, dan modal dialog kustom pada Next.js 16 tanpa interupsi cache Turbopack.
+
+> **Catatan Akses Testing via Jaringan LAN (HP / Laptop Lain):**  
+> Next.js membatasi request internal `/_next/*` jika diakses melalui IP selain localhost. Jika ingin mencoba tampilan dari HP atau perangkat lain di jaringan Wi-Fi yang sama, sesuaikan daftar IP Anda pada array `allowedDevOrigins` di file `next.config.js`.
 
 ---
 
-## 🏛️ Fitur & Arsitektur Sistem
+## 👥 Akun Demo & Kredensial Pengujian Multi-Peran
+
+Untuk memudahkan verifikasi fitur tanpa perlu registrasi manual terlebih dahulu, halaman `/login` dan kartu autentikasi di beranda menyediakan tombol **Akun Demo (1-Klik)**:
+
+| Peran | Nama Pengguna | Email | Kata Sandi | Lingkup Hak Akses |
+| :--- | :--- | :--- | :--- | :--- |
+| **Admin** | Admin Utama | `admin@sipinjam.ac.id` | `admin123` | `/admin/*`: Master fasilitas, audit reservasi & laporan, verifikasi akun, rekap data & ekspor (CSV/Excel/PDF). |
+| **Petugas** | Budi (Petugas Sarpras) | `petugas@sipinjam.ac.id` | `petugas123` | `/petugas/*`: Validasi persetujuan/penolakan reservasi, pembatalan darurat, tindak lanjut perbaikan sarpras. |
+| **Mahasiswa** | Sinta (Mahasiswa FSM) | `mahasiswa@sipinjam.ac.id` | `mhs12345` | `/pengguna/*`: Pengajuan pinjam ruang/alat, pembatalan mandiri (H-2 jam), lapor sarpras rusak + bukti foto. |
+| **Dosen** | Pak Herman (Dosen IF) | `dosen@sipinjam.ac.id` | `dosen123` | `/pengguna/*`: Hak akses civitas akademika untuk perkuliahan/riset. |
+| **Staf** | Bu Rina (Staf Akademik) | `staf@sipinjam.ac.id` | `staf123` | `/pengguna/*`: Hak akses civitas akademika untuk operasional unit kerja. |
+
+---
+
+## 🏛️ Fitur Unggulan & Implementasi Sistem
 
 ### 1. Header & Navigasi Publik Adaptif (*Collision-Proof*)
-- **Layout 3-Kolom Seimbang**: Menggunakan arsitektur flex 3 kolom (`flex: 1 1 0%` di sayap kiri dan kanan, serta `flex: 0 0 auto` di bagian tengah).
-- **Penempatan Logo Presisi**: Logo & teks *"SIPINJAM UNIVERSITAS DIPONEGORO"* terkunci tepat di titik 50% horizontal tengah dan terhindar dari benturan/tumpang-tindih dengan menu navigasi maupun tombol login pada berbagai ukuran layar dan tingkat zoom.
-- **Konsistensi Visual Kaca Gelap (*Translucent Dark Slate*)**: Top bar di halaman beranda (*Home*) serta seluruh subpage publik (`/fasilitas`, `/jadwal`, `/panduan`) menggunakan gradien kaca gelap yang seragam (`rgba(14, 18, 23, 0.94)` hingga `rgba(27, 33, 42, 0.82)` dengan `backdrop-filter: blur(16px)`), memberikan kesan elegan dan profesional.
+- **Layout Flex 3-Kolom Seimbang**: Menu navigasi dan tombol aksi berada di sayap kiri dan kanan, mengunci brand *"SIPINJAM UNIVERSITAS DIPONEGORO"* tepat di titik 50% tengah.
+- **Warna & Posisi Navigasi Bersih**: Tautan Dashboard pada bilah atas memiliki warna teks serasi dengan menu navigasi utama lainnya, serta bilah atas menggunakan efek subpage scenic seragam di semua rute portal.
+- **Bebas Tumpang Tindih**: Tampilan tetap proporsional pada resolusi laptop, tablet, hingga berbagai tingkat perbesaran (*zoom level*).
 
-### 2. Hero Section & Hub Layanan Kampus
-- **Bahasa Alami & Komunikatif**: Copywriting pada kartu panduan kampus menggunakan bahasa Indonesia yang lugas dan manusiawi, bebas dari jargon artifisial yang kaku.
-- **Distribusi Tombol Fungsional yang Jelas**:
-  - **Sisi Kiri Hero**: Tombol eksplorasi utama `[ JELAJAHI FASILITAS ]` (`/fasilitas`) dan `[ PANDUAN PEMINJAMAN ]` (`/panduan`).
-  - **Kartu Kanan Hero**: Tombol aksi langsung `[ CEK JADWAL RUANGAN ]` (`/jadwal`) dan `[ MASUK KE AKUN ]` (`/login`).
+### 2. Beranda Interaktif & Campus Hub
+- **Hero Hub Section**: Tautan eksplorasi langsung ke katalog fasilitas, panduan pendelegasian izin, cek matriks jadwal, dan form masuk.
+- **Visual Denah Lantai (Floor Plans)**: Tab interaktif denah lantai gedung (`FacilityTabs.tsx`) untuk melihat tata letak ruangan, proyektor, dan kapasitas kursi.
+- **Building Features Showcase (3 Slide Utama)**: Menampilkan 3 fitur inti sistem dengan screenshot beresolusi tajam (rasio seragam 1400 × 680):
+  1. *Slot Waktu 30 Menit (07.00 - 20.00 WIB)*: Validasi rentang waktu ketat untuk menghindari bentrok jadwal.
+  2. *Pelaporan Kerusakan dengan Foto Bukti*: Form pelaporan sarpras dengan unggah foto dan pemantauan status perbaikan.
+  3. *Katalog Fasilitas & Filter Kategori*: Filter jenis sarpras, detail kapasitas, dan opsi tata letak grid yang fleksibel.
+- **Ilustrasi Peta Kampus Vektor**: Komponen SVG artistik kustom (`CampusMapArt.tsx`) yang mempercantik estetika lingkungan akademik Undip.
 
-### 3. Autentikasi Fleksibel & Registrasi Civitas Akademika
-- **Halaman Masuk (`/login`) & Daftar (`/register`)**: Memiliki tata letak formulir yang proporsional, seimbang, dan konsisten.
-- **Tombol Cepat Akun Demo (1-Klik)**: Memudahkan pengujian multi-peran (Admin, Petugas, Mahasiswa, Dosen, Staf) secara instan tanpa perlu mengetik manual.
-- **Alur Registrasi Mandiri**: Pendaftaran akun mahasiswa/dosen baru dilengkapi data Nama, Email, NIM/NIP, Unit/Fakultas, dan No. WhatsApp yang otomatis masuk ke antrean verifikasi Admin (`/admin/akun`).
+### 3. Matriks Jadwal Slot Waktu 30 Menit (07.00 – 20.00 WIB)
+- **26 Slot Modular per Hari**: Terbagi rapi ke dalam 4 sesi harian (Pagi, Siang, Sore, Malam).
+- **Deteksi Bentrok Otomatis (Real-time Collision Check)**: Perhitungan irisan interval `[start, end)` secara instan mencegah peminjaman ganda pada ruangan/alat dan tanggal yang sama.
+- **Pratinjau Ketersediaan Terbuka**: Publik dapat memantau jadwal yang sudah terisi (*booked*) atau kosong tanpa harus login terlebih dahulu.
 
-### 4. Manajemen Jadwal Slot 30 Menit (07.00 – 20.00 WIB)
-- **26 Slot Modular Harian**: Pembagian waktu terstruktur ke dalam 4 sesi (Pagi, Siang, Sore, Malam).
-- **Validasi Anti-Bentrok Real-time**: Pengecekan irisan interval waktu `[start, end)` secara otomatis untuk mencegah peminjaman ganda pada ruangan/fasilitas yang sama.
-- **Kebebasan Memilih Jam**: Pengguna dapat memilih jam mulai dan jam selesai secara fleksibel dengan dukungan navigasi keyboard (`Tab`).
+### 4. Kebijakan Pembatalan Terstruktur (`lib/cancellation.ts`)
+- **Pembatalan Mandiri Pengguna**: Peminjam dapat membatalkan reservasi berstatus *Menunggu* atau *Disetujui* maksimal H-2 jam sebelum waktu kegiatan dimulai.
+- **Pembatalan Darurat oleh Petugas/Admin**: Staf pengelola dapat membatalkan reservasi sewaktu-waktu jika terdapat kendala operasional mendadak, disertai alasan pembatalan resmi yang tercatat di audit log.
 
-### 5. Kebijakan Pembatalan Reservasi Terstruktur (`lib/cancellation.ts`)
-- **Pembatalan Mandiri Pengguna**: Pengguna dapat membatalkan reservasi berstatus *Menunggu* atau *Disetujui* sebelum batas waktu (maksimal H-2 jam sebelum kegiatan dimulai).
-- **Pembatalan Darurat oleh Petugas/Admin**: Dilengkapi dialog input alasan pembatalan resmi yang wajib diisi dan dicatat pada riwayat peminjaman.
+### 5. Sistem Pelaporan Kendala Sarpras & Bukti Foto
+- **Formulir Laporan Kerusakan**: Formulir pelaporan kendala fisik fasilitas yang mendukung unggah URL / file bukti visual.
+- **Tampilan Anti-Overflow**: Link lampiran foto pada tabel admin/petugas diringkas dengan tombol pratinjau thumbnail modal terpadu (`ReportDetailModal.tsx`), mencegah URL panjang merusak tata letak tabel.
+- **Siklus Status Transparan**: Alur penanganan terukur dari status *Baru* ➔ *Diproses* ➔ *Selesai* (lengkap dengan catatan perbaikan teknisi) atau *Ditolak*.
 
-### 6. Sistem Pelaporan Sarpras & Bukti Foto Rapi
-- **Formulir Laporan Kerusakan**: Pengguna dapat menyampaikan kendala fisik sarpras beserta foto bukti kerusakan.
-- **Tampilan URL Foto Bebas Overflow**: Link lampiran foto pada tabel admin/petugas ditampilkan ringkas dengan tombol pratinjau thumbnail modal, mencegah teks URL panjang merusak tata letak tabel.
-- **Siklus Status Laporan**: Progres terukur dari *Baru* ➔ *Diproses* ➔ *Selesai* (lengkap dengan catatan resolusi perbaikan petugas) atau *Ditolak*.
+### 6. Dialog Interaktif Kustom (`ActionPromptModal`)
+- Mengeliminasi penggunaan popup bawaan browser (`window.alert`, `window.confirm`, `window.prompt`).
+- Seluruh konfirmasi kritis (penolakan izin, pembatalan darurat, catatan perbaikan sarpras) disajikan lewat modal terpadu dengan validasi input teks dan shortcut keyboard (`Esc` untuk membatalkan, `Ctrl+Enter` untuk submit).
 
-### 7. Dialog Interaktif Kustom (`ActionPromptModal`)
-- Seluruh konfirmasi kritis (penolakan izin, pembatalan darurat, penolakan laporan, catatan perbaikan, notifikasi kapasitas lebih) **tidak menggunakan popup bawaan browser** (`alert()`, `confirm()`, `prompt()`).
-- Menggunakan modal terpadu berdesain tema aplikasi dengan validasi input teks dan pintasan keyboard (`Esc` untuk batal, `Ctrl+Enter` untuk konfirmasi).
-
-### 8. Tata Kelola Multi-Peran (17 User Stories Terpenuhi)
-- **Publik / Pengunjung**: Eksplorasi katalog sarana, filter gedung & tipe fasilitas, denah lantai (*floor plans*), dan pratinjau jadwal publik.
-- **Pengguna (Mahasiswa / Dosen / Staf)**: Pengajuan izin pinjam, pantau status reservasi, pembatalan mandiri, lapor sarpras rusak, dan timeline tindak lanjut perbaikan.
-- **Petugas**: Validasi reservasi masuk (setujui / tolak berargumen), pembatalan darurat, tindak lanjut penanganan sarpras, dan pengaturan status operasional (*Aktif* / *Perbaikan*).
-- **Admin**: Dashboard rekapitulasi, pengelolaan master data fasilitas, audit log seluruh peminjaman & laporan, verifikasi akun baru, dan ekspor laporan rekapitulasi (CSV, Excel, PDF).
+### 7. Dashboard Multi-Peran & Presisi Tata Letak
+- **Perataan Horizontal Sejajar**: Chip peran (`.ochoco-dash-role-chip`) beserta tab navigasi di setiap halaman role (`/admin`, `/petugas`, `/pengguna`) sejajar lurus dengan tombol `KEMBALI KE HOME` di atasnya dan kartu banner (`.greeting-band`) di bawahnya (`padding: 0 28px`).
+- **Manajemen Master Sarpras**: Tambah, ubah spesifikasi, dan kelola status operasional fasilitas (*Aktif* / *Perbaikan*).
+- **Verifikasi Akun Baru**: Antrean pendaftaran mandiri civitas akademika diverifikasi oleh admin sebelum dapat mengajukan reservasi.
+- **Rekapitulasi & Ekspor Multiformat**: Halaman `/admin/rekap` menyediakan rekapitulasi okupansi peminjaman dan riwayat kerusakan dengan opsi ekspor ke **CSV**, **Format Excel**, dan **Cetak PDF**.
 
 ---
 
-## 👥 Akun Demo & Kredensial Pengujian
+## 📁 Struktur Berkas & Direktori Proyek
 
-Pada halaman `/login` (serta kartu autentikasi cepat di beranda), tersedia tombol **Akun Demo (1-Klik)** untuk menguji berbagai hak akses:
-
-| Peran          | Nama Pengguna           | Email                      | Kata Sandi  | Akses Halaman |
-|----------------|-------------------------|----------------------------|-------------|---------------|
-| **Admin**      | Admin                   | `admin@sipinjam.ac.id`     | `admin123`  | `/admin/*`    |
-| **Petugas**    | Budi (Petugas)          | `petugas@sipinjam.ac.id`   | `petugas123`| `/petugas/*`  |
-| **Mahasiswa**  | Sinta (Mahasiswa FSM)   | `mahasiswa@sipinjam.ac.id` | `mhs12345`  | `/pengguna/*` |
-| **Dosen**      | Pak Herman (Dosen IF)   | `dosen@sipinjam.ac.id`     | `dosen123`  | `/pengguna/*` |
-| **Staf**       | Bu Rina (Staf Akademik) | `staf@sipinjam.ac.id`      | `staf123`   | `/pengguna/*` |
-
----
-
-## 📁 Struktur Folder Proyek
-
+```text
+frontend/
+├── app/
+│   ├── layout.tsx                    # Root layout (Font Jost, metadata global, AppDataProvider)
+│   ├── globals.css                   # Design tokens, variabel CSS, tema The Reserve at Ochoco
+│   ├── page.tsx                      # Landing page (Hero Hub, Denah Lantai, Fitur Kampus, Footer)
+│   ├── login/page.tsx                # Halaman autentikasi masuk & akses cepat akun demo
+│   ├── register/page.tsx             # Halaman pendaftaran akun civitas akademika baru
+│   ├── fasilitas/page.tsx            # Katalog fasilitas kampus lengkap dengan filter multi-kategori
+│   ├── jadwal/page.tsx               # Matriks ketersediaan 26 slot 30 menit publik (07.00–20.00 WIB)
+│   ├── panduan/page.tsx              # Panduan alur 3 langkah peminjaman & pelaporan sarpras
+│   ├── icon.svg                      # Favicon SVG arsitektural kampus
+│   │
+│   ├── pengguna/                     # Modul Pengguna (Mahasiswa, Dosen, Staf)
+│   │   ├── layout.tsx                # Layout wrapper dashboard pengguna
+│   │   ├── page.tsx                  # Dashboard ringkasan aktivitas peminjam
+│   │   ├── reservasi/page.tsx        # Formulir pengajuan reservasi (validasi slot & anti-bentrok)
+│   │   ├── riwayat/page.tsx          # Riwayat peminjaman & pembatalan mandiri (aturan H-2 jam)
+│   │   ├── lapor/page.tsx            # Formulir pelaporan kerusakan sarpras + bukti foto
+│   │   └── status-laporan/page.tsx   # Timeline perkembangan tindak lanjut laporan kerusakan
+│   │
+│   ├── petugas/                      # Modul Petugas Sarpras
+│   │   ├── layout.tsx                # Layout wrapper dashboard petugas
+│   │   ├── page.tsx                  # Ringkasan antrean tugas petugas
+│   │   ├── reservasi/page.tsx        # Validasi izin (Setujui, Tolak, Pembatalan Darurat)
+│   │   ├── laporan/page.tsx          # Penanganan laporan (Diproses, Selesai + Catatan, Tolak)
+│   │   └── fasilitas/page.tsx        # Pengaturan status sarpras (Aktif / Perbaikan)
+│   │
+│   └── admin/                        # Modul Administrator Sistem
+│       ├── layout.tsx                # Layout wrapper dashboard admin
+│       ├── page.tsx                  # Ringkasan analitik & tata kelola sarpras
+│       ├── fasilitas/page.tsx        # Master data sarana prasarana kampus (CRUD fasilitas)
+│       ├── reservasi/page.tsx        # Audit log seluruh peminjaman sarpras kampus
+│       ├── laporan/page.tsx          # Audit log seluruh laporan kendala fasilitas
+│       ├── akun/page.tsx             # Kelola data pengguna & verifikasi pendaftaran akun
+│       └── rekap/page.tsx            # Rekapitulasi data & ekspor laporan (CSV, Excel, PDF)
+│
+├── components/
+│   ├── Navbar.tsx                    # Header navigasi adaptif 3-kolom anti-tabrakan
+│   ├── Hero.tsx                      # Hero banner interaktif & tombol aksi cepat
+│   ├── CampusMapArt.tsx              # Ilustrasi visual artistik peta kampus Undip
+│   ├── FacilityTabs.tsx              # Visual denah lantai (floor plans) & spesifikasi ruang
+│   ├── BuildingFeatures.tsx          # Komponen showcase keunggulan sarana prasarana (3 slide)
+│   ├── FacilityCard.tsx              # Kartu item katalog sarpras
+│   ├── FacilityFilterBar.tsx         # Bilah filter kategori & pencarian fasilitas
+│   ├── CategorySidebar.tsx           # Sidebar filter tipe sarana prasarana
+│   ├── SearchWidget.tsx              # Komponen widget pencarian fasilitas
+│   ├── SchedulePreview.tsx           # Komponen pratinjau matriks jadwal slot waktu
+│   ├── Flow.tsx                      # Diagram alur tahapan peminjaman
+│   ├── Footer.tsx                    # Footer tautan informasi kampus & aksesibilitas
+│   ├── ActionPromptModal.tsx         # Modal dialog konfirmasi terpadu (bebas alert/confirm bawaan)
+│   ├── FacilityDetailModal.tsx       # Modal rincian spesifikasi & foto fasilitas
+│   ├── ReservationDetailModal.tsx    # Modal rincian data peminjam & peruntukan kegiatan
+│   ├── ReportDetailModal.tsx         # Modal rincian kerusakan & foto bukti laporan
+│   └── dashboard/
+│       └── DashboardShell.tsx        # Shell tata letak dashboard multi-peran dengan role guard
+│
+├── config/
+│   └── site.ts                       # Konfigurasi konstanta waktu operasional & parameter sistem
+│
+├── context/
+│   └── AppDataContext.tsx            # Client state management terpusat (Reservasi, Fasilitas, Laporan, Akun)
+│
+├── lib/
+│   ├── slots.ts                      # Logika kalkulasi, pembagian, dan validasi bentrok slot waktu
+│   ├── cancellation.ts               # Logika perhitungan batas waktu pembatalan mandiri (H-2 jam)
+│   ├── dashboard-nav.ts              # Konfigurasi menu navigasi dashboard per peran
+│   └── filter-facilities.ts          # Utilitas pencarian & filter sarana prasarana
+│
+├── mock/
+│   ├── fake-users-db.ts              # Dataset akun civitas akademika untuk pengujian
+│   └── auth-api.ts                   # Lapisan simulasi autentikasi asinkron (login, logout, session)
+│
+├── models/
+│   ├── facility.ts                   # Interface tipe data fasilitas kampus & slot waktu
+│   ├── facilities-data.ts            # Data awal fasilitas sarana prasarana kampus
+│   ├── reservation.ts                # Interface tipe data reservasi peminjaman
+│   └── report.ts                     # Interface tipe data laporan kerusakan & antrean akun
+│
+├── public/
+│   ├── features/                     # Aset gambar visual fitur sarana prasarana (1400x680)
+│   │   ├── slot-waktu-30-menit.png   # Slide 1: Matriks jadwal slot 30 menit
+│   │   ├── pelaporan-kerusakan.png   # Slide 2: Form laporan kendala fasilitas
+│   │   └── katalog-fasilitas.png     # Slide 3: Katalog & filter jenis fasilitas
+│   ├── undip-hero.jpg                # Foto latar kampus Universitas Diponegoro
+│   └── favicon.svg                   # Ikon web SVG
+│
+├── next.config.js                    # Konfigurasi static export & allowedDevOrigins
+├── package.json                      # Dependensi Next.js 16, React 19, TypeScript
+└── tsconfig.json                     # Konfigurasi compiler TypeScript
 ```
-app/
-  layout.tsx                Root layout (Font Jost, metadata, AppDataProvider)
-  globals.css               Design tokens & stylesheet sistem (publik & dashboard)
-  page.tsx                  Landing page (Navbar transparan, Hero Hub, Denah Lantai, Fitur, Footer)
-  login/page.tsx            Halaman autentikasi masuk & akses cepat akun demo
-  register/page.tsx         Halaman registrasi mandiri civitas akademika
-  fasilitas/page.tsx        Katalog fasilitas kampus lengkap dengan filter multi-kategori
-  jadwal/page.tsx           Matriks jadwal ketersediaan slot 30 menit publik (07.00–20.00 WIB)
-  panduan/page.tsx          Panduan alur 3 langkah reservasi & pelaporan kendala
-
-  pengguna/
-    layout.tsx              Layout dashboard pengguna
-    page.tsx                Menu ringkasan & navigasi cepat pengguna
-    reservasi/page.tsx      Form pengajuan peminjaman (deteksi bentrok & slot 30 menit)
-    riwayat/page.tsx        Riwayat reservasi peminjam (+ pembatalan mandiri sebelum batas)
-    lapor/page.tsx          Form pelaporan kerusakan sarpras (+ unggah foto bukti)
-    status-laporan/page.tsx Timeline progres tindak lanjut penanganan laporan
-
-  petugas/
-    layout.tsx              Layout dashboard petugas
-    page.tsx                Ringkasan antrean reservasi & laporan yang menunggu
-    reservasi/page.tsx      Validasi reservasi (Setujui, Tolak, Pembatalan Darurat berargumen)
-    laporan/page.tsx        Tindak lanjut laporan (Baru, Diproses, Selesai + Catatan, Tolak)
-    fasilitas/page.tsx      Kontrol status operasional sarpras (Aktif / Perbaikan)
-
-  admin/
-    layout.tsx              Layout dashboard admin
-    page.tsx                Ringkasan tata kelola fasilitas, peminjaman, dan akun pengguna
-    fasilitas/page.tsx      Kelola master data fasilitas (tambah, edit, status)
-    reservasi/page.tsx      Log audit seluruh peminjaman sarpras kampus (+ filter multi-status)
-    laporan/page.tsx        Log audit seluruh laporan kerusakan sarpras
-    akun/page.tsx           Kelola akun pengguna/petugas & verifikasi registrasi mandiri
-    rekap/page.tsx          Rekapitulasi okupansi & kerusakan sarpras (ekspor CSV/Excel/PDF)
-
-components/
-  Navbar.tsx                Header publik adaptif & collision-proof (3-column layout)
-  Hero.tsx                  Hero section + Campus Hub Card (copywriting alami & tombol fungsional)
-  FacilityTabs.tsx          Visual denah lantai (floor plans) & spesifikasi ruang
-  BuildingFeatures.tsx      Daftar keunggulan sarana prasarana kampus
-  Footer.tsx                Footer navigasi kampus & aksesibilitas
-  ActionPromptModal.tsx     Modal dialog kustom pengganti prompt/alert/confirm bawaan browser
-  FacilityDetailModal.tsx   Modal rincian fasilitas & spesifikasi kapasitas
-  ReservationDetailModal.tsx Modal rincian reservasi peminjam
-  ReportDetailModal.tsx     Modal detail kerusakan & foto bukti laporan
-  dashboard/DashboardShell.tsx Shell dashboard bersama (topbar, sub-navigasi teratur, guard izin)
-
-config/
-  site.ts                   Konfigurasi aturan operasional, jam kampus, dan rute API backend
-
-context/
-  AppDataContext.tsx        State management terpusat di sisi client (React Context)
-
-lib/
-  slots.ts                  Logika pembuatan & kalkulasi bentrok slot waktu 30 menit
-  cancellation.ts           Aturan & kalkulasi batas waktu pembatalan mandiri peminjaman
-  dashboard-nav.ts          Daftar menu navigasi dashboard per peran
-  filter-facilities.ts      Helper penyaringan fasilitas kampus
-
-mock/
-  fake-users-db.ts          Database akun demo civitas akademika
-  auth-api.ts               Lapisan simulasi async API autentikasi
-
-models/
-  facility.ts               Definisi tipe data fasilitas, tipe sarpras, dan slot waktu
-  reservation.ts            Definisi tipe data peminjaman/reservasi
-  report.ts                 Definisi tipe data laporan kerusakan & akun tertunda verifikasi
-```
 
 ---
 
-## 🎨 Branding & Desain Sistem (*The Reserve at Ochoco*)
+## 🎨 Desain Sistem & Estetika Visual (*The Reserve at Ochoco*)
 
-- **Palet Warna Arsitektural**:
-  - *Forest / Deep Charcoal*: `#14171A`, `#1A1F24`
-  - *Warm Brass Gold*: `#B59876`, `#937451`
-  - *Clean Alabaster / Chalk*: `#F4F5F7`, `#FFFFFF`
+- **Palet Warna Harmonis & Arsitektural**:
+  - *Deep Charcoal / Obsidian*: `#0E1217`, `#14171A`, `#1A1F24`
+  - *Warm Brass & Gold Accent*: `#B59876`, `#937451`
+  - *Clean Alabaster & Chalk*: `#F4F5F7`, `#FFFFFF`
   - *Muted Slate Borders*: `rgba(255, 255, 255, 0.1)`
-- **Tipografi**: Menggunakan font modern **Jost** dengan hierarki tipografi formal dan keterbacaan tinggi.
-- **Favicon Kustom SiPinjam**: Ikon vektor SVG bertema fasad arsitektural gedung kampus Undip (`/icon.svg` dan `/favicon.svg`).
-- **Dropdown Arah Bawah (`DownwardSelect`)**: Menjamin konsistensi arah buka ke bawah pada Chromium Windows tanpa loncatan posisi ke atas.
-- **Tabel Responsif & Bersih**: Menghilangkan scroll horizontal liar, menerapkan padding seimbang, dan menjaga perataan teks rapi.
+- **Tipografi Modern**: Memanfaatkan font **Jost** (Google Fonts) untuk menghadirkan kesan geometris, bersih, dan formal.
+- **Konsistensi Formulir & Dropdown**: Menggunakan implementasi dropdown arah bawah yang stabil di berbagai browser tanpa loncatan posisi.
+- **Tata Letak Tabel Terstruktur**: Dilengkapi horizontal scroll internal yang halus, padding proporsional, serta badge status dengan kode warna kontras dan mudah dibaca.
 
 ---
 
-## ⚙️ Catatan Arsitektur & Transisi Backend
+## 🔌 Kesiapan Integrasi ke Backend REST / GraphQL
 
-1. **State Abstraction**: `context/AppDataContext.tsx` mengisolasi seluruh mutasi data (reservasi, laporan, fasilitas, akun pengguna). Ketika beralih ke backend sungguhan, fungsi-fungsi ini siap digantikan dengan pemanggilan REST/GraphQL API tanpa mengubah komponen antarmuka.
-2. **Keamanan Autentikasi**: File `mock/auth-api.ts` menyimulasikan alur verifikasi kredensial asinkron dan siap dihubungkan ke penyedia identitas kampus (misal: SSO Undip / OAuth2 / JWT).
-3. **Konfigurasi Lingkungan**: Variabel endpoint dan opsi runtime dapat dikonfigurasi melalui `config/site.ts` atau file environment `.env.local`.
+Aplikasi frontend ini dirancang secara modular dan *decoupled*:
+1. **Central Data Layer**: Seluruh pemanggilan dan modifikasi data dikelola melalui `context/AppDataContext.tsx`. Saat menghubungkan ke API backend nyata, fungsi-fungsi mock di context dapat diganti langsung dengan `fetch` atau `axios` ke endpoint REST API tanpa merombak komponen tampilan.
+2. **Lapisan Autentikasi**: `mock/auth-api.ts` menyimulasikan siklus async token/cookie yang siap disambungkan ke mekanisme SSO Universitas Diponegoro, JWT, atau OAuth2.
+3. **Konfigurasi Lingkungan**: Pengaturan base URL API dan variabel lingkungan dapat dipusatkan di file `.env.local` dan `config/site.ts`.
+
+---
+
+*Dikembangkan untuk Praktikum Pengembangan Perangkat Lunak Berbasis Komponen (PPK): Universitas Diponegoro.*

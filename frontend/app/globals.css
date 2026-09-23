@@ -1343,10 +1343,11 @@ button.slot-lg:disabled {
 }
 
 .ochoco-top-header.solid-dark {
-  position: sticky;
-  top: 0;
-  background: #15171A;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  background: linear-gradient(180deg, rgba(14, 18, 23, 0.94) 0%, rgba(20, 25, 32, 0.88) 55%, rgba(27, 33, 42, 0.82) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .ochoco-top-header.subpage-scenic-bar {
@@ -2272,7 +2273,7 @@ button.slot-lg:disabled {
 .ochoco-feat-split {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  min-height: 560px;
+  min-height: 440px;
 }
 
 .ochoco-feat-media {
@@ -2291,7 +2292,7 @@ button.slot-lg:disabled {
 
 .ochoco-feat-content {
   background: #b59876;
-  padding: 80px 72px;
+  padding: 48px 56px;
   color: #FFFFFF;
   display: flex;
   flex-direction: column;
@@ -2300,33 +2301,33 @@ button.slot-lg:disabled {
 
 .ochoco-feat-title {
   font-family: var(--font);
-  font-size: 48px;
+  font-size: 38px;
   font-weight: 600;
   line-height: 1.05;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #FFFFFF;
-  margin: 0 0 36px 0;
+  margin: 0 0 20px 0;
 }
 
 .ochoco-feat-sub {
   font-family: var(--font);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #FFFFFF;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
   opacity: 0.95;
 }
 
 .ochoco-feat-desc {
   font-family: var(--font);
-  font-size: 14.5px;
-  line-height: 1.8;
+  font-size: 13.5px;
+  line-height: 1.65;
   color: rgba(255, 255, 255, 0.92);
   max-width: 480px;
-  margin-bottom: 42px;
+  margin-bottom: 24px;
 }
 
 .ochoco-feat-nav {
@@ -2645,6 +2646,7 @@ button.slot-lg:disabled {
   gap: 16px;
   flex-wrap: wrap;
   min-height: 36px;
+  padding: 0 28px;
 }
 
 .ochoco-back-button {
@@ -2741,7 +2743,7 @@ button.slot-lg:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 0;
+  padding: 0 28px;
   flex-wrap: wrap;
 }
 .ochoco-dash-role-chip {

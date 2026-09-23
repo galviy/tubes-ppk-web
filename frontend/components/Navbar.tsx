@@ -17,16 +17,7 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
   const { currentUser, logout } = useAppData();
 
   const isHome = pathname === '/';
-  const isPublicSubpage =
-    pathname.startsWith('/fasilitas') ||
-    pathname.startsWith('/jadwal') ||
-    pathname.startsWith('/panduan');
-
-  const topHeaderClass = isHome
-    ? 'transparent-hero'
-    : isPublicSubpage
-    ? 'subpage-scenic-bar'
-    : 'solid-dark';
+  const topHeaderClass = isHome ? 'transparent-hero' : 'subpage-scenic-bar';
 
   function handleLogout() {
     logout();
@@ -68,7 +59,6 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
           <Link
             href={ROLE_HOME[currentUser.role]}
             className={`ochoco-nav-link ${pathname.startsWith('/pengguna') || pathname.startsWith('/petugas') || pathname.startsWith('/admin') ? 'active' : ''}`}
-            style={{ color: '#b59876', fontWeight: 700 }}
           >
             DASHBOARD
           </Link>
@@ -91,23 +81,6 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
 
         {currentUser ? (
           <div className="ochoco-user-bar">
-            <Link
-              href={ROLE_HOME[currentUser.role] || '/'}
-              className="ochoco-btn-dashboard"
-              style={{
-                padding: '4px 10px',
-                fontSize: 10.5,
-                fontWeight: 700,
-                letterSpacing: '0.08em',
-                borderRadius: 4,
-                background: 'rgba(181, 152, 118, 0.2)',
-                border: '1px solid rgba(181, 152, 118, 0.5)',
-                color: '#b59876',
-                textDecoration: 'none',
-              }}
-            >
-              DASHBOARD
-            </Link>
             <span className="ochoco-role-chip">{currentUser.role}</span>
             <span className="ochoco-user-name" style={{ color: '#FFFFFF' }}>{currentUser.nama}</span>
             <button

@@ -15,28 +15,21 @@ const SLIDES: FeatureSlide[] = [
     subtitle: 'SLOT WAKTU 30 MENIT (07.00 - 20.00)',
     description:
       'Peminjaman fasilitas menggunakan 26 slot waktu tetap berdurasi 30 menit yang dimulai dari pukul 07.00 hingga 20.00 WIB. Sistem memvalidasi rentang waktu secara ketat di sisi server dan client untuk mencegah bentrok jadwal pada fasilitas yang sama.',
-    image: 'https://images.unsplash.com/photo-1541829070764-84a7d30dd3f3?auto=format&fit=crop&w=1600&q=85',
+    image: '/features/slot-waktu-30-menit.png',
   },
   {
     title: 'BUILDING FEATURES',
     subtitle: 'PELAPORAN KERUSAKAN DENGAN FOTO BUKTI',
     description:
       'Mahasiswa dan dosen dapat melaporkan kendala pada fasilitas kampus dengan memilih kategori kerusakan, menuliskan deskripsi masalah, serta mengunggah foto bukti. Setiap laporan terpantau statusnya mulai dari baru, diproses, hingga selesai.',
-    image: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1600&q=85',
+    image: '/features/pelaporan-kerusakan.png',
   },
   {
     title: 'BUILDING FEATURES',
-    subtitle: 'ANTREAN PETUGAS & STATUS PERBAIKAN',
+    subtitle: 'KATALOG FASILITAS & FILTER KATEGORI',
     description:
-      'Petugas memproses antrean reservasi dan laporan kerusakan secara terpusat dalam satu alur kerja. Petugas dapat menyetujui, menolak, membatalkan reservasi darurat dengan alasan resmi, serta menandai fasilitas berstatus "Dalam Perbaikan".',
-    image: 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1600&q=85',
-  },
-  {
-    title: 'BUILDING FEATURES',
-    subtitle: 'DATA MASTER & EKSPOR REKAPITULASI ADMIN',
-    description:
-      'Administrator mengelola data master seluruh tipe fasilitas kampus, memverifikasi akun civitas akademika, serta mengekspor rekapitulasi okupansi dan frekuensi kerusakan ke CSV/Excel/PDF.',
-    image: 'https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1600&q=85',
+      'Telusuri katalog lengkap seluruh fasilitas kampus dengan filter kategori yang praktis. Dilengkapi informasi kapasitas ruangan, sarana pendukung (AC, proyektor, papan tulis), serta pilihan tata letak grid untuk mempermudah pencarian ruang yang dibutuhkan.',
+    image: '/features/katalog-fasilitas.png',
   },
 ];
 
