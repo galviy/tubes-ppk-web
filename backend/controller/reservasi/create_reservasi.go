@@ -27,9 +27,14 @@ func Create_reservasi(w http.ResponseWriter, r *http.Request) {
 	ruangan := r.FormValue("ruangan_reservasi")
 	waktuMulai := r.FormValue("waktu_peminjaman")
 	waktuSelesai := r.FormValue("waktu_peminjaman_selesai")
+	alasan_peminjaman := r.FormValue("alasan_peminjaman")
 
-	if ruangan == "" || waktuMulai == "" || waktuSelesai == "" {
+	if ruangan == "" || waktuMulai == "" || waktuSelesai == "" || alasan_peminjaman == "" {
 		utils.ResponseJSONMessage(w, "Missing field!", http.StatusBadRequest, false)
+		return
+	}
+	if len(alasan_peminjaman) > 255 {
+		utils.ResponseJSONMessage(w, "Alasan kamu terlalu panjang!", http.StatusBadRequest, false)
 		return
 	}
 
@@ -107,7 +112,7 @@ func Create_reservasi(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// INSERT RESERVASI
-	err = repositories.CreateReservasi(ruanganID, userID, startTime, endTime)
+	err = repositories.CreateReservasi(ruanganID, userID, startTime, endTime, alasan_peminjaman)
 
 	if err != nil {
 		log.Printf("Gagal membuat reservasi: %v", err)

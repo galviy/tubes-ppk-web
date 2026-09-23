@@ -135,6 +135,10 @@ func SetupRoutes() *http.ServeMux {
 		middleware.Auth(http.HandlerFunc(reservasi.Create_reservasi)),
 	)
 	mux.Handle(
+		"GET /reservasi/list_reservasi",
+		middleware.Auth(http.HandlerFunc(reservasi.Show_Reservasi)),
+	)
+	mux.Handle(
 		"GET /petugas/reports",
 		middleware.Auth(middleware.RequireRole(
 			http.HandlerFunc(petugas_report.ListAllLaporan),

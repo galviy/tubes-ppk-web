@@ -28,7 +28,7 @@ func IsReservasiBentrok(ruanganID int, waktuMulai time.Time, waktuSelesai time.T
 	return exist, nil
 }
 
-func CreateReservasi(ruanganID int, userID int, waktuMulai time.Time, waktuSelesai time.Time) error {
+func CreateReservasi(ruanganID int, userID int, waktuMulai time.Time, waktuSelesai time.Time, alasan string) error {
 
 	query := `
 		INSERT INTO reservasi (
@@ -37,12 +37,13 @@ func CreateReservasi(ruanganID int, userID int, waktuMulai time.Time, waktuSeles
 			user_reservasi,
 			waktu_peminjaman,
 			waktu_peminjaman_selesai,
-			status_reservasi
+			status_reservasi,
+			alasan_peminjaman
 		)
-		VALUES (NOW(),?,?,?,?,'PENDING')
+		VALUES (NOW(),?,?,?,?,'PENDING',?)
 	`
 
-	_, err := config.Exec(query, ruanganID, userID, waktuMulai, waktuSelesai)
+	_, err := config.Exec(query, ruanganID, userID, waktuMulai, waktuSelesai, alasan)
 
 	return err
 }
