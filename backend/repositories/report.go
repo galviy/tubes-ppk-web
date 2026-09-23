@@ -37,7 +37,6 @@ func CheckRuanganById(id int) bool {
 		return false
 	}
 	return true
-
 }
 
 func scanReportDetail(row interface {

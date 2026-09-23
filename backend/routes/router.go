@@ -131,12 +131,20 @@ func SetupRoutes() *http.ServeMux {
 		middleware.Auth(http.HandlerFunc(report.DetailLaporan)),
 	)
 	mux.Handle(
-		"POST /reservasi/create_reservasi",
+		"POST /reservasi/create_reservasi/ruangan",
 		middleware.Auth(http.HandlerFunc(reservasi.Create_reservasi)),
 	)
 	mux.Handle(
-		"GET /reservasi/list_reservasi",
+		"POST /reservasi/create_reservasi/alat",
+		middleware.Auth(http.HandlerFunc(reservasi.Create_reservasi_alat)),
+	)
+	mux.Handle(
+		"GET /reservasi/list_reservasi/ruangan",
 		middleware.Auth(http.HandlerFunc(reservasi.Show_Reservasi)),
+	)
+	mux.Handle(
+		"GET /reservasi/list_reservasi/alat",
+		middleware.Auth(http.HandlerFunc(reservasi.Show_Reservasi_Alat)),
 	)
 	mux.Handle(
 		"GET /petugas/reports",
