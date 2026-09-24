@@ -96,6 +96,8 @@ interface AppDataValue {
   currentUser: LoggedInUser | null;
   /** true jika backend Go terjangkau via /api (proxy rewrites). */
   backendOnline: boolean;
+  /** Status sinkronisasi terakhir: bedakan "kosong" vs "gagal memuat". */
+  syncStatus: 'idle' | 'loading' | 'ok' | 'error';
 
   facilityById: (id: string) => Facility | undefined;
   isSlotTaken: (facilityId: string, slotStart: string, excludeId?: number) => boolean;
@@ -176,6 +178,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [registeredAccounts, setRegisteredAccounts] = useState<BackendAccount[]>([]);
   const [currentUser, setCurrentUser] = useState<LoggedInUser | null>(null);
   const [backendOnline, setBackendOnline] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
 
   // Backend-first untuk katalog publik (tanpa auth): jika Go hidup,
   // ganti seed lokal dengan data MySQL. Jika mati, tetap pakai seed
@@ -188,8 +191,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setBackendOnline(up);
       if (!up) return;
       const res = await backendListFasilitas();
-      if (cancelled || !res.ok || !res.data || res.data.length === 0) return;
-      setFacilities(res.data.map(mapBackendFasilitas));
+      if (cancelled || !res.ok) return;
+      // Server menang (termasuk list kosong yang legitimate).
+      setFacilities((res.data ?? []).map(mapBackendFasilitas));
     })();
     return () => {
       cancelled = true;
@@ -224,8 +228,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const refreshFacilities = useCallback(async (): Promise<boolean> => {
     const res = await backendListFasilitas();
-    if (!res.ok || !res.data) return false;
-    setFacilities(res.data.map(mapBackendFasilitas));
+    if (!res.ok) return false;
+    setFacilities((res.data ?? []).map(mapBackendFasilitas));
     return true;
   }, []);
 
@@ -235,16 +239,20 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       backendListReservasiRuangan(100),
       backendListReservasiAlat(100),
     ]);
-    // Kedua endpoint harus OK agar tidak ada data yang hilang diam-diam.
-    if (!ru.ok || !al.ok || !ru.data || !al.data) return false;
+    // Per-jenis dan null-tolerant: backend me-return "data":null untuk
+    // jenis yang kosong (bukan error). Hanya batal bila KEDUANYA gagal
+    // agar satu jenis kosong tak menenggelamkan jenis berisi.
+    if (!ru.ok && !al.ok) return false;
     const rows: Reservation[] = [];
-    for (const row of ru.data) {
+    for (const row of ru.data ?? []) {
       const m = mapReservasiRuangan(row);
       if (m) rows.push({ ...m, pemohon: sessionUser.nama, sumber: 'backend' });
+      else console.warn('[sync] baris reservasi ruangan terbuang (tak terparse)', row);
     }
-    for (const row of al.data) {
+    for (const row of al.data ?? []) {
       const m = mapReservasiAlat(row);
       if (m) rows.push({ ...m, pemohon: sessionUser.nama, sumber: 'backend' });
+      else console.warn('[sync] baris reservasi alat terbuang (tak terparse)', row);
     }
     rows.sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
     setReservations(rows);
@@ -254,9 +262,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const refreshReportsMine = useCallback(async (): Promise<boolean> => {
     if (!sessionUser) return false;
     const res = await backendListLaporanSaya();
-    if (!res.ok || !res.data) return false;
+    if (!res.ok) return false;
     setReports(
-      (res.data.map(mapBackendReport).filter(Boolean) as NonNullable<
+      ((res.data ?? []).map(mapBackendReport).filter(Boolean) as NonNullable<
         ReturnType<typeof mapBackendReport>
       >[]).map((m) => ({
         id: m.backendId,
@@ -280,25 +288,31 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return false;
     }
     const res = await backendListSemuaLaporan();
-    if (!res.ok || !res.data) return false;
-    setReports(
-      (res.data.map(mapBackendReport).filter(Boolean) as NonNullable<
-        ReturnType<typeof mapBackendReport>
-      >[]).map((m, i) => ({
+    if (!res.ok) return false;
+    const rows = res.data ?? [];
+    const mapped: Report[] = [];
+    for (const row of rows) {
+      const m = mapBackendReport(row);
+      if (!m) {
+        console.warn('[sync] baris laporan terbuang (tak terparse)', row);
+        continue;
+      }
+      mapped.push({
         id: m.backendId,
         backendId: m.backendId,
         sumber: 'backend' as const,
         facilityId: m.facilityId,
         // Backend tidak mengembalikan nama pelapor (hanya user_report id).
-        pelapor: `Pengguna #${(res.data as Record<string, unknown>[])[i]?.['user_report'] ?? '?'}`,
+        pelapor: `Pengguna #${(row as Record<string, unknown>)['user_report'] ?? '?'}`,
         kategori: m.kategori,
         deskripsi: m.deskripsi,
         foto: m.foto,
         status: m.status,
         catatan: m.catatan,
         createdAt: m.createdAt,
-      })),
-    );
+      });
+    }
+    setReports(mapped);
     return true;
   }, [sessionUser]);
 
@@ -309,9 +323,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       backendAdminList('/admin/show_dosen_pending'),
       backendAdminList('/admin/show_staff_pending'),
     ]);
-    if (!mhs.ok || !dsn.ok || !stf.ok || !mhs.data || !dsn.data || !stf.data) return false;
+    // Per-list null-tolerant (backend me-return "data":null saat kosong).
+    if (!mhs.ok || !dsn.ok || !stf.ok) return false;
     const rows: PendingAccount[] = [];
-    for (const row of mhs.data) {
+    for (const row of mhs.data ?? []) {
       const m = mapPendingMhs(row);
       if (!m) continue;
       rows.push({
@@ -326,7 +341,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         status: 'menunggu',
       });
     }
-    for (const row of dsn.data) {
+    for (const row of dsn.data ?? []) {
       const m = mapPendingDosen(row);
       if (!m) continue;
       rows.push({
@@ -341,7 +356,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         status: 'menunggu',
       });
     }
-    for (const row of stf.data) {
+    for (const row of stf.data ?? []) {
       const m = mapPendingStaff(row);
       if (!m) continue;
       rows.push({
@@ -362,9 +377,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const refreshAccounts = useCallback(async (): Promise<boolean> => {
     if (!sessionUser || sessionUser.role !== 'admin') return false;
     const res = await backendAdminList('/admin/show_user', 100);
-    if (!res.ok || !res.data) return false;
+    if (!res.ok) return false;
     setRegisteredAccounts(
-      res.data.map(mapBackendAccount).filter((a): a is BackendAccount => a !== null),
+      (res.data ?? []).map(mapBackendAccount).filter((a): a is BackendAccount => a !== null),
     );
     return true;
   }, [sessionUser]);
@@ -375,13 +390,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (!sessionUser) return;
     let cancelled = false;
     (async () => {
+      setSyncStatus('loading');
       const r1 = refreshReservations();
       const r2 = refreshReportsMine();
       const r3 = refreshPetugasReports();
-      const r4 = sessionUser.role === 'admin' ? refreshPendingAccounts() : Promise.resolve(false);
-      const r5 = sessionUser.role === 'admin' ? refreshAccounts() : Promise.resolve(false);
-      await Promise.all([r1, r2, r3, r4, r5]);
+      const r4 = sessionUser.role === 'admin' ? refreshPendingAccounts() : Promise.resolve(true);
+      const r5 = sessionUser.role === 'admin' ? refreshAccounts() : Promise.resolve(true);
+      const results = await Promise.all([r1, r2, r3, r4, r5]);
       if (cancelled) return;
+      // Gagal total (backend mati di tengah) -> 'error'; jika minimal
+      // reservasi+laporan milik sendiri OK -> 'ok' (parsial masih berguna).
+      setSyncStatus(results[0] && results[1] ? 'ok' : 'error');
     })();
     return () => {
       cancelled = true;
@@ -398,6 +417,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       registeredAccounts,
       currentUser,
       backendOnline,
+      syncStatus,
 
       facilityById: (id) => facilities.find((f) => f.id === id),
       isSlotTaken: (facilityId, slotStart, excludeId) =>
@@ -812,6 +832,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       registeredAccounts,
       currentUser,
       backendOnline,
+      syncStatus,
       refreshReservations,
       refreshReportsMine,
       refreshPetugasReports,

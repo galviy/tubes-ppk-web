@@ -81,6 +81,11 @@ export default function PetugasReservasiPage() {
               <tr>
                 <td colSpan={7} style={{ textAlign: 'center', padding: '36px', color: '#6B7280' }}>
                   Tidak ada reservasi dalam kategori ini.
+                  <div style={{ fontSize: 12, marginTop: 8 }}>
+                    Catatan: backend hanya mengembalikan reservasi milik akun yang login — pengajuan
+                    milik pengguna lain (mis. 4 antrean PENDING saat ini) tidak terlihat di sini.
+                    Antrean lintas-pengguna membutuhkan endpoint backend yang belum tersedia.
+                  </div>
                 </td>
               </tr>
             ) : (
