@@ -166,20 +166,18 @@ frontend/
 │   └── AppDataContext.tsx            # Client state management terpusat (Reservasi, Fasilitas, Laporan, Akun)
 │
 ├── lib/
+│   ├── api.ts                        # Klien HTTP backend Go + mapper backend->model frontend
 │   ├── slots.ts                      # Logika kalkulasi, pembagian, dan validasi bentrok slot waktu
-│   ├── cancellation.ts               # Logika perhitungan batas waktu pembatalan mandiri (H-2 jam)
+│   ├── cancellation.ts               # Aturan info batas waktu pembatalan mandiri (H-2 jam)
 │   ├── dashboard-nav.ts              # Konfigurasi menu navigasi dashboard per peran
 │   └── filter-facilities.ts          # Utilitas pencarian & filter sarana prasarana
 │
-├── mock/
-│   ├── fake-users-db.ts              # Dataset akun civitas akademika untuk pengujian
-│   └── auth-api.ts                   # Lapisan simulasi autentikasi asinkron (login, logout, session)
-│
 ├── models/
 │   ├── facility.ts                   # Interface tipe data fasilitas kampus & slot waktu
-│   ├── facilities-data.ts            # Data awal fasilitas sarana prasarana kampus
+│   ├── facilities-data.ts            # Metadata kategori filter katalog (bukan data)
 │   ├── reservation.ts                # Interface tipe data reservasi peminjaman
-│   └── report.ts                     # Interface tipe data laporan kerusakan & antrean akun
+│   ├── report.ts                     # Interface tipe data laporan kerusakan & antrean akun
+│   └── user.ts                       # Tipe peran + akun backend (GET /user/me, /admin/show_user)
 │
 ├── public/
 │   ├── features/                     # Aset gambar visual fitur sarana prasarana (1400x680)
@@ -189,7 +187,8 @@ frontend/
 │   ├── undip-hero.jpg                # Foto latar kampus Universitas Diponegoro
 │   └── favicon.svg                   # Ikon web SVG
 │
-├── next.config.js                    # Konfigurasi static export & allowedDevOrigins
+├── next.config.js                    # Mode dinamis + rewrites proxy /api -> backend Go
+├── .env.local                        # NEXT_PUBLIC_API_URL + BACKEND_URL (gitignored)
 ├── package.json                      # Dependensi Next.js 16, React 19, TypeScript
 └── tsconfig.json                     # Konfigurasi compiler TypeScript
 ```
@@ -209,12 +208,13 @@ frontend/
 
 ---
 
-## 🔌 Kesiapan Integrasi ke Backend REST / GraphQL
+## 🔌 Integrasi ke Backend Go
 
-Aplikasi frontend ini dirancang secara modular dan *decoupled*:
-1. **Central Data Layer**: Seluruh pemanggilan dan modifikasi data dikelola melalui `context/AppDataContext.tsx`. Saat menghubungkan ke API backend nyata, fungsi-fungsi mock di context dapat diganti langsung dengan `fetch` atau `axios` ke endpoint REST API tanpa merombak komponen tampilan.
-2. **Lapisan Autentikasi**: `mock/auth-api.ts` menyimulasikan siklus async token/cookie yang siap disambungkan ke mekanisme SSO Universitas Diponegoro, JWT, atau OAuth2.
-3. **Konfigurasi Lingkungan**: Pengaturan base URL API dan variabel lingkungan dapat dipusatkan di file `.env.local` dan `config/site.ts`.
+Frontend terhubung ke backend Go tanpa mock data:
+
+1. **Central Data Layer**: `context/AppDataContext.tsx` memanggil backend via `lib/api.ts` (proxy `rewrites()` `/api/*` -> `http://127.0.0.1:8080/*`, cookie `session_id` HttpOnly). Modul tanpa endpoint backend (persetujuan/penolakan/pembatalan reservasi, ubah/hapus fasilitas, suspend akun, logout server, matriks slot publik) dinonaktifkan jujur di UI.
+2. **Lapisan Autentikasi**: `POST /auth/login` + `GET /user/me` (role `1/2/3` -> admin/petugas/pengguna). Hanya akun backend terverifikasi.
+3. **Konfigurasi Lingkungan**: `NEXT_PUBLIC_API_URL` (`/api`) dan `BACKEND_URL` di `.env.local` dan `config/site.ts`.
 
 ---
 

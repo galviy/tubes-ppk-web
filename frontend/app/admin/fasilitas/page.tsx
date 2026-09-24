@@ -9,6 +9,7 @@ const DEFAULT_TYPES = ['Ruang Kelas', 'Aula', 'Laboratorium', 'Lapangan', 'Alat'
 
 const BLANK_FORM = {
   nama: '',
+  tipeSarana: 'ruangan' as 'ruangan' | 'alat',
   tipeSelect: DEFAULT_TYPES[0],
   tipeCustom: '',
   lokasi: '',
@@ -19,9 +20,8 @@ const BLANK_FORM = {
 };
 
 export default function KelolaFasilitasPage() {
-  const { facilities, addFacility, updateFacility, deleteFacility, setFacilityStatus } = useAppData();
+  const { facilities, addFacility, setFacilityStatus } = useAppData();
 
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(BLANK_FORM);
 
   const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
@@ -34,24 +34,7 @@ export default function KelolaFasilitasPage() {
   const existingTypes = Array.from(new Set(facilities.map((f) => f.type))).filter(Boolean);
   const allTypeOptions = Array.from(new Set([...DEFAULT_TYPES, ...existingTypes]));
 
-  function startEdit(f: Facility) {
-    setEditingId(f.id);
-    const isKnown = allTypeOptions.includes(f.type);
-    setForm({
-      nama: f.name,
-      tipeSelect: isKnown ? f.type : '+baru',
-      tipeCustom: isKnown ? '' : f.type,
-      lokasi: f.loc,
-      kapasitas: String(f.cap),
-      deskripsi: f.desc,
-      kelengkapan: (f.amenities || []).join(', '),
-      image: f.image || '',
-    });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
   function cancelEdit() {
-    setEditingId(null);
     setForm(BLANK_FORM);
   }
 
@@ -81,7 +64,10 @@ export default function KelolaFasilitasPage() {
     reader.readAsDataURL(file);
   }
 
-  function handleSubmit() {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleSubmit() {
+    if (isSubmitting) return;
     if (!form.nama.trim() || !form.lokasi.trim()) {
       setModalConfig({
         isOpen: true,
@@ -124,46 +110,50 @@ export default function KelolaFasilitasPage() {
       image: form.image.trim() || undefined,
     };
 
-    if (editingId) {
-      updateFacility(editingId, payload);
-    } else {
-      addFacility(payload);
+    // Tambah via backend (ubah/hapus tak punya endpoint -> tombolnya
+    // dihapus dari tabel; desc/amenities/image tidak punya kolom backend).
+    setIsSubmitting(true);
+    try {
+      const res = await addFacility({ ...payload, tipeSarana: form.tipeSarana });
+      if (!res.ok) {
+        setModalConfig({
+          isOpen: true,
+          title: 'Gagal Menambah Fasilitas',
+          subtitle: res.message || 'Data fasilitas tidak dapat diproses.',
+          confirmText: 'Mengerti',
+          confirmVariant: 'danger',
+          showInput: false,
+          onConfirm: () => {},
+        });
+        return;
+      }
+      setModalConfig({
+        isOpen: true,
+        title: 'Fasilitas Ditambahkan',
+        subtitle: `"${payload.name}" tersimpan di database backend. Deskripsi, kelengkapan, dan foto tidak memiliki kolom backend sehingga hanya tampil lokal sementara.`,
+        confirmText: 'Selesai',
+        confirmVariant: 'primary',
+        showInput: false,
+        onConfirm: () => {},
+      });
+      cancelEdit();
+    } finally {
+      setIsSubmitting(false);
     }
-    cancelEdit();
-  }
-
-  function handleDelete(f: Facility) {
-    setModalConfig({
-      isOpen: true,
-      title: 'Hapus Fasilitas',
-      subtitle: `Apakah Anda yakin ingin menghapus "${f.name}" (${f.loc}) dari sistem? Fasilitas ini tidak akan lagi muncul di katalog maupun pencarian.`,
-      confirmText: 'Hapus Fasilitas',
-      confirmVariant: 'danger',
-      showInput: false,
-      onConfirm: () => {
-        deleteFacility(f.id);
-        if (editingId === f.id) cancelEdit();
-      },
-    });
   }
 
   return (
     <div>
       <div className="content-head">
         <h2>Kelola data fasilitas</h2>
-        <p>Tambah, ubah, atau hapus fasilitas kampus Universitas Diponegoro secara dinamis.</p>
+        <p>Tambah fasilitas dan atur status operasional. Ubah dan hapus menunggu endpoint backend.</p>
       </div>
 
       <div className="panel">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#181D24' }}>
-            {editingId ? 'Ubah data fasilitas' : 'Tambah fasilitas baru'}
+            Tambah fasilitas baru
           </h3>
-          {editingId && (
-            <span style={{ fontSize: 12, color: '#b59876', fontWeight: 600 }}>
-              Mode Pengeditan Aktif
-            </span>
-          )}
         </div>
 
         <div className="form-grid">
@@ -177,6 +167,24 @@ export default function KelolaFasilitasPage() {
               required
             />
           </div>
+
+          {/* Jenis Sarana (menentukan endpoint backend) */}
+          <div className="fgroup">
+              <label>Jenis sarana *</label>
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '8px 0' }}>
+                {(['ruangan', 'alat'] as const).map((t) => (
+                  <label key={t} style={{ display: 'inline-flex', gap: 6, alignItems: 'center', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="tipeSarana"
+                      checked={form.tipeSarana === t}
+                      onChange={() => setForm((f) => ({ ...f, tipeSarana: t }))}
+                    />
+                    {t === 'ruangan' ? 'Ruangan' : 'Alat'}
+                  </label>
+                ))}
+              </div>
+            </div>
 
           {/* Tipe Fasilitas (Fleksibel: Pilihan ada + Bisa Tipe Baru) */}
           <div className="fgroup">
@@ -405,14 +413,12 @@ export default function KelolaFasilitasPage() {
         </div>
 
         <div className="btn-row" style={{ marginTop: 16 }}>
-          <button className="btn primary" onClick={handleSubmit}>
-            {editingId ? 'Simpan perubahan' : 'Simpan fasilitas'}
+          <button className="btn primary" onClick={() => void handleSubmit()} disabled={isSubmitting}>
+            {isSubmitting ? 'Menyimpan…' : 'Simpan fasilitas'}
           </button>
-          {editingId && (
-            <button className="btn" onClick={cancelEdit}>
-              Batal
-            </button>
-          )}
+          <button className="btn" onClick={cancelEdit}>
+            Reset
+          </button>
         </div>
       </div>
 
@@ -512,13 +518,15 @@ export default function KelolaFasilitasPage() {
                 <td>
                   <span
                     className={`pill ${
-                      f.status === 'repair' ? 'busy' : f.status === 'nonaktif' ? 'danger' : 'avail'
+                      f.status === 'repair' ? 'busy' : f.status === 'nonaktif' ? 'danger' : f.status === 'busy' ? 'busy' : 'avail'
                     }`}
                   >
                     {f.status === 'repair'
                       ? 'Perbaikan'
                       : f.status === 'nonaktif'
                       ? 'Nonaktif'
+                      : f.status === 'busy'
+                      ? 'Terpakai'
                       : 'Aktif'}
                   </span>
                 </td>
@@ -526,8 +534,24 @@ export default function KelolaFasilitasPage() {
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                     <select
                       className="table-select-action"
-                      value={f.status}
-                      onChange={(e) => setFacilityStatus(f.id, e.target.value as any)}
+                      value={f.status === 'busy' ? 'avail' : f.status}
+                      onChange={(e) => {
+                        void setFacilityStatus(f.id, e.target.value as Facility['status']).then(
+                          (res) => {
+                            if (!res.ok) {
+                              setModalConfig({
+                                isOpen: true,
+                                title: 'Gagal Mengubah Status',
+                                subtitle: res.message || 'Status fasilitas tidak dapat diproses.',
+                                confirmText: 'Mengerti',
+                                confirmVariant: 'danger',
+                                showInput: false,
+                                onConfirm: () => {},
+                              });
+                            }
+                          },
+                        );
+                      }}
                       style={{
                         borderColor:
                           f.status === 'repair'
@@ -549,9 +573,11 @@ export default function KelolaFasilitasPage() {
                       <option value="nonaktif">Nonaktif</option>
                     </select>
 
+                    {/* No-op: backend belum menyediakan endpoint ubah/hapus */}
                     <button
                       type="button"
-                      onClick={() => startEdit(f)}
+                      title="Menunggu endpoint backend — tombol tidak melakukan apa-apa"
+                      onClick={() => {}}
                       style={{
                         padding: '5px 10px',
                         fontSize: 11,
@@ -568,7 +594,8 @@ export default function KelolaFasilitasPage() {
 
                     <button
                       type="button"
-                      onClick={() => handleDelete(f)}
+                      title="Menunggu endpoint backend — tombol tidak melakukan apa-apa"
+                      onClick={() => {}}
                       style={{
                         padding: '5px 10px',
                         fontSize: 11,

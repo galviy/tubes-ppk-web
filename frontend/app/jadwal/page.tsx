@@ -54,6 +54,11 @@ function JadwalContent() {
               Pengecekan slot waktu 30 menit real-time untuk seluruh fasilitas akademik Universitas Diponegoro.
               Pilih fasilitas di bawah ini untuk melihat ketersediaan slot hari ini tanpa harus login.
             </p>
+            <div className="alert info" style={{ marginTop: 12 }}>
+              Matriks hanya menandai reservasi <b>milik sendiri</b> sebagai terpakai — backend belum menyediakan
+              endpoint ketersediaan publik. Konfirmasi akhir dilakukan sistem saat pengajuan (ruangan yang
+              sudah disetujui orang lain akan ditolak).
+            </div>
           </div>
 
           <SchedulePreview activeFacilityId={activeFacilityId} onSelectFacility={setActiveFacilityId} />

@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { Reservation, ReservationStatus } from '@/models/reservation';
-import { canSelfCancel } from '@/lib/cancellation';
 import ReservationDetailModal from '@/components/ReservationDetailModal';
 
 const STATUS_PILL: Record<ReservationStatus, [string, string]> = {
@@ -14,7 +13,7 @@ const STATUS_PILL: Record<ReservationStatus, [string, string]> = {
 };
 
 export default function RiwayatReservasiPage() {
-  const { reservations, facilityById, currentUser, cancelReservation } = useAppData();
+  const { reservations, facilityById, currentUser } = useAppData();
   const mine = reservations.filter((r) => r.pemohon === currentUser?.nama);
   const [detailFor, setDetailFor] = useState<Reservation | null>(null);
 
@@ -84,7 +83,7 @@ export default function RiwayatReservasiPage() {
           reservation={detailFor}
           facility={facilityById(detailFor.facilityId)}
           onClose={() => setDetailFor(null)}
-          onCancel={canSelfCancel(detailFor) ? cancelReservation : undefined}
+          cancelNoop
         />
       )}
     </div>

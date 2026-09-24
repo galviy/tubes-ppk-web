@@ -1,9 +1,40 @@
 'use client';
 
+import { useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
+import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
+import { FacilityStatus } from '@/models/facility';
+
+const STATUS_META: Record<FacilityStatus, { pill: string; label: string }> = {
+  avail: { pill: 'avail', label: 'Aktif' },
+  busy: { pill: 'busy', label: 'Terpakai' },
+  repair: { pill: 'busy', label: 'Perbaikan' },
+  nonaktif: { pill: 'danger', label: 'Nonaktif' },
+};
 
 export default function PetugasFasilitasPage() {
   const { facilities, setFacilityStatus } = useAppData();
+  const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
+    isOpen: false,
+    title: '',
+    onConfirm: () => {},
+  });
+
+  function handleStatusChange(facilityId: string, status: FacilityStatus) {
+    void setFacilityStatus(facilityId, status).then((res) => {
+      if (!res.ok) {
+        setModalConfig({
+          isOpen: true,
+          title: 'Gagal Mengubah Status',
+          subtitle: res.message || 'Status fasilitas tidak dapat diproses.',
+          confirmText: 'Mengerti',
+          confirmVariant: 'danger',
+          showInput: false,
+          onConfirm: () => {},
+        });
+      }
+    });
+  }
 
   return (
     <div>
@@ -34,23 +65,17 @@ export default function PetugasFasilitasPage() {
                 <td style={{ color: '#4B5563', fontSize: 13 }}>{f.cap ? `${f.cap} ${f.type?.toLowerCase() === 'alat' ? 'unit' : 'orang'}` : '-'}</td>
                 <td>
                   <span
-                    className={`pill ${
-                      f.status === 'repair' ? 'busy' : f.status === 'nonaktif' ? 'danger' : 'avail'
-                    }`}
+                    className={`pill ${STATUS_META[f.status]?.pill ?? 'avail'}`}
                     style={{ fontSize: 11 }}
                   >
-                    {f.status === 'repair'
-                      ? 'Perbaikan'
-                      : f.status === 'nonaktif'
-                      ? 'Nonaktif'
-                      : 'Aktif'}
+                    {STATUS_META[f.status]?.label ?? 'Aktif'}
                   </span>
                 </td>
                 <td style={{ textAlign: 'left', whiteSpace: 'nowrap' }}>
                   <select
                     className="table-select-action"
-                    value={f.status}
-                    onChange={(e) => setFacilityStatus(f.id, e.target.value as any)}
+                    value={f.status === 'busy' ? 'avail' : f.status}
+                    onChange={(e) => handleStatusChange(f.id, e.target.value as FacilityStatus)}
                     style={{
                       borderColor:
                         f.status === 'repair'
@@ -77,6 +102,11 @@ export default function PetugasFasilitasPage() {
           </tbody>
         </table>
       </div>
+
+      <ActionPromptModal
+        config={modalConfig}
+        onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

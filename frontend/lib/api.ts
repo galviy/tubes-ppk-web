@@ -42,6 +42,18 @@ async function parseBody(res: Response): Promise<BackendEnvelope> {
   }
 }
 
+// Body mentah (flat) untuk endpoint yang TIDAK membungkus dalam {data},
+// mis. GET /user/me -> {"Role","Username","email","success"}.
+export async function fetchRawBody(path: string): Promise<{
+  status: number;
+  okHttp: boolean;
+  body: BackendEnvelope & Record<string, unknown>;
+}> {
+  const res = await fetch(`${API_BASE}${path}`, { credentials: 'include' });
+  const body = (await parseBody(res)) as BackendEnvelope & Record<string, unknown>;
+  return { status: res.status, okHttp: res.ok, body };
+}
+
 export async function apiFetch<T = unknown>(
   path: string,
   init: RequestInit = {},
@@ -152,17 +164,38 @@ export interface BackendMe {
 }
 
 export async function backendMe(): Promise<ApiResult<BackendMe>> {
-  const raw = await apiFetch<BackendMe & { Username?: string; Role?: string }>('/user/me');
-  if (!raw.ok) return raw as ApiResult<BackendMe>;
-  // Normalisasi key kapital milik controller/user/me.go
-  const data = raw.data as Record<string, unknown> | undefined;
+  // /user/me mengembalikan field FLAT di top-level body
+  // ({"Role","Username","email","success"}) — BUKAN envelope {data}.
+  // Jangan baca via apiFetch().data (selalu undefined di sini).
+  let raw: { status: number; okHttp: boolean; body: BackendEnvelope & Record<string, unknown> };
+  try {
+    raw = await fetchRawBody('/user/me');
+  } catch (e) {
+    return {
+      ok: false,
+      status: 0,
+      message: e instanceof Error ? e.message : 'Backend tidak terjangkau.',
+    };
+  }
+  const b = raw.body;
+  const success = (b['success'] as boolean | undefined) ?? true;
+  if (!raw.okHttp || success !== true) {
+    const msg =
+      typeof b['message'] === 'string' && b['message'] ? b['message'] : `HTTP ${raw.status}`;
+    return { ok: false, status: raw.status, message: msg };
+  }
   const username =
-    (data?.['Username'] as string | undefined) ??
-    (data?.['username'] as string | undefined) ??
+    (typeof b['Username'] === 'string' && b['Username']) ||
+    (typeof b['username'] === 'string' && b['username']) ||
     '';
-  const role = ((data?.['Role'] as string | undefined) ?? (data?.['role'] as string | undefined) ?? '') as BackendRole;
-  const email = (data?.['email'] as string | undefined) ?? '';
-  return { ...raw, data: { username, email, role } };
+  const role = (typeof b['Role'] === 'string' && b['Role']) ||
+    (typeof b['role'] === 'string' && b['role']) ||
+    '';
+  const email = typeof b['email'] === 'string' ? b['email'] : '';
+  if (!email) {
+    return { ok: false, status: raw.status, message: 'Respons /user/me tidak lengkap.' };
+  }
+  return { ok: true, status: raw.status, message: 'OK', data: { username, email, role: role as BackendRole } };
 }
 
 // ---------- Publik (controller/fasilitas/list.go, controller/akademik) ----------
@@ -316,7 +349,221 @@ export function parseLaporanTarget(facility: BackendKoordinat): LaporanTarget {
   return { kind: 'ruangan', ruangan_id: refId };
 }
 
-// ---------- Laporan (controller/report/*, controller/petugas/report/*) ----------
+// ---------- Mapper backend -> model frontend ----------
+
+function pad2(n: number): string {
+  return String(n).padStart(2, '0');
+}
+
+// "2026-10-05T08:00:00Z" (atau "YYYY-MM-DD HH:MM:SS") -> {tanggal, start, end}
+export function splitBackendWaktu(
+  mulai: string,
+  selesai: string,
+): { tanggal: string; start: string; end: string } {
+  const s = new Date(mulai);
+  const e = new Date(selesai);
+  const valid = !Number.isNaN(s.getTime()) && !Number.isNaN(e.getTime());
+  if (!valid) return { tanggal: '', start: '', end: '' };
+  const tanggal = `${s.getFullYear()}-${pad2(s.getMonth() + 1)}-${pad2(s.getDate())}`;
+  return {
+    tanggal,
+    start: `${pad2(s.getHours())}:${pad2(s.getMinutes())}`,
+    end: `${pad2(e.getHours())}:${pad2(e.getMinutes())}`,
+  };
+}
+
+function num(v: unknown): number | undefined {
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function str(v: unknown): string {
+  return typeof v === 'string' ? v : '';
+}
+
+export type FrontendReservasiStatus = 'menunggu' | 'disetujui' | 'ditolak' | 'dibatalkan';
+
+export function mapReservasiStatus(s: unknown): FrontendReservasiStatus {
+  switch (String(s ?? '').toUpperCase()) {
+    case 'APPROVED':
+    case 'DISETUJUI':
+      return 'disetujui';
+    case 'REJECTED':
+    case 'DITOLAK':
+      return 'ditolak';
+    case 'CANCELLED':
+    case 'CANCELED':
+    case 'DIBATALKAN':
+      return 'dibatalkan';
+    case 'PENDING':
+    case 'MENUNGGU':
+    default:
+      return 'menunggu';
+  }
+}
+
+export interface MappedReservasi {
+  id: number;
+  backendId: number;
+  facilityId: string;
+  tanggal: string;
+  start: string;
+  end: string;
+  tujuan: string;
+  peserta?: number;
+  status: FrontendReservasiStatus;
+  createdAt: string;
+  catatanBatal: string;
+}
+
+// Baris GET /reservasi/list_reservasi/ruangan (W-keys + Ruangan_reservasi int).
+export function mapReservasiRuangan(row: Record<string, unknown>): MappedReservasi | null {
+  const id = num(row['id']);
+  const refId = num(row['Ruangan_reservasi']);
+  if (id === undefined || refId === undefined) return null;
+  const t = splitBackendWaktu(str(row['Waktu_peminjaman']), str(row['Waktu_peminjaman_selesai']));
+  const dibuat = str(row['Waktu_reservasi_dibuat']);
+  return {
+    id,
+    backendId: id,
+    facilityId: `ruangan-${refId}`,
+    tanggal: t.tanggal,
+    start: t.start,
+    end: t.end,
+    tujuan: str(row['Alasan_peminjaman']),
+    peserta: undefined,
+    status: mapReservasiStatus(row['Status_reservasi']),
+    createdAt: dibuat ? new Date(dibuat).toISOString() : new Date().toISOString(),
+    catatanBatal: str(row['Alasan_penolakan']),
+  };
+}
+
+// Baris GET /reservasi/list_reservasi/alat (+ Alat_reservasi int, Jumlah).
+export function mapReservasiAlat(row: Record<string, unknown>): MappedReservasi | null {
+  const id = num(row['id']);
+  const refId = num(row['Alat_reservasi']);
+  if (id === undefined || refId === undefined) return null;
+  const t = splitBackendWaktu(str(row['Waktu_peminjaman']), str(row['Waktu_peminjaman_selesai']));
+  const dibuat = str(row['Waktu_reservasi_dibuat']);
+  return {
+    id,
+    backendId: id,
+    facilityId: `alat-${refId}`,
+    tanggal: t.tanggal,
+    start: t.start,
+    end: t.end,
+    tujuan: str(row['Alasan_peminjaman']),
+    peserta: num(row['Jumlah']),
+    status: mapReservasiStatus(row['Status_reservasi']),
+    createdAt: dibuat ? new Date(dibuat).toISOString() : new Date().toISOString(),
+    catatanBatal: str(row['Alasan_penolakan']),
+  };
+}
+
+export type FrontendReportStatus = 'baru' | 'diproses' | 'selesai' | 'ditolak';
+
+export function mapReportStatus(s: unknown): FrontendReportStatus {
+  switch (String(s ?? '').toLowerCase()) {
+    case 'diproses':
+      return 'diproses';
+    case 'selesai':
+      return 'selesai';
+    case 'ditolak':
+      return 'ditolak';
+    case 'baru':
+    default:
+      return 'baru';
+  }
+}
+
+export interface MappedReport {
+  id: number;
+  backendId: number;
+  facilityId: string;
+  kategori: string;
+  deskripsi: string;
+  foto?: string;
+  status: FrontendReportStatus;
+  catatan: string;
+  createdAt: string;
+}
+
+// Baris GET /reports, GET /petugas/reports(+/{id}) — ReportDetail + nama join.
+export function mapBackendReport(row: Record<string, unknown>): MappedReport | null {
+  const id = num(row['id']);
+  if (id === undefined) return null;
+  const rRuangan = num(row['report_ruangan']);
+  const rAlat = num(row['report_alat']);
+  let facilityId = '';
+  if (rRuangan !== undefined) facilityId = `ruangan-${rRuangan}`;
+  else if (rAlat !== undefined) facilityId = `alat-${rAlat}`;
+  else return null;
+  const dibuat = str(row['waktu_dibuat'] ?? row['Waktu_dibuat']);
+  const foto = row['foto'];
+  return {
+    id,
+    backendId: id,
+    facilityId,
+    kategori: str(row['kategori_laporan']),
+    deskripsi: str(row['alasan']),
+    foto: typeof foto === 'string' && foto ? foto : undefined,
+    status: mapReportStatus(row['status_laporan']),
+    catatan: str(row['catatan_resolusi']),
+    createdAt: dibuat ? new Date(dibuat).toISOString() : new Date().toISOString(),
+  };
+}
+
+export type PendingKind = 'mhs' | 'dosen' | 'staff';
+
+export interface MappedPending {
+  backendId: number;
+  kind: PendingKind;
+  nama: string;
+  email: string;
+  identifier: string; // nim / nidn / nip
+  extra?: string; // angkatan / prodi info
+}
+
+// Baris GET /admin/show_mhs_pending: {id, nim, nama_lengkap, angkatan, username}
+export function mapPendingMhs(row: Record<string, unknown>): MappedPending | null {
+  const id = num(row['id']);
+  if (id === undefined) return null;
+  return {
+    backendId: id,
+    kind: 'mhs',
+    nama: str(row['nama_lengkap']),
+    email: '',
+    identifier: str(row['nim']),
+    extra: str(row['angkatan']),
+  };
+}
+
+// Baris GET /admin/show_dosen_pending: {id, nidn, nama_lengkap, prodi_dosen}
+export function mapPendingDosen(row: Record<string, unknown>): MappedPending | null {
+  const id = num(row['id']);
+  if (id === undefined) return null;
+  return {
+    backendId: id,
+    kind: 'dosen',
+    nama: str(row['nama_lengkap']),
+    email: '',
+    identifier: str(row['nidn']),
+    extra: str(row['prodi_dosen']),
+  };
+}
+
+// Baris GET /admin/show_staff_pending: {id, nip, nama_lengkap, email}
+export function mapPendingStaff(row: Record<string, unknown>): MappedPending | null {
+  const id = num(row['id']);
+  if (id === undefined) return null;
+  return {
+    backendId: id,
+    kind: 'staff',
+    nama: str(row['nama_lengkap']),
+    email: str(row['email']),
+    identifier: str(row['nip']),
+  };
+}
 
 export const REPORT_KATEGORI = ['Kebersihan', 'AC/Pendingin', 'Elektronik', 'Lainnya'] as const;
 

@@ -1,29 +1,37 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { Facility } from '@/models/facility';
 import { Reservation } from '@/models/reservation';
 import { Report, PendingAccount } from '@/models/report';
+import { isSlotBooked } from '@/lib/slots';
+import { AuthResult, SelfRegisterInput } from '@/models/user';
+import { UserRole, BackendAccount, mapBackendAccount } from '@/models/user';
 import {
-  FACILITIES as SEED_FACILITIES,
-  SEED_RESERVATIONS,
-  SEED_REPORTS,
-  SEED_PENDING_ACCOUNTS,
-} from '@/models/facilities-data';
-import { isSlotBooked, hasRangeConflict } from '@/lib/slots';
-import { registerSelf as apiRegisterSelf, AuthResult, SelfRegisterInput } from '@/mock/auth-api';
-import { UserRole, FakeUserRecord, FAKE_USERS_DB } from '@/mock/fake-users-db';
-import {
+  backendAdminList,
+  backendAdminPostForm,
   backendAvailable,
   backendCreateLaporan,
   backendCreateReservasiAlat,
   backendCreateReservasiRuangan,
   backendListFasilitas,
+  backendListLaporanSaya,
+  backendListReservasiAlat,
+  backendListReservasiRuangan,
+  backendListSemuaLaporan,
   backendLogin,
   backendMe,
   backendRegisterDosen,
   backendRegisterMhs,
   backendRegisterStaff,
+  backendUpdateFasilitasStatus,
+  backendUpdateLaporan,
+  mapBackendReport,
+  mapPendingDosen,
+  mapPendingMhs,
+  mapPendingStaff,
+  mapReservasiAlat,
+  mapReservasiRuangan,
   parseLaporanTarget,
   REPORT_KATEGORI,
   roleIdToFrontend,
@@ -122,7 +130,6 @@ interface AppDataValue {
   submitReservation: (
     input: Omit<Reservation, 'id' | 'pemohon' | 'status' | 'createdAt'>
   ) => Promise<{ ok: boolean; message?: string }>;
-  cancelReservation: (id: number) => void;
   submitReport: (
     input: Omit<Report, 'id' | 'pelapor' | 'status' | 'catatan' | 'createdAt'> & {
       fotoFile?: File | null;
@@ -130,31 +137,43 @@ interface AppDataValue {
   ) => Promise<{ ok: boolean; message?: string }>;
 
   // Petugas
-  approveReservation: (id: number) => { ok: boolean; message?: string };
-  rejectReservation: (id: number) => void;
-  cancelApprovedReservation: (id: number, alasan: string) => void;
-  resetReservationToWaiting: (id: number) => void;
-  updateReportStatus: (id: number, status: Report['status'], catatan?: string) => void;
-  setFacilityStatus: (facilityId: string, status: Facility['status']) => void;
+  updateReportStatus: (
+    id: number,
+    status: Report['status'],
+    catatan?: string
+  ) => Promise<{ ok: boolean; message?: string }>;
+  setFacilityStatus: (
+    facilityId: string,
+    status: Facility['status']
+  ) => Promise<{ ok: boolean; message?: string }>;
 
   // Admin
-  registeredAccounts: FakeUserRecord[];
-  addFacility: (input: Omit<Facility, 'id' | 'status'>) => void;
-  updateFacility: (id: string, input: Omit<Facility, 'id' | 'status'>) => void;
-  deleteFacility: (id: string) => void;
-  registerAccountDirectly: (input: DirectRegisterInput) => { ok: boolean; message?: string; account?: FakeUserRecord };
-  toggleAccountStatus: (id: string) => void;
-  verifyPendingAccount: (id: number, approve: boolean) => void;
+  registeredAccounts: BackendAccount[];
+  addFacility: (
+    input: Omit<Facility, 'id' | 'status'> & { tipeSarana?: 'ruangan' | 'alat' }
+  ) => Promise<{ ok: boolean; message?: string }>;
+  registerAccountDirectly: (
+    input: DirectRegisterInput
+  ) => Promise<{ ok: boolean; message?: string; account?: BackendAccount }>;
+  verifyPendingAccount: (id: number, approve: boolean) => Promise<{ ok: boolean; message?: string }>;
+
+  // Sinkronisasi dari backend (server menang, seed dibuang).
+  refreshReservations: () => Promise<boolean>;
+  refreshReportsMine: () => Promise<boolean>;
+  refreshPetugasReports: () => Promise<boolean>;
+  refreshPendingAccounts: () => Promise<boolean>;
+  refreshFacilities: () => Promise<boolean>;
+  refreshAccounts: () => Promise<boolean>;
 }
 
 const AppDataContext = createContext<AppDataValue | null>(null);
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
-  const [facilities, setFacilities] = useState<Facility[]>(SEED_FACILITIES);
-  const [reservations, setReservations] = useState<Reservation[]>(SEED_RESERVATIONS);
-  const [reports, setReports] = useState<Report[]>(SEED_REPORTS);
-  const [pendingAccounts, setPendingAccounts] = useState<PendingAccount[]>(SEED_PENDING_ACCOUNTS);
-  const [registeredAccounts, setRegisteredAccounts] = useState<FakeUserRecord[]>(FAKE_USERS_DB);
+  const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [pendingAccounts, setPendingAccounts] = useState<PendingAccount[]>([]);
+  const [registeredAccounts, setRegisteredAccounts] = useState<BackendAccount[]>([]);
   const [currentUser, setCurrentUser] = useState<LoggedInUser | null>(null);
   const [backendOnline, setBackendOnline] = useState(false);
 
@@ -177,6 +196,199 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const sessionUser = currentUser && currentUser.id.startsWith('backend-') ? currentUser : null;
+
+  // Kembalikan sesi saat refresh/hydration: cookie session_id HttpOnly
+  // masih di browser, jadi tanyakan ke backend siapa pemiliknya.
+  // Tanpa ini, refresh halaman selalu dianggap belum login.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (currentUser) return;
+      const me = await backendMe();
+      if (cancelled || !me.ok || !me.data) return;
+      setCurrentUser({
+        id: `backend-${me.data.email}`,
+        nama: me.data.username || me.data.email,
+        email: me.data.email,
+        role: roleIdToFrontend(me.data.role || '3'),
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ----- Sinkronisasi: server menang, seed dibuang -----
+
+  const refreshFacilities = useCallback(async (): Promise<boolean> => {
+    const res = await backendListFasilitas();
+    if (!res.ok || !res.data) return false;
+    setFacilities(res.data.map(mapBackendFasilitas));
+    return true;
+  }, []);
+
+  const refreshReservations = useCallback(async (): Promise<boolean> => {
+    if (!sessionUser) return false;
+    const [ru, al] = await Promise.all([
+      backendListReservasiRuangan(100),
+      backendListReservasiAlat(100),
+    ]);
+    // Kedua endpoint harus OK agar tidak ada data yang hilang diam-diam.
+    if (!ru.ok || !al.ok || !ru.data || !al.data) return false;
+    const rows: Reservation[] = [];
+    for (const row of ru.data) {
+      const m = mapReservasiRuangan(row);
+      if (m) rows.push({ ...m, pemohon: sessionUser.nama, sumber: 'backend' });
+    }
+    for (const row of al.data) {
+      const m = mapReservasiAlat(row);
+      if (m) rows.push({ ...m, pemohon: sessionUser.nama, sumber: 'backend' });
+    }
+    rows.sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
+    setReservations(rows);
+    return true;
+  }, [sessionUser]);
+
+  const refreshReportsMine = useCallback(async (): Promise<boolean> => {
+    if (!sessionUser) return false;
+    const res = await backendListLaporanSaya();
+    if (!res.ok || !res.data) return false;
+    setReports(
+      (res.data.map(mapBackendReport).filter(Boolean) as NonNullable<
+        ReturnType<typeof mapBackendReport>
+      >[]).map((m) => ({
+        id: m.backendId,
+        backendId: m.backendId,
+        sumber: 'backend' as const,
+        facilityId: m.facilityId,
+        pelapor: sessionUser.nama,
+        kategori: m.kategori,
+        deskripsi: m.deskripsi,
+        foto: m.foto,
+        status: m.status,
+        catatan: m.catatan,
+        createdAt: m.createdAt,
+      })),
+    );
+    return true;
+  }, [sessionUser]);
+
+  const refreshPetugasReports = useCallback(async (): Promise<boolean> => {
+    if (!sessionUser || (sessionUser.role !== 'petugas' && sessionUser.role !== 'admin')) {
+      return false;
+    }
+    const res = await backendListSemuaLaporan();
+    if (!res.ok || !res.data) return false;
+    setReports(
+      (res.data.map(mapBackendReport).filter(Boolean) as NonNullable<
+        ReturnType<typeof mapBackendReport>
+      >[]).map((m, i) => ({
+        id: m.backendId,
+        backendId: m.backendId,
+        sumber: 'backend' as const,
+        facilityId: m.facilityId,
+        // Backend tidak mengembalikan nama pelapor (hanya user_report id).
+        pelapor: `Pengguna #${(res.data as Record<string, unknown>[])[i]?.['user_report'] ?? '?'}`,
+        kategori: m.kategori,
+        deskripsi: m.deskripsi,
+        foto: m.foto,
+        status: m.status,
+        catatan: m.catatan,
+        createdAt: m.createdAt,
+      })),
+    );
+    return true;
+  }, [sessionUser]);
+
+  const refreshPendingAccounts = useCallback(async (): Promise<boolean> => {
+    if (!sessionUser || sessionUser.role !== 'admin') return false;
+    const [mhs, dsn, stf] = await Promise.all([
+      backendAdminList('/admin/show_mhs_pending'),
+      backendAdminList('/admin/show_dosen_pending'),
+      backendAdminList('/admin/show_staff_pending'),
+    ]);
+    if (!mhs.ok || !dsn.ok || !stf.ok || !mhs.data || !dsn.data || !stf.data) return false;
+    const rows: PendingAccount[] = [];
+    for (const row of mhs.data) {
+      const m = mapPendingMhs(row);
+      if (!m) continue;
+      rows.push({
+        id: m.backendId * 10 + 1,
+        backendId: m.backendId,
+        sumber: 'backend',
+        nama: m.nama,
+        email: '',
+        peran: 'Mahasiswa',
+        nim: m.identifier,
+        angkatan: m.extra,
+        status: 'menunggu',
+      });
+    }
+    for (const row of dsn.data) {
+      const m = mapPendingDosen(row);
+      if (!m) continue;
+      rows.push({
+        id: m.backendId * 10 + 2,
+        backendId: m.backendId,
+        sumber: 'backend',
+        nama: m.nama,
+        email: '',
+        peran: 'Dosen',
+        nidn: m.identifier,
+        prodi: m.extra,
+        status: 'menunggu',
+      });
+    }
+    for (const row of stf.data) {
+      const m = mapPendingStaff(row);
+      if (!m) continue;
+      rows.push({
+        id: m.backendId * 10 + 3,
+        backendId: m.backendId,
+        sumber: 'backend',
+        nama: m.nama,
+        email: m.email,
+        peran: 'Staf',
+        nip: m.identifier,
+        status: 'menunggu',
+      });
+    }
+    setPendingAccounts(rows);
+    return true;
+  }, [sessionUser]);
+
+  const refreshAccounts = useCallback(async (): Promise<boolean> => {
+    if (!sessionUser || sessionUser.role !== 'admin') return false;
+    const res = await backendAdminList('/admin/show_user', 100);
+    if (!res.ok || !res.data) return false;
+    setRegisteredAccounts(
+      res.data.map(mapBackendAccount).filter((a): a is BackendAccount => a !== null),
+    );
+    return true;
+  }, [sessionUser]);
+
+  // Auto-sync setiap session backend aktif (sekali per user, tanpa loop:
+  // refresh tidak menyentuh currentUser).
+  useEffect(() => {
+    if (!sessionUser) return;
+    let cancelled = false;
+    (async () => {
+      const r1 = refreshReservations();
+      const r2 = refreshReportsMine();
+      const r3 = refreshPetugasReports();
+      const r4 = sessionUser.role === 'admin' ? refreshPendingAccounts() : Promise.resolve(false);
+      const r5 = sessionUser.role === 'admin' ? refreshAccounts() : Promise.resolve(false);
+      await Promise.all([r1, r2, r3, r4, r5]);
+      if (cancelled) return;
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionUser?.id]);
+
   const value = useMemo<AppDataValue>(
     () => ({
       facilities,
@@ -198,27 +410,31 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         try {
           const res = await backendLogin(email, password);
           if (res.ok) {
-            const me = await backendMe();
-            if (me.ok && me.data) {
+            // Baca sesi dengan 1x percobaan ulang: cookie session_id kadang
+            // belum tersedia / backend restart tepat di antara 2 request.
+            let me = await backendMe();
+            if (!me.ok) {
+              await new Promise((r) => setTimeout(r, 700));
+              me = await backendMe();
+            }
+            if (me.ok && me.data && me.data.email) {
               const user: LoggedInUser = {
-                id: `backend-${me.data.email || email.trim().toLowerCase()}`,
+                id: `backend-${me.data.email.trim().toLowerCase()}`,
                 nama: me.data.username || email,
-                email: me.data.email || email,
+                email: me.data.email,
                 role: roleIdToFrontend(me.data.role || '3'),
               };
               setCurrentUser(user);
               return { ok: true, user };
             }
-            // Login cookie OK tapi /user/me gagal: tetap anggap login,
-            // role default pengguna (jangan kunci user di luar).
-            const fallback: LoggedInUser = {
-              id: `backend-${email.trim().toLowerCase()}`,
-              nama: email,
-              email,
-              role: 'pengguna',
+            // JANGAN fallback ke peran pengguna: salah peran lebih buruk
+            // daripada gagal login. Status dirinci agar bisa didiagnosis:
+            // 0 = backend tak terjangkau, 401 = sesi hilang (backend restart?).
+            console.error('[login] sesi tidak terbaca', `HTTP ${me.status}`, me.message);
+            return {
+              ok: false,
+              message: `Login berhasil tetapi sesi tidak terbaca (HTTP ${me.status}). Pastikan backend tidak di-restart, lalu coba login ulang.`,
             };
-            setCurrentUser(fallback);
-            return { ok: true, user: fallback };
           }
           return { ok: false, message: res.message || 'Email atau kata sandi salah.' };
         } catch (e) {
@@ -283,67 +499,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
               prodi,
             });
           }
-          // Backend OK (atau backend menolak dengan alasan validasi asli):
-          // tampilkan pesan backend apa adanya, dan cerminkan ke antrean
-          // lokal agar halaman admin tetap melihatnya.
-          if (res && (res.ok || res.status !== 0)) {
-            if (res.ok) {
-              setPendingAccounts((prev) => [
-                ...prev,
-                {
-                  id: genId(),
-                  nama: input.nama,
-                  email: input.email,
-                  username: input.username,
-                  peran: input.peran,
-                  nim: input.nim || input.nidn || input.nip,
-                  nidn: input.nidn,
-                  nip: input.nip,
-                  angkatan: input.angkatan,
-                  prodi: input.prodi,
-                  phone: input.phone,
-                  fakultas:
-                    input.fakultas ||
-                    input.prodi ||
-                    (input.peran === 'Dosen'
-                      ? 'Fakultas Teknik (FT)'
-                      : 'Fakultas Sains dan Matematika (FSM)'),
-                  status: 'menunggu',
-                },
-              ]);
-            }
-            return res;
-          }
-        } catch {
-          // Backend mati -> lanjut ke mock di bawah.
+          // Tanpa cermin lokal: baris pending asli tampil via
+          // refreshPendingAccounts (admin). Pesan backend apa adanya.
+          return res;
+        } catch (e) {
+          // Tanpa fallback mock (keputusan hapus-demo): backend mati =
+          // error jelas, bukan antrean lokal palsu.
+          return {
+            ok: false,
+            message: e instanceof Error ? e.message : 'Backend tidak terjangkau.',
+          };
         }
-        const result = await apiRegisterSelf(input);
-        if (result.ok) {
-          setPendingAccounts((prev) => [
-            ...prev,
-            {
-              id: genId(),
-              nama: input.nama,
-              email: input.email,
-              username: input.username,
-              peran: input.peran,
-              nim: input.nim || input.nidn || input.nip,
-              nidn: input.nidn,
-              nip: input.nip,
-              angkatan: input.angkatan,
-              prodi: input.prodi,
-              phone: input.phone,
-              fakultas:
-                input.fakultas ||
-                input.prodi ||
-                (input.peran === 'Dosen'
-                  ? 'Fakultas Teknik (FT)'
-                  : 'Fakultas Sains dan Matematika (FSM)'),
-              status: 'menunggu',
-            },
-          ]);
-        }
-        return result;
       },
 
       submitReservation: async (input) => {
@@ -392,9 +558,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           },
         ]);
         return { ok: true };
-      },
-      cancelReservation: (id) => {
-        setReservations((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'dibatalkan' } : r)));
       },
       submitReport: async (input) => {
         // API-only: hanya session backend yang bisa melapor (konsisten
@@ -463,56 +626,92 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         return { ok: true };
       },
 
-      approveReservation: (id) => {
-        const target = reservations.find((r) => r.id === id);
-        if (!target) return { ok: false, message: 'Reservasi tidak ditemukan.' };
-        const conflict = hasRangeConflict(
-          reservations,
-          target.facilityId,
-          target.tanggal,
-          target.start,
-          target.end,
-          target.id
-        );
-        if (conflict) {
-          return {
-            ok: false,
-            message: `Bentrok dengan reservasi '${conflict.pemohon}' (${conflict.start} - ${conflict.end} WIB) yang sudah disetujui sebelumnya.`,
-          };
+      updateReportStatus: async (id, status, catatan) => {
+        const row = reports.find((r) => r.id === id);
+        // Baris backend (punya backendId): PATCH /petugas/reports/{id}.
+        // Aturan server: tutup (selesai/ditolak) wajib catatan; baris
+        // tertutup 409; transisi ilegal 400 — pesan diteruskan apa adanya.
+        if (row?.sumber === 'backend' && row.backendId !== undefined) {
+          if ((status === 'selesai' || status === 'ditolak') && !catatan?.trim()) {
+            return { ok: false, message: 'Catatan resolusi wajib diisi saat laporan ditutup.' };
+          }
+          const res = await backendUpdateLaporan(row.backendId, status, catatan ?? '');
+          if (!res.ok) return { ok: false, message: res.message };
+          setReports((prev) =>
+            prev.map((r) => (r.id === id ? { ...r, status, catatan: catatan ?? r.catatan } : r)),
+          );
+          return { ok: true };
         }
-        setReservations((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'disetujui' } : r)));
+        setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status, catatan: catatan ?? r.catatan } : r)));
         return { ok: true };
       },
-      rejectReservation: (id) => {
-        setReservations((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'ditolak' } : r)));
-      },
-      cancelApprovedReservation: (id, alasan) => {
-        setReservations((prev) =>
-          prev.map((r) => (r.id === id ? { ...r, status: 'dibatalkan', catatanBatal: alasan } : r))
-        );
-      },
-      resetReservationToWaiting: (id) => {
-        setReservations((prev) =>
-          prev.map((r) => (r.id === id ? { ...r, status: 'menunggu' } : r))
-        );
-      },
-      updateReportStatus: (id, status, catatan) => {
-        setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status, catatan: catatan ?? r.catatan } : r)));
-      },
-      setFacilityStatus: (facilityId, status) => {
+      setFacilityStatus: async (facilityId, status) => {
+        const fac = facilities.find((f) => f.id === facilityId);
+        // Baris backend: PATCH /petugas/facilities/{refId}/status.
+        // 'busy' (stok habis) dikelola otomatis server — tanpa padanan tulis.
+        if (fac?.refId !== undefined && fac.tipe) {
+          if (status === 'busy') {
+            return {
+              ok: false,
+              message: 'Status Terpakai dikelola otomatis oleh sistem (stok habis).',
+            };
+          }
+          const backendStatus =
+            status === 'repair' ? 'dalam_perbaikan' : status === 'nonaktif' ? 'nonaktif' : 'aktif';
+          const res = await backendUpdateFasilitasStatus(fac.refId, backendStatus, fac.tipe);
+          if (!res.ok) return { ok: false, message: res.message };
+          setFacilities((prev) => prev.map((f) => (f.id === facilityId ? { ...f, status } : f)));
+          return { ok: true };
+        }
         setFacilities((prev) => prev.map((f) => (f.id === facilityId ? { ...f, status } : f)));
+        return { ok: true };
       },
 
-      addFacility: (input) => {
-        setFacilities((prev) => [...prev, { ...input, id: `f${genId()}`, status: 'avail' }]);
+      addFacility: async (input) => {
+        // API-only (admin). desc/amenities/image tidak punya padanan kolom
+        // backend sehingga tidak terkirim — hanya tampil di cermin lokal.
+        const tipe = input.tipeSarana;
+        if (tipe !== 'ruangan' && tipe !== 'alat') {
+          return { ok: false, message: 'Pilih jenis sarana: ruangan atau alat.' };
+        }
+        if (!sessionUser || sessionUser.role !== 'admin') {
+          return { ok: false, message: 'Hanya admin yang dapat menambah fasilitas.' };
+        }
+        const kategori = input.type.trim();
+        if (kategori.length < 5 || kategori.length > 100) {
+          return { ok: false, message: 'Nama kategori 5-100 karakter.' };
+        }
+        const cap = Number.isInteger(input.cap) && input.cap > 0 ? input.cap : 1;
+        const doCreate = () =>
+          tipe === 'ruangan'
+            ? backendAdminPostForm('/admin/create_fasilitas/ruangan', {
+                nama_kategori: kategori,
+                nama_ruangan: input.name.trim(),
+                status: 1,
+                kapasistas: cap,
+                lokasi: input.loc.trim(),
+              })
+            : backendAdminPostForm('/admin/create_fasilitas/alat', {
+                nama_alat: input.name.trim(),
+                jumlah_tersedia: cap,
+                banyak_alat: cap,
+                nama_kategori: kategori,
+                status: 1,
+              });
+        let res = await doCreate();
+        // Kategori belum ada -> buatkan dulu lalu ulangi sekali.
+        if (!res.ok && /tidak exist/i.test(res.message)) {
+          const kat = await backendAdminPostForm('/admin/create_fasilitas/kategori', {
+            nama_kategori: kategori,
+          });
+          if (!kat.ok) return { ok: false, message: kat.message };
+          res = await doCreate();
+        }
+        if (!res.ok) return { ok: false, message: res.message };
+        await refreshFacilities();
+        return { ok: true };
       },
-      updateFacility: (id, input) => {
-        setFacilities((prev) => prev.map((f) => (f.id === id ? { ...f, ...input } : f)));
-      },
-      deleteFacility: (id) => {
-        setFacilities((prev) => prev.filter((f) => f.id !== id));
-      },
-      registerAccountDirectly: (input: DirectRegisterInput) => {
+      registerAccountDirectly: async (input: DirectRegisterInput) => {
         const exists = registeredAccounts.some(
           (a) => a.email.toLowerCase() === input.email.trim().toLowerCase()
         );
@@ -520,75 +719,106 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           return { ok: false, message: 'Email sudah terdaftar dalam sistem.' };
         }
 
-        let role: UserRole = 'pengguna';
-        if (input.peran.toLowerCase().includes('admin')) role = 'admin';
-        else if (input.peran.toLowerCase().includes('petugas')) role = 'petugas';
+        const peranLower = input.peran.toLowerCase();
+        const username = input.username?.trim() || input.email.split('@')[0];
+        const password = input.password || 'Sipinjam2026!';
+        const email = input.email.trim();
+        const nama = input.nama.trim();
+        // Cabang endpoint mengikuti backend (admin/petugas langsung aktif;
+        // pengguna via create_user/mhs|dosen|staff yang langsung terverifikasi).
+        let res;
+        if (peranLower.includes('admin')) {
+          res = await backendAdminPostForm('/admin/create_user/admin', { username, email, password });
+        } else if (peranLower.includes('petugas')) {
+          res = await backendAdminPostForm('/admin/create_user/petugas', { username, email, password });
+        } else if (peranLower.includes('dosen')) {
+          res = await backendAdminPostForm('/admin/create_user/dosen', {
+            username,
+            email,
+            password,
+            nidn: input.nidn?.trim(),
+            nama_lengkap: nama,
+            prodi: input.prodi?.trim(),
+          });
+        } else if (peranLower.includes('staf') || peranLower.includes('staff')) {
+          res = await backendAdminPostForm('/admin/create_user/staff', {
+            username,
+            email,
+            password,
+            nip: input.nip?.trim(),
+            nama_lengkap: nama,
+          });
+        } else {
+          res = await backendAdminPostForm('/admin/create_user/mhs', {
+            username,
+            email,
+            password,
+            nim: input.nim?.trim(),
+            angkatan: input.angkatan,
+            nama_lengkap: nama,
+            prodi: input.prodi?.trim(),
+          });
+        }
+        if (!res.ok) return { ok: false, message: res.message };
 
-        const newAcc: FakeUserRecord = {
-          id: `u-${role}-${genId()}`,
-          email: input.email.trim(),
-          username: input.username?.trim(),
-          password: input.password || 'Sipinjam2026!',
-          nama: input.nama.trim(),
-          role,
-          nip: input.nip?.trim() || input.nim?.trim() || input.nidn?.trim() || '-',
-          nim: input.nim?.trim(),
-          nidn: input.nidn?.trim(),
-          angkatan: input.angkatan,
-          prodi: input.prodi?.trim(),
-          phone: input.phone?.trim() || '-',
-          unit: input.unit?.trim() || (input.prodi ? `Prodi ${input.prodi}` : 'Universitas Diponegoro'),
-          jabatan: input.peran,
-          status: 'aktif',
-          createdAt: new Date().toISOString().split('T')[0],
-        };
-
-        setRegisteredAccounts((prev) => [newAcc, ...prev]);
-
-        return { ok: true, account: newAcc };
-      },
-      toggleAccountStatus: (id: string) => {
-        setRegisteredAccounts((prev) =>
-          prev.map((acc) =>
-            acc.id === id
-              ? { ...acc, status: acc.status === 'aktif' ? 'nonaktif' : 'aktif' }
-              : acc
-          )
+        // Server menang: ambil ulang daftar akun agar id asli tampil.
+        await refreshAccounts();
+        const created = registeredAccounts.find(
+          (a) => a.email.toLowerCase() === email.toLowerCase(),
         );
+        return { ok: true, account: created };
       },
-      verifyPendingAccount: (id, approve) => {
-        setPendingAccounts((prev) =>
-          prev.map((a) => {
-            if (a.id === id) {
-              if (approve) {
-                const newAcc: FakeUserRecord = {
-                  id: `u-pengguna-${genId()}`,
-                  email: a.email,
-                  username: a.username,
-                  password: 'mhs12345',
-                  nama: a.nama,
-                  role: 'pengguna',
-                  nip: a.nim || a.nidn || a.nip || '-',
-                  nim: a.nim,
-                  nidn: a.nidn,
-                  angkatan: a.angkatan,
-                  prodi: a.prodi,
-                  phone: a.phone || '-',
-                  unit: a.fakultas || (a.prodi ? `Prodi ${a.prodi}` : a.peran === 'Dosen' ? 'Fakultas Teknik (FT)' : 'Fakultas Sains dan Matematika (FSM)'),
-                  jabatan: a.peran,
-                  status: 'aktif',
-                  createdAt: new Date().toISOString().split('T')[0],
-                };
-                setRegisteredAccounts((existing) => [newAcc, ...existing]);
-              }
-              return { ...a, status: approve ? 'diverifikasi' : 'ditolak' };
-            }
-            return a;
-          })
-        );
-      },
+      verifyPendingAccount: async (id, approve) => {
+        const row = pendingAccounts.find((a) => a.id === id);
+        // Hanya baris backend (daftar pending selalu dari sync show_*_pending).
+        // POST /admin/verifikasi_{mhs,dosen,staff} dengan nama field berbeda
+        // per tipe (id_mhs / id_dosen / id_staff). Sisi TOLAK mustahil.
+        if (!row || row.backendId === undefined) {
+          return { ok: false, message: 'Data pending tidak ditemukan.' };
+        }
+        if (!approve) {
+          return { ok: false, message: 'Penolakan akun pending belum didukung backend.' };
+        }
+          const peranLower = row.peran.toLowerCase();
+          const path = peranLower.includes('dosen')
+            ? '/admin/verifikasi_dosen'
+            : peranLower.includes('staf') || peranLower.includes('staff')
+              ? '/admin/verifikasi_staff'
+              : '/admin/verifikasi_mhs';
+          const field =
+            path === '/admin/verifikasi_dosen'
+              ? 'id_dosen'
+              : path === '/admin/verifikasi_staff'
+                ? 'id_staff'
+                : 'id_mhs';
+          const res = await backendAdminPostForm(path, { [field]: row.backendId });
+          if (!res.ok) return { ok: false, message: res.message };
+          setPendingAccounts((prev) => prev.filter((a) => a.id !== id));
+          return { ok: true };
+        },
+
+      refreshReservations,
+      refreshReportsMine,
+      refreshPetugasReports,
+      refreshPendingAccounts,
+      refreshFacilities,
+      refreshAccounts,
     }),
-    [facilities, reservations, reports, pendingAccounts, registeredAccounts, currentUser, backendOnline]
+    [
+      facilities,
+      reservations,
+      reports,
+      pendingAccounts,
+      registeredAccounts,
+      currentUser,
+      backendOnline,
+      refreshReservations,
+      refreshReportsMine,
+      refreshPetugasReports,
+      refreshPendingAccounts,
+      refreshFacilities,
+      refreshAccounts,
+    ]
   );
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;
