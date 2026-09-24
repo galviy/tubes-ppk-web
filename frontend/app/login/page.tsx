@@ -11,14 +11,6 @@ const ROLE_HOME: Record<string, string> = {
   admin: '/admin',
 };
 
-const DEMO_ACCOUNTS = [
-  { role: 'admin', label: 'Admin', email: 'admin@sipinjam.ac.id', pass: 'admin123' },
-  { role: 'petugas', label: 'Petugas', email: 'petugas@sipinjam.ac.id', pass: 'petugas123' },
-  { role: 'pengguna', label: 'Mahasiswa', email: 'mahasiswa@sipinjam.ac.id', pass: 'mhs12345' },
-  { role: 'pengguna', label: 'Dosen', email: 'dosen@sipinjam.ac.id', pass: 'dosen123' },
-  { role: 'pengguna', label: 'Staf', email: 'staf@sipinjam.ac.id', pass: 'staf123' },
-];
-
 export default function LoginPage() {
   const router = useRouter();
   const { login, logout, currentUser } = useAppData();
@@ -44,12 +36,6 @@ export default function LoginPage() {
 
     const targetUrl = ROLE_HOME[result.user.role] ?? '/';
     router.push(targetUrl);
-  }
-
-  function fillDemo(demoEmail: string, demoPassword: string) {
-    setLoginEmail(demoEmail);
-    setLoginPassword(demoPassword);
-    setLoginError('');
   }
 
   return (
@@ -200,26 +186,6 @@ export default function LoginPage() {
                 >
                   Daftar Akun Baru
                 </Link>
-              </div>
-
-              {/* Quick Demo Credentials Box for Testing */}
-              <div className="ochoco-demo-box" style={{ marginTop: 26 }}>
-                <div className="ochoco-demo-title" style={{ fontSize: 11 }}>AKUN UJI COBA (KLIK UNTUK MENGISI OTOMATIS)</div>
-                <div className="ochoco-demo-list">
-                  {DEMO_ACCOUNTS.map((u) => (
-                    <button
-                      key={u.email}
-                      type="button"
-                      className="ochoco-demo-row"
-                      onClick={() => fillDemo(u.email, u.pass)}
-                      title={`Gunakan akun ${u.label}`}
-                    >
-                      <span className="ochoco-demo-role">{u.label}</span>
-                      <span className="ochoco-demo-email">{u.email}</span>
-                      <span className="ochoco-demo-fill">Isi otomatis</span>
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
           )}

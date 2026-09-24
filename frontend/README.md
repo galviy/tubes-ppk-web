@@ -35,12 +35,14 @@ npm run dev
 # 3. Validasi typecheck TypeScript
 npx tsc --noEmit
 
-# 4. Bangun bundel produksi (Static Site Export ke folder /out)
+# 4. Bangun bundel produksi (mode dinamis, butuh `next start`)
 npm run build
-
-# 5. (Opsional) Pratinjau hasil build statis secara lokal
-npx serve out
+npm run start
+# Buka peramban di: http://localhost:3000
 ```
+
+> **Catatan arsitektur (integrasi backend Go):**
+> Frontend memanggil backend via proxy `rewrites()` `/api/*` -> `http://127.0.0.1:8080/*` (lihat `next.config.js` + `lib/api.ts`), sehingga browser hanya kenal 1 origin dan cookie `session_id` HttpOnly tetap terkirim. Backend Go TIDAK diubah. Pastikan backend (`go run .` di `backend/`) dan MySQL (`tubes_ppk_web`) jalan sebelum login.
 
 > **Catatan Bundler Webpack:**  
 > Skrip `npm run dev` dan `npm run build` secara eksplisit menambahkan flag `--webpack`. Konfigurasi ini menjamin keandalan *hydration* event handler form interaktif, date picker, dan modal dialog kustom pada Next.js 16 tanpa interupsi cache Turbopack.
@@ -50,17 +52,9 @@ npx serve out
 
 ---
 
-## 👥 Akun Demo & Kredensial Pengujian Multi-Peran
+## 👥 Akun Pengujian (Backend MySQL)
 
-Untuk memudahkan verifikasi fitur tanpa perlu registrasi manual terlebih dahulu, halaman `/login` dan kartu autentikasi di beranda menyediakan tombol **Akun Demo (1-Klik)**:
-
-| Peran | Nama Pengguna | Email | Kata Sandi | Lingkup Hak Akses |
-| :--- | :--- | :--- | :--- | :--- |
-| **Admin** | Admin Utama | `admin@sipinjam.ac.id` | `admin123` | `/admin/*`: Master fasilitas, audit reservasi & laporan, verifikasi akun, rekap data & ekspor (CSV/Excel/PDF). |
-| **Petugas** | Budi (Petugas Sarpras) | `petugas@sipinjam.ac.id` | `petugas123` | `/petugas/*`: Validasi persetujuan/penolakan reservasi, pembatalan darurat, tindak lanjut perbaikan sarpras. |
-| **Mahasiswa** | Sinta (Mahasiswa FSM) | `mahasiswa@sipinjam.ac.id` | `mhs12345` | `/pengguna/*`: Pengajuan pinjam ruang/alat, pembatalan mandiri (H-2 jam), lapor sarpras rusak + bukti foto. |
-| **Dosen** | Pak Herman (Dosen IF) | `dosen@sipinjam.ac.id` | `dosen123` | `/pengguna/*`: Hak akses civitas akademika untuk perkuliahan/riset. |
-| **Staf** | Bu Rina (Staf Akademik) | `staf@sipinjam.ac.id` | `staf123` | `/pengguna/*`: Hak akses civitas akademika untuk operasional unit kerja. |
+Login hanya menerima akun backend terverifikasi (`POST /auth/login` + `GET /user/me` via `lib/api.ts`; akun demo mock dihapus). Contoh akun di database dev: `dosen01@example.com`. Untuk menambah akun: daftar via `/register` (masuk antrean pending backend) lalu verifikasi langsung di DB, atau buat via endpoint `POST /admin/create_user/*` dengan session admin.
 
 ---
 

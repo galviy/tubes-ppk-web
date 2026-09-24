@@ -1,11 +1,22 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Menghasilkan situs statis murni (folder /out) saat `npm run build`,
-  // jadi hasil akhirnya bisa di-hosting di static hosting mana pun
-  // tanpa perlu Node.js server berjalan terus.
-  output: 'export',
+  // Mode dinamis (bukan `output: 'export'`) supaya `rewrites()` proxy
+  // /api/* -> backend Go berjalan. Browser hanya kenal 1 origin
+  // (localhost:3000) sehingga tidak kena blokir CORS dan cookie
+  // session_id HttpOnly tetap terkirim via credentials:'include'.
+  // Backend Go TIDAK diubah sama sekali.
   images: {
     unoptimized: true,
+  },
+
+  async rewrites() {
+    const backend = process.env.BACKEND_URL || 'http://127.0.0.1:8080';
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${backend}/:path*`,
+      },
+    ];
   },
 
   // PENTING (dev mode saja, tidak mempengaruhi hasil build/export):
