@@ -1,10 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 
 export default function RekapEksporPage() {
-  const { facilities, reservations, reports } = useAppData();
+  const {
+    facilities,
+    reservations,
+    reports,
+    refreshFacilities,
+    refreshReservations,
+    refreshPetugasReports,
+  } = useAppData();
+
+  useEffect(() => {
+    refreshFacilities();
+    refreshReservations();
+    refreshPetugasReports();
+  }, [refreshFacilities, refreshReservations, refreshPetugasReports]);
+
   const [filterMode, setFilterMode] = useState<'semua' | 'fasilitas' | 'gedung'>('semua');
   const [selectedGedung, setSelectedGedung] = useState<string>('Pilih');
   const [selectedFacilityId, setSelectedFacilityId] = useState<string>('Pilih');
@@ -118,7 +132,7 @@ export default function RekapEksporPage() {
         <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Dropdown 1: Filter berdasarkan */}
           <div>
-            <label style={{ display: 'block', fontSize: 11, color: '#6B7280', marginBottom: 4, fontWeight: 600 }}>
+            <label style={{ display: 'block', fontSize: 13.5, color: '#6B7280', marginBottom: 4, fontWeight: 600 }}>
               Filter berdasarkan
             </label>
             <select
@@ -147,7 +161,7 @@ export default function RekapEksporPage() {
           {/* Dropdown 2: Jika filter Gedung/Lokasi dipilih */}
           {filterMode === 'gedung' && (
             <div>
-              <label style={{ display: 'block', fontSize: 11, color: '#6B7280', marginBottom: 4, fontWeight: 600 }}>
+              <label style={{ display: 'block', fontSize: 13.5, color: '#6B7280', marginBottom: 4, fontWeight: 600 }}>
                 Pilih Gedung
               </label>
               <select
@@ -175,7 +189,7 @@ export default function RekapEksporPage() {
           {/* Dropdown 2: Jika filter Fasilitas Tertentu dipilih */}
           {filterMode === 'fasilitas' && (
             <div>
-              <label style={{ display: 'block', fontSize: 11, color: '#6B7280', marginBottom: 4, fontWeight: 600 }}>
+              <label style={{ display: 'block', fontSize: 13.5, color: '#6B7280', marginBottom: 4, fontWeight: 600 }}>
                 Pilih Fasilitas
               </label>
               <select
@@ -202,7 +216,7 @@ export default function RekapEksporPage() {
 
           {/* Format Dokumen */}
           <div>
-            <label style={{ display: 'block', fontSize: 11, color: '#6B7280', marginBottom: 4, fontWeight: 600 }}>
+            <label style={{ display: 'block', fontSize: 13.5, color: '#6B7280', marginBottom: 4, fontWeight: 600 }}>
               Format Dokumen
             </label>
             <select

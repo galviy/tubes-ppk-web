@@ -66,7 +66,7 @@ export default function PetugasFasilitasPage() {
                 <td>
                   <span
                     className={`pill ${STATUS_META[f.status]?.pill ?? 'avail'}`}
-                    style={{ fontSize: 11 }}
+                    style={{ fontSize: 13.5 }}
                   >
                     {STATUS_META[f.status]?.label ?? 'Aktif'}
                   </span>

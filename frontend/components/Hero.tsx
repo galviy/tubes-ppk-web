@@ -47,7 +47,6 @@ export default function Hero() {
             <span className="ochoco-hub-tag">SARPRAS • UNIVERSITAS DIPONEGORO</span>
             <h3 className="ochoco-hub-title">Peminjaman &amp; Layanan Kampus</h3>
             <div className="ochoco-hub-status">
-              <span className="ochoco-hub-dot" />
               <span>Layanan Aktif • 07.00 - 20.00 WIB</span>
             </div>
           </div>

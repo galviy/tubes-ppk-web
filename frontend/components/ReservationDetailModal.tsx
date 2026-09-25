@@ -101,7 +101,7 @@ export default function ReservationDetailModal({
           <div className={`deadline-box ${deadlinePassed ? 'passed' : ''}`}>
             <b>Batas waktu pembatalan:</b> {formatDeadline(deadline)}
             <div className="deadline-note">
-              ⚠ Batas pembatalan adalah 2 jam sebelum mulai{deadlinePassed ? ' (sudah lewat)' : ''}
+              Batas pembatalan adalah 2 jam sebelum mulai{deadlinePassed ? ' (sudah lewat)' : ''}
             </div>
           </div>
         )}
@@ -133,7 +133,7 @@ export default function ReservationDetailModal({
               }}
             />
             {errorMsg && (
-              <div style={{ color: '#DC2626', fontSize: 12, marginTop: 4 }}>{errorMsg}</div>
+              <div style={{ color: '#DC2626', fontSize: 14, marginTop: 4 }}>{errorMsg}</div>
             )}
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
               <button

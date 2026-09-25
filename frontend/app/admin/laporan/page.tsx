@@ -64,7 +64,7 @@ export default function AdminSemuaLaporanPage() {
               style={{
                 padding: '6px 14px',
                 borderRadius: 4,
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: 600,
                 cursor: 'pointer',
                 border: filterStatus === tab.key ? '1px solid #b59876' : '1px solid #E5E0D8',
@@ -133,7 +133,7 @@ export default function AdminSemuaLaporanPage() {
                       <div style={{ fontWeight: 600, color: '#181D24' }}>
                         {fac?.name || `Fasilitas #${r.facilityId}`}
                       </div>
-                      <div style={{ fontSize: 12, color: '#6B7280' }}>
+                      <div style={{ fontSize: 14, color: '#6B7280' }}>
                         {fac?.type} • {fac?.loc}
                         {fac?.status === 'repair' && (
                           <span style={{ color: '#d97706', fontWeight: 600, marginLeft: 6 }}>
@@ -150,7 +150,7 @@ export default function AdminSemuaLaporanPage() {
 
                     {/* STATUS */}
                     <td style={{ whiteSpace: 'nowrap' }}>
-                      <span className={`pill ${cfg.pillClass}`} style={{ fontSize: 11 }}>
+                      <span className={`pill ${cfg.pillClass}`} style={{ fontSize: 13.5 }}>
                         {cfg.label}
                       </span>
                     </td>
@@ -181,14 +181,14 @@ export default function AdminSemuaLaporanPage() {
                         </div>
                       )}
                       {r.catatan && (
-                        <div style={{ marginTop: 4, fontSize: 12, color: '#166534', fontStyle: 'italic' }}>
+                        <div style={{ marginTop: 4, fontSize: 14, color: '#166534', fontStyle: 'italic' }}>
                           Catatan Petugas: {r.catatan}
                         </div>
                       )}
                     </td>
 
                     {/* TANGGAL */}
-                    <td style={{ whiteSpace: 'nowrap', fontSize: 12, color: '#6B7280' }}>
+                    <td style={{ whiteSpace: 'nowrap', fontSize: 14, color: '#6B7280' }}>
                       {formatDateIndo(r.createdAt || '2026-09-18')}
                     </td>
                   </tr>

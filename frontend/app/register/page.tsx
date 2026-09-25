@@ -300,7 +300,7 @@ export default function RegisterPage() {
           </svg>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
             <span style={{ fontFamily: 'var(--font)', fontSize: 13, fontWeight: 700, letterSpacing: '0.14em', color: '#FFFFFF' }}>SIPINJAM</span>
-            <span style={{ fontFamily: 'var(--font)', fontSize: 9, letterSpacing: '0.1em', color: '#b59876' }}>UNIVERSITAS DIPONEGORO</span>
+            <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, letterSpacing: '0.1em', color: '#b59876' }}>UNIVERSITAS DIPONEGORO</span>
           </div>
         </Link>
 
@@ -341,7 +341,7 @@ export default function RegisterPage() {
                 Pendaftaran akun civitas akademika Universitas Diponegoro (Mahasiswa, Dosen, dan Staf).
               </p>
 
-              <div className="ochoco-auth-info" style={{ marginBottom: 20, fontSize: 12.5, padding: '10px 14px' }}>
+              <div className="ochoco-auth-info" style={{ marginBottom: 20, fontSize: 14, padding: '10px 14px' }}>
                 Akun baru berstatus <b>menunggu verifikasi admin</b> sebelum dapat digunakan untuk login ke sistem.
               </div>
 
@@ -525,7 +525,7 @@ export default function RegisterPage() {
                     />
                   </div>
                 </div>
-                <div style={{ fontSize: 11, color: '#6B7280', marginTop: -8, marginBottom: 12 }}>
+                <div style={{ fontSize: 13.5, color: '#6B7280', marginTop: -8, marginBottom: 12 }}>
                   * Kata sandi harus mengandung minimal 1 huruf kapital (A-Z) dan 1 karakter simbol (@, #, !, $).
                 </div>
 

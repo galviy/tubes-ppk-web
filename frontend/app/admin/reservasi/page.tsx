@@ -59,7 +59,7 @@ export default function AdminSemuaReservasiPage() {
               style={{
                 padding: '6px 14px',
                 borderRadius: 4,
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: 600,
                 cursor: 'pointer',
                 border: filterStatus === tab.key ? '1px solid #b59876' : '1px solid #E5E0D8',
@@ -128,7 +128,7 @@ export default function AdminSemuaReservasiPage() {
                       <div style={{ fontWeight: 600, color: '#181D24' }}>
                         {fac?.name || `Fasilitas #${r.facilityId}`}
                       </div>
-                      <div style={{ fontSize: 12, color: '#6B7280' }}>
+                      <div style={{ fontSize: 14, color: '#6B7280' }}>
                         {fac?.type} • {fac?.loc}
                         {fac?.status === 'repair' && (
                           <span style={{ color: '#d97706', fontWeight: 600, marginLeft: 6 }}>
@@ -142,7 +142,7 @@ export default function AdminSemuaReservasiPage() {
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <div style={{ fontWeight: 600, color: '#181D24' }}>{r.pemohon}</div>
                       {r.peserta && (
-                        <div style={{ fontSize: 11, color: '#6B7280' }}>
+                        <div style={{ fontSize: 13.5, color: '#6B7280' }}>
                           {fac?.type?.toLowerCase() === 'alat' ? `Jumlah: ${r.peserta} unit` : `Estimasi: ${r.peserta} peserta`}
                         </div>
                       )}
@@ -151,7 +151,7 @@ export default function AdminSemuaReservasiPage() {
                     {/* JADWAL */}
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <div style={{ fontWeight: 600, color: '#181D24' }}>{formatDateIndo(r.tanggal)}</div>
-                      <div style={{ fontSize: 12, color: '#b59876', fontWeight: 500 }}>
+                      <div style={{ fontSize: 14, color: '#b59876', fontWeight: 500 }}>
                         {r.start} - {r.end} WIB
                       </div>
                     </td>
@@ -160,7 +160,7 @@ export default function AdminSemuaReservasiPage() {
                     <td style={{ maxWidth: 280, fontSize: 13, color: '#4B5563' }}>
                       <div>{r.tujuan}</div>
                       {r.catatanBatal && (
-                        <div style={{ marginTop: 4, fontSize: 12, color: '#991B1B', fontStyle: 'italic' }}>
+                        <div style={{ marginTop: 4, fontSize: 14, color: '#991B1B', fontStyle: 'italic' }}>
                           Alasan pembatalan/penolakan: {r.catatanBatal}
                         </div>
                       )}
@@ -168,13 +168,13 @@ export default function AdminSemuaReservasiPage() {
 
                     {/* STATUS */}
                     <td style={{ whiteSpace: 'nowrap' }}>
-                      <span className={`pill ${cfg.pillClass}`} style={{ fontSize: 11 }}>
+                      <span className={`pill ${cfg.pillClass}`} style={{ fontSize: 13.5 }}>
                         {cfg.label}
                       </span>
                     </td>
 
                     {/* TANGGAL DIAJUKAN */}
-                    <td style={{ whiteSpace: 'nowrap', fontSize: 12, color: '#6B7280' }}>
+                    <td style={{ whiteSpace: 'nowrap', fontSize: 14, color: '#6B7280' }}>
                       {formatDateIndo(r.createdAt || '2026-09-18')}
                     </td>
                   </tr>

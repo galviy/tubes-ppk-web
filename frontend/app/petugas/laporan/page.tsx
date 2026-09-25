@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { ReportStatus } from '@/models/report';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
@@ -14,7 +14,12 @@ const STATUS_CONFIG: Record<ReportStatus, { pillClass: string; label: string }> 
 };
 
 export default function PetugasLaporanPage() {
-  const { reports, facilityById, updateReportStatus } = useAppData();
+  const { reports, facilityById, updateReportStatus, refreshPetugasReports } = useAppData();
+
+  useEffect(() => {
+    refreshPetugasReports();
+  }, [refreshPetugasReports]);
+
   const [filterStatus, setFilterStatus] = useState<string>('semua');
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
@@ -22,8 +27,17 @@ export default function PetugasLaporanPage() {
     title: '',
     onConfirm: () => {},
   });
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Auto-dismiss popup notifikasi setelah 4.5 detik
+  useEffect(() => {
+    if (!feedback) return;
+    const timer = setTimeout(() => setFeedback(null), 4500);
+    return () => clearTimeout(timer);
+  }, [feedback]);
 
   function reportFailure(message?: string) {
+    setFeedback({ type: 'error', message: message || 'Status laporan tidak dapat diproses.' });
     setModalConfig({
       isOpen: true,
       title: 'Pembaruan Status Gagal',
@@ -38,6 +52,7 @@ export default function PetugasLaporanPage() {
   function handleProses(id: number) {
     void updateReportStatus(id, 'diproses').then((res) => {
       if (!res.ok) reportFailure(res.message);
+      else setFeedback({ type: 'success', message: 'Laporan berhasil diperbarui ke status Diproses.' });
     });
   }
 
@@ -56,6 +71,7 @@ export default function PetugasLaporanPage() {
       onConfirm: (catatan) => {
         void updateReportStatus(id, 'selesai', catatan).then((res) => {
           if (!res.ok) reportFailure(res.message);
+          else setFeedback({ type: 'success', message: 'Laporan kerusakan berhasil diselesaikan.' });
         });
       },
     });
@@ -75,6 +91,7 @@ export default function PetugasLaporanPage() {
       onConfirm: (catatan) => {
         void updateReportStatus(id, 'ditolak', catatan).then((res) => {
           if (!res.ok) reportFailure(res.message);
+          else setFeedback({ type: 'success', message: 'Laporan kerusakan berhasil ditolak.' });
         });
       },
     });
@@ -90,6 +107,66 @@ export default function PetugasLaporanPage() {
 
   return (
     <div>
+      {/* Popup toast notifikasi */}
+      {feedback && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            top: 24,
+            right: 24,
+            zIndex: 99999,
+            maxWidth: 440,
+            width: 'calc(100vw - 48px)',
+            background: '#FFFFFF',
+            border: feedback.type === 'success' ? '1px solid #BBF7D0' : '1px solid #FECACA',
+            borderLeft: feedback.type === 'success' ? '5px solid #16A34A' : '5px solid #DC2626',
+            borderRadius: 6,
+            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.2)',
+            padding: '14px 16px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 12,
+            animation: 'fadeIn 0.2s ease-out',
+          }}
+        >
+          <div style={{ flexShrink: 0, marginTop: 1 }}>
+            {feedback.type === 'success' ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+            )}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: 'var(--font)', fontWeight: 700, fontSize: 14, color: feedback.type === 'success' ? '#166534' : '#991B1B', marginBottom: 2 }}>
+              {feedback.type === 'success' ? 'Pemberitahuan Berhasil' : 'Kendala Penanganan'}
+            </div>
+            <div style={{ fontSize: 14, color: '#374151', lineHeight: 1.5 }}>
+              {feedback.message}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFeedback(null)}
+            aria-label="Tutup notifikasi"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Header Split matching Reference Image 4 */}
       <div className="dash-split-header">
         <h2>Antrian laporan kerusakan</h2>
@@ -112,7 +189,7 @@ export default function PetugasLaporanPage() {
             style={{
               padding: '6px 14px',
               borderRadius: 4,
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: 600,
               cursor: 'pointer',
               border: filterStatus === tab.key ? '1px solid #b59876' : '1px solid #E5E0D8',
@@ -164,7 +241,7 @@ export default function PetugasLaporanPage() {
                       <div style={{ fontWeight: 600, color: '#181D24' }}>
                         {fac?.name || `Fasilitas #${r.facilityId}`}
                       </div>
-                      <div style={{ fontSize: 12, color: '#6B7280' }}>
+                      <div style={{ fontSize: 14, color: '#6B7280' }}>
                         {fac?.type} • {fac?.loc}
                         {isRepair && (
                           <span style={{ color: '#d97706', fontWeight: 600, marginLeft: 6 }}>
@@ -200,7 +277,7 @@ export default function PetugasLaporanPage() {
                         </div>
                       )}
                       {r.catatan && (
-                        <div style={{ marginTop: 4, fontSize: 12, color: '#166534', fontStyle: 'italic' }}>
+                        <div style={{ marginTop: 4, fontSize: 14, color: '#166534', fontStyle: 'italic' }}>
                           Catatan: {r.catatan}
                         </div>
                       )}
@@ -208,7 +285,7 @@ export default function PetugasLaporanPage() {
 
                     {/* STATUS */}
                     <td style={{ whiteSpace: 'nowrap' }}>
-                      <span className={`pill ${cfg.pillClass}`} style={{ fontSize: 11 }}>
+                      <span className={`pill ${cfg.pillClass}`} style={{ fontSize: 13.5 }}>
                         {cfg.label}
                       </span>
                     </td>

@@ -2,20 +2,33 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
-import { generateTimeSlots, getSlotState, getTodayDateString } from '@/lib/slots';
+import { generateTimeSlots, getSlotState, getTodayDateString, formatDateIndo } from '@/lib/slots';
 import { SlotState } from '@/models/facility';
 import { backendKetersediaanFasilitas } from '@/lib/api';
 
 const SLOTS = generateTimeSlots();
 
-const MONTH_NAMES = [
-  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
-];
+const DAY_NAMES = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
-function formatToday(d: Date) {
-  return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+function formatFullDate(dateStr: string) {
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length !== 3) return dateStr;
+  const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+  const dayName = DAY_NAMES[dt.getDay()] || '';
+  return `${dayName}, ${formatDateIndo(dateStr)}`;
 }
+
+function shiftDay(dateStr: string, delta: number): string {
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length !== 3) return dateStr;
+  const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+  dt.setDate(dt.getDate() + delta);
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, '0');
+  const d = String(dt.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function pad(n: number) {
   return n.toString().padStart(2, '0');
 }
@@ -43,6 +56,7 @@ interface SchedulePreviewProps {
 export default function SchedulePreview({ activeFacilityId, onSelectFacility }: SchedulePreviewProps) {
   const { facilities, reservations } = useAppData();
   const [now, setNow] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(() => getTodayDateString());
   const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
   const [publicUnavailable, setPublicUnavailable] = useState<Record<string, Set<string>>>({});
   const tabsRef = useRef<HTMLDivElement>(null);
@@ -53,12 +67,11 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
     return () => clearInterval(id);
   }, []);
 
-  // Ambil ketersediaan slot dari endpoint publik backend GET /fasilitas/ketersediaan
+  // Ambil ketersediaan slot dari endpoint publik backend GET /fasilitas/ketersediaan berdasarkan selectedDate
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const today = getTodayDateString();
-      const res = await backendKetersediaanFasilitas({ tanggal: today, hari: 1 });
+      const res = await backendKetersediaanFasilitas({ tanggal: selectedDate, hari: 1 });
       if (cancelled || !res.ok || !Array.isArray(res.data)) return;
       const unavailMap: Record<string, Set<string>> = {};
       for (const item of res.data as Array<{
@@ -81,7 +94,7 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [selectedDate]);
 
   // Auto-scroll active chip into view horizontally when active facility changes
   useEffect(() => {
@@ -123,13 +136,13 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
     if (!now || !facility) return SLOTS.map(() => 'passed' as SlotState);
     const unavail = publicUnavailable[facility.id];
     return SLOTS.map((slot) => {
-      const baseState = getSlotState(facility, slot.start, reservations);
+      const baseState = getSlotState(facility, slot.start, reservations, selectedDate);
       if (baseState === 'avail' && unavail && unavail.has(slot.start)) {
         return 'booked';
       }
       return baseState;
     });
-  }, [facility, reservations, now, publicUnavailable]);
+  }, [facility, reservations, now, publicUnavailable, selectedDate]);
 
   const availableCount = slotStates.filter((s) => s === 'avail').length;
   const availablePct = Math.round((availableCount / SLOTS.length) * 100);
@@ -156,14 +169,172 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           </div>
           <div>
             <div className="sched-title">
-              Pratinjau Ketersediaan Jadwal{now && ` (${formatToday(now)})`}
+              Pratinjau Ketersediaan Jadwal ({formatFullDate(selectedDate)})
             </div>
-            <p className="sched-sub">Pilih fasilitas untuk melihat jam ketersediaan publik secara real-time.</p>
+            <p className="sched-sub">Pilih fasilitas dan tanggal untuk melihat ketersediaan slot waktu secara real-time.</p>
           </div>
         </div>
         <div className="server-clock-badge">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" /><path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
           {now ? `${pad(now.getHours())}:${pad(now.getMinutes())}` : '--:--'} WIB
+        </div>
+      </div>
+
+      {/* Calendar Date Navigation Bar */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12,
+          padding: '12px 16px',
+          background: '#FAF8F5',
+          border: '1px solid #E5E0D8',
+          borderRadius: 6,
+          margin: '16px 0 14px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setSelectedDate((d) => shiftDay(d, -1))}
+            style={{
+              padding: '7px 12px',
+              borderRadius: 4,
+              border: '1px solid #D5D0C7',
+              background: '#FFFFFF',
+              color: '#181D24',
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              fontFamily: 'inherit',
+            }}
+            aria-label="Hari sebelumnya"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+            Hari Sebelumnya
+          </button>
+
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => {
+              if (e.target.value) setSelectedDate(e.target.value);
+            }}
+            style={{
+              padding: '6px 12px',
+              borderRadius: 4,
+              border: '1px solid #b59876',
+              background: '#FFFFFF',
+              color: '#181D24',
+              fontSize: 13,
+              fontWeight: 600,
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          />
+
+          <button
+            type="button"
+            onClick={() => setSelectedDate((d) => shiftDay(d, 1))}
+            style={{
+              padding: '7px 12px',
+              borderRadius: 4,
+              border: '1px solid #D5D0C7',
+              background: '#FFFFFF',
+              color: '#181D24',
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              fontFamily: 'inherit',
+            }}
+            aria-label="Hari selanjutnya"
+          >
+            Hari Selanjutnya
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+
+          {selectedDate !== getTodayDateString() && (
+            <button
+              type="button"
+              onClick={() => setSelectedDate(getTodayDateString())}
+              style={{
+                padding: '7px 12px',
+                borderRadius: 4,
+                border: '1px solid #b59876',
+                background: '#15171A',
+                color: '#b59876',
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              Kembali ke Hari Ini
+            </button>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#181D24' }}>
+            {formatFullDate(selectedDate)}
+          </span>
+          {selectedDate === getTodayDateString() ? (
+            <span
+              style={{
+                fontSize: 13.5,
+                fontWeight: 700,
+                color: '#15803D',
+                background: '#DCFCE7',
+                border: '1px solid #BBF7D0',
+                padding: '2px 8px',
+                borderRadius: 4,
+                letterSpacing: '0.04em',
+              }}
+            >
+              HARI INI
+            </span>
+          ) : selectedDate < getTodayDateString() ? (
+            <span
+              style={{
+                fontSize: 13.5,
+                fontWeight: 600,
+                color: '#4B5563',
+                background: '#F3F4F6',
+                border: '1px solid #E5E7EB',
+                padding: '2px 8px',
+                borderRadius: 4,
+              }}
+            >
+              Riwayat Lalu
+            </span>
+          ) : (
+            <span
+              style={{
+                fontSize: 13.5,
+                fontWeight: 600,
+                color: '#854D0E',
+                background: '#FEF9C3',
+                border: '1px solid #FEF08A',
+                padding: '2px 8px',
+                borderRadius: 4,
+              }}
+            >
+              Jadwal Mendatang
+            </span>
+          )}
         </div>
       </div>
 
@@ -260,7 +431,11 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           <b>07.00 - 20.00 WIB</b>
         </div>
         <div className="sched-info-cell sched-avail-meter">
-          <span className="lbl-sm">Slot Tersedia Hari Ini</span>
+          <span className="lbl-sm">
+            {selectedDate === getTodayDateString()
+              ? 'Slot Tersedia Hari Ini'
+              : `Slot Tersedia (${formatDateIndo(selectedDate)})`}
+          </span>
           <div className="meter-row">
             <div className="meter-track"><div className="meter-fill" style={{ width: `${availablePct}%` }} /></div>
             <b>{availableCount}/{SLOTS.length}</b>

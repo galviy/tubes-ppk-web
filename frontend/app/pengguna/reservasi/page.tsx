@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
 import {
@@ -175,7 +175,7 @@ const PERIODS = [
 
 function AjukanReservasiContent() {
   const searchParams = useSearchParams();
-  const { facilities, isSlotTaken, submitReservation, currentUser } = useAppData();
+  const { facilities, isSlotTaken, fetchSlotAvailability, submitReservation, currentUser } = useAppData();
   const availableFacilities = facilities.filter((f) => f.status !== 'repair');
 
   const preselect = searchParams.get('facility');
@@ -209,12 +209,47 @@ function AjukanReservasiContent() {
   const [peserta, setPeserta] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Status ketersediaan slot aktual dari backend untuk seluruh pengguna
+  const [publicUnavailable, setPublicUnavailable] = useState<Record<string, Set<string>>>({});
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+
   // Jam Mulai dan Jam Selesai yang independen dan presisi
   const [startTime, setStartTime] = useState<string>('');
   const [endTime, setEndTime] = useState<string>('');
 
   const facility = facilities.find((f) => f.id === facilityId) || availableFacilities[0];
   const currentUserIdent = currentUser?.nama || currentUser?.email || '';
+
+  // Muat ketersediaan slot backend secara real-time setiap kali tanggal berubah
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!tanggal) return;
+      setIsLoadingSlots(true);
+      try {
+        const map = await fetchSlotAvailability(tanggal);
+        if (!cancelled && map) {
+          setPublicUnavailable(map);
+        }
+      } finally {
+        if (!cancelled) setIsLoadingSlots(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tanggal, fetchSlotAvailability]);
+
+  // Cek apakah slot spesifik sudah terpakai/disetujui untuk fasilitas & tanggal ini
+  const isSlotOccupied = useCallback(
+    (fId: string, sStart: string): boolean => {
+      if (isSlotTaken(fId, sStart, undefined, tanggal, currentUserIdent)) return true;
+      if (publicUnavailable[fId]?.has(sStart)) return true;
+      if (facility?.refId && facility?.tipe && publicUnavailable[`${facility.tipe}-${facility.refId}`]?.has(sStart)) return true;
+      return false;
+    },
+    [isSlotTaken, tanggal, currentUserIdent, publicUnavailable, facility]
+  );
 
   // Daftar slot start yang berada dalam rentang [startTime, endTime)
   const pickedSlots = useMemo(() => {
@@ -225,10 +260,8 @@ function AjukanReservasiContent() {
   // Cek bentrok terhadap slot yang dipilih untuk tanggal dan user spesifik
   const conflictSlots = useMemo(() => {
     if (!facility || pickedSlots.length === 0) return [];
-    return pickedSlots.filter((slotStart) =>
-      isSlotTaken(facility.id, slotStart, undefined, tanggal, currentUserIdent)
-    );
-  }, [facility, pickedSlots, isSlotTaken, tanggal, currentUserIdent]);
+    return pickedSlots.filter((slotStart) => isSlotOccupied(facility.id, slotStart));
+  }, [facility, pickedSlots, isSlotOccupied]);
 
   const hasConflict = conflictSlots.length > 0;
 
@@ -273,7 +306,7 @@ function AjukanReservasiContent() {
   // Interaksi klik kartu slot yang cerdas & sinkron dengan periode
   function handleSlotClick(slot: TimeSlot) {
     if (!facility) return;
-    const isTaken = isSlotTaken(facility.id, slot.start, undefined, tanggal, currentUserIdent);
+    const isTaken = isSlotOccupied(facility.id, slot.start);
     if (isTaken) return;
 
     // 1. Jika belum ada yang dipilih: pilih slot ini (30 menit)
@@ -308,7 +341,13 @@ function AjukanReservasiContent() {
 
   // Tombol durasi cepat
   function applyPreset(durationHours: number) {
-    const baseStart = startTime || '07:00';
+    let baseStart = startTime;
+    if (!baseStart && facility) {
+      const firstAvail = SLOTS.find((s) => !isSlotOccupied(facility.id, s.start));
+      baseStart = firstAvail ? firstAvail.start : '07:00';
+    } else if (!baseStart) {
+      baseStart = '07:00';
+    }
     setStartTime(baseStart);
 
     const [h, m] = baseStart.split(':').map(Number);
@@ -328,6 +367,26 @@ function AjukanReservasiContent() {
 
   async function doSubmit() {
     if (!facility || isSubmitting) return;
+
+    const isConflictNow = pickedSlots.some((slotStart) => isSlotOccupied(facility.id, slotStart));
+    if (isConflictNow) {
+      setBannerNotice({
+        type: 'error',
+        title: 'Rentang Jadwal Bentrok',
+        message: `Rentang jam yang dipilih (${startTime} - ${endTime} WIB) pada tanggal ${formatDateIndo(tanggal)} sudah terpakai atau disetujui untuk peminjaman lain. Silakan pilih slot yang tersedia.`,
+      });
+      setModalConfig({
+        isOpen: true,
+        title: 'Rentang Jadwal Bentrok',
+        subtitle: `Rentang jam yang dipilih (${startTime} - ${endTime} WIB) pada tanggal ${formatDateIndo(tanggal)} bentrok dengan jadwal reservasi lain yang sudah terpakai atau disetujui. Silakan pilih rentang yang berstatus tersedia.`,
+        confirmText: 'Pilih Jam Lain',
+        confirmVariant: 'danger',
+        showInput: false,
+        onConfirm: () => {},
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     let result: { ok: boolean; message?: string };
     try {
@@ -368,6 +427,10 @@ function AjukanReservasiContent() {
     setEndTime('');
     setTujuan('');
     setPeserta('');
+
+    void fetchSlotAvailability(tanggal).then((map) => {
+      if (map) setPublicUnavailable(map);
+    });
 
     setBannerNotice({
       type: 'success',
@@ -564,7 +627,12 @@ function AjukanReservasiContent() {
                 <label style={{ margin: 0, fontSize: 13, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#181D24' }}>
                   PILIH SLOT WAKTU (07.00 - 20.00 WIB)
                 </label>
-                <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
+                {isLoadingSlots && (
+                  <span style={{ fontSize: 13, color: '#b59876', fontWeight: 600, marginLeft: 8 }}>
+                    (Memperbarui ketersediaan...)
+                  </span>
+                )}
+                <div style={{ fontSize: 14, color: '#6B7280', marginTop: 2 }}>
                   Klik slot untuk memilih waktu mulai dan waktu selesai secara berurutan.
                 </div>
               </div>
@@ -574,28 +642,28 @@ function AjukanReservasiContent() {
                 <button
                   type="button"
                   onClick={() => applyPreset(1)}
-                  style={{ fontSize: 11, padding: '5px 11px', borderRadius: 4, border: '1px solid #D5D0C7', background: '#FAF8F5', cursor: 'pointer', fontWeight: 600 }}
+                  style={{ fontSize: 13, padding: '6px 13px', borderRadius: 4, border: '1px solid #D5D0C7', background: '#FAF8F5', cursor: 'pointer', fontWeight: 600 }}
                 >
                   +1 Jam
                 </button>
                 <button
                   type="button"
                   onClick={() => applyPreset(2)}
-                  style={{ fontSize: 11, padding: '5px 11px', borderRadius: 4, border: '1px solid #D5D0C7', background: '#FAF8F5', cursor: 'pointer', fontWeight: 600 }}
+                  style={{ fontSize: 13, padding: '6px 13px', borderRadius: 4, border: '1px solid #D5D0C7', background: '#FAF8F5', cursor: 'pointer', fontWeight: 600 }}
                 >
                   +2 Jam
                 </button>
                 <button
                   type="button"
                   onClick={() => applyPreset(4)}
-                  style={{ fontSize: 11, padding: '5px 11px', borderRadius: 4, border: '1px solid #D5D0C7', background: '#FAF8F5', cursor: 'pointer', fontWeight: 600 }}
+                  style={{ fontSize: 13, padding: '6px 13px', borderRadius: 4, border: '1px solid #D5D0C7', background: '#FAF8F5', cursor: 'pointer', fontWeight: 600 }}
                 >
                   +4 Jam
                 </button>
                 <button
                   type="button"
                   onClick={applyFullDay}
-                  style={{ fontSize: 11, padding: '5px 11px', borderRadius: 4, border: '1px solid #b59876', background: '#15171a', color: '#b59876', cursor: 'pointer', fontWeight: 700 }}
+                  style={{ fontSize: 13, padding: '6px 13px', borderRadius: 4, border: '1px solid #b59876', background: '#15171a', color: '#b59876', cursor: 'pointer', fontWeight: 700 }}
                 >
                   Seharian (07:00 - 20:00)
                 </button>
@@ -603,7 +671,7 @@ function AjukanReservasiContent() {
                   <button
                     type="button"
                     onClick={() => { setStartTime(''); setEndTime(''); }}
-                    style={{ fontSize: 11, padding: '5px 11px', borderRadius: 4, border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626', cursor: 'pointer', fontWeight: 600 }}
+                    style={{ fontSize: 13, padding: '6px 13px', borderRadius: 4, border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626', cursor: 'pointer', fontWeight: 600 }}
                   >
                     Reset Jam
                   </button>
@@ -622,7 +690,7 @@ function AjukanReservasiContent() {
                     <div className="sched-period-head">{period.label}</div>
                     <div className="slot-grid-lg">
                       {periodSlots.map((slot) => {
-                        const isTaken = isSlotTaken(facility.id, slot.start, undefined, tanggal, currentUserIdent);
+                        const isTaken = isSlotOccupied(facility.id, slot.start);
                         const isPicked = pickedSlots.includes(slot.start);
 
                         let stateClass = 'avail';
@@ -645,7 +713,7 @@ function AjukanReservasiContent() {
                             onClick={() => handleSlotClick(slot)}
                             title={
                               isTaken
-                                ? 'Slot sudah dikunci (sudah Anda pesan atau sudah disetujui untuk pemohon lain)'
+                                ? 'Slot sudah dikunci (sudah terpakai atau disetujui untuk peminjaman lain)'
                                 : `${slot.start} - ${slot.end} WIB (Klik untuk memilih)`
                             }
                           >
@@ -695,7 +763,7 @@ function AjukanReservasiContent() {
                         gap: 6,
                         padding: '3px 10px',
                         borderRadius: 4,
-                        fontSize: 12,
+                        fontSize: 14,
                         fontWeight: 800,
                         letterSpacing: '0.05em',
                         textTransform: 'uppercase',
@@ -716,7 +784,7 @@ function AjukanReservasiContent() {
                   </div>
                   {hasConflict ? (
                     <div style={{ color: '#B91C1C', fontSize: 14, fontWeight: 600, marginTop: 4 }}>
-                      ⚠️ Rentang waktu ini bertabrakan dengan jadwal yang sudah disetujui / direservasi pada tanggal {formatDateIndo(tanggal)}. Silakan pilih slot hijau yang tersedia.
+                      Rentang waktu ini bertabrakan dengan jadwal yang sudah disetujui / direservasi pada tanggal {formatDateIndo(tanggal)}. Silakan pilih slot yang tersedia.
                     </div>
                   ) : (
                     <div style={{ color: '#166534', fontSize: 14, marginTop: 4 }}>

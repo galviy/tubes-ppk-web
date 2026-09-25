@@ -31,7 +31,7 @@ export default function ReportFoto({ foto, alt = 'Foto Bukti', className, style 
           textAlign: 'center',
           background: '#F3F4F6',
           color: '#6B7280',
-          fontSize: 11,
+          fontSize: 13.5,
           padding: 8,
           ...style,
         }}
