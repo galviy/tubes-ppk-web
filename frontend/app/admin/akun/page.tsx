@@ -145,10 +145,17 @@ export default function KelolaAkunPage() {
     registeredAccounts,
     registerAccountDirectly,
     verifyPendingAccount,
+    deleteAccount,
+    toggleAccountStatus,
   } = useAppData();
 
   const [tab, setTab] = useState<'daftar' | 'verifikasi'>('daftar');
   const [targetTipe, setTargetTipe] = useState<'petugas' | 'pengguna'>('petugas');
+  const [bannerNotice, setBannerNotice] = useState<{
+    type: 'success' | 'error';
+    title: string;
+    message: string;
+  } | null>(null);
 
   // Form Fields
   const [username, setUsername] = useState('');
@@ -174,6 +181,55 @@ export default function KelolaAkunPage() {
     title: '',
     onConfirm: () => {},
   });
+
+  function handleDeleteAccount(id: number, username: string, role: string) {
+    setModalConfig({
+      isOpen: true,
+      title: 'Hapus Akun Pengguna',
+      subtitle: `Apakah Anda yakin ingin menghapus akun @${username} (Peran: ${role.toUpperCase()}) secara permanen dari sistem? Tindakan ini tidak dapat dibatalkan.`,
+      confirmText: 'Hapus Akun',
+      confirmVariant: 'danger',
+      showInput: false,
+      onConfirm: async () => {
+        const res = await deleteAccount(id);
+        if (res.ok) {
+          setBannerNotice({
+            type: 'success',
+            title: 'Akun Berhasil Dihapus',
+            message: res.message || `Akun @${username} berhasil dihapus dari sistem.`,
+          });
+        } else {
+          setBannerNotice({
+            type: 'error',
+            title: 'Gagal Menghapus Akun',
+            message: res.message || 'Terjadi kesalahan saat menghapus akun.',
+          });
+        }
+      },
+    });
+  }
+
+  function handleToggleStatus(id: number, username: string, currentStatus?: 'aktif' | 'nonaktif') {
+    const isCurrentlyActive = currentStatus !== 'nonaktif';
+    setModalConfig({
+      isOpen: true,
+      title: isCurrentlyActive ? 'Nonaktifkan Akun' : 'Aktifkan Akun',
+      subtitle: `Apakah Anda yakin ingin ${isCurrentlyActive ? 'menonaktifkan' : 'mengaktifkan kembali'} akses akun @${username}?`,
+      confirmText: isCurrentlyActive ? 'Nonaktifkan' : 'Aktifkan',
+      confirmVariant: isCurrentlyActive ? 'warning' : 'success',
+      showInput: false,
+      onConfirm: async () => {
+        const res = await toggleAccountStatus(id);
+        if (res.ok) {
+          setBannerNotice({
+            type: 'success',
+            title: 'Status Akun Diperbarui',
+            message: res.message || `Status akun @${username} berhasil diubah.`,
+          });
+        }
+      },
+    });
+  }
 
   // Credential Card after successful registration
   const [createdCredential, setCreatedCredential] = useState<{
@@ -366,6 +422,26 @@ export default function KelolaAkunPage() {
         <h2>Kelola akun</h2>
         <p>Pendaftaran akun resmi petugas sarpras, serta verifikasi pengajuan registrasi mandiri civitas akademika.</p>
       </div>
+
+      {/* Prominent Feedback Banner */}
+      {bannerNotice && (
+        <div className={`status-banner ${bannerNotice.type}`}>
+          <div>
+            <div className="status-banner-badge">
+              {bannerNotice.type === 'success' ? '✓ SUCCESS • BERHASIL' : '✕ FAILED • GAGAL'}
+            </div>
+            <div className="status-banner-title">{bannerNotice.title}</div>
+            <div className="status-banner-desc">{bannerNotice.message}</div>
+          </div>
+          <button
+            type="button"
+            className="status-banner-close"
+            onClick={() => setBannerNotice(null)}
+          >
+            ✕ Tutup
+          </button>
+        </div>
+      )}
 
       <div className="subtabs">
         <button className={`subtab${tab === 'daftar' ? ' active' : ''}`} onClick={() => setTab('daftar')}>
@@ -901,17 +977,18 @@ export default function KelolaAkunPage() {
             <table>
               <thead>
                 <tr>
-                  <th>ID</th>
+                  <th style={{ width: 70 }}>ID</th>
                   <th>Username</th>
                   <th>Email</th>
                   <th>Peran</th>
-                  <th style={{ textAlign: 'center', width: 120 }}>Tindakan</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'center', width: 170 }}>Tindakan</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredAccounts.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', color: '#6B7280', padding: 24 }}>
+                    <td colSpan={6} style={{ textAlign: 'center', color: '#6B7280', padding: 24 }}>
                       Tidak ditemukan akun yang cocok dengan pencarian.
                     </td>
                   </tr>
@@ -926,25 +1003,46 @@ export default function KelolaAkunPage() {
                           {acc.role === 'admin' ? 'Admin' : acc.role === 'petugas' ? 'Petugas' : 'Pengguna'}
                         </span>
                       </td>
-                      {/* No-op: backend belum menyediakan endpoint suspend */}
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <span className={`pill ${acc.status === 'nonaktif' ? 'danger' : 'avail'}`} style={{ fontSize: 11 }}>
+                          {acc.status === 'nonaktif' ? 'Nonaktif' : 'Aktif'}
+                        </span>
+                      </td>
                       <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
-                        <button
-                          type="button"
-                          title="Menunggu endpoint backend — tombol tidak melakukan apa-apa"
-                          onClick={() => {}}
-                          style={{
-                            padding: '4px 10px',
-                            fontSize: 11,
-                            fontWeight: 600,
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            border: '1px solid #FECACA',
-                            background: '#FEF2F2',
-                            color: '#DC2626',
-                          }}
-                        >
-                          Nonaktifkan
-                        </button>
+                        <div style={{ display: 'inline-flex', gap: 6 }}>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleStatus(acc.id, acc.username, acc.status)}
+                            style={{
+                              padding: '5px 10px',
+                              fontSize: 11,
+                              fontWeight: 600,
+                              borderRadius: 4,
+                              cursor: 'pointer',
+                              border: acc.status === 'nonaktif' ? '1px solid #BBF7D0' : '1px solid #FECACA',
+                              background: acc.status === 'nonaktif' ? '#F0FDF4' : '#FEF2F2',
+                              color: acc.status === 'nonaktif' ? '#166534' : '#DC2626',
+                            }}
+                          >
+                            {acc.status === 'nonaktif' ? 'Aktifkan' : 'Nonaktifkan'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAccount(acc.id, acc.username, acc.role)}
+                            style={{
+                              padding: '5px 10px',
+                              fontSize: 11,
+                              fontWeight: 600,
+                              borderRadius: 4,
+                              cursor: 'pointer',
+                              border: '1px solid #DC2626',
+                              background: '#DC2626',
+                              color: '#FFFFFF',
+                            }}
+                          >
+                            Hapus
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

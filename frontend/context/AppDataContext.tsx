@@ -100,7 +100,13 @@ interface AppDataValue {
   syncStatus: 'idle' | 'loading' | 'ok' | 'error';
 
   facilityById: (id: string) => Facility | undefined;
-  isSlotTaken: (facilityId: string, slotStart: string, excludeId?: number) => boolean;
+  isSlotTaken: (
+    facilityId: string,
+    slotStart: string,
+    excludeId?: number,
+    tanggal?: string,
+    currentUserIdentifier?: string
+  ) => boolean;
 
   // Auth
   login: (email: string, password: string) => Promise<AuthResult>;
@@ -158,6 +164,8 @@ interface AppDataValue {
     input: DirectRegisterInput
   ) => Promise<{ ok: boolean; message?: string; account?: BackendAccount }>;
   verifyPendingAccount: (id: number, approve: boolean) => Promise<{ ok: boolean; message?: string }>;
+  deleteAccount: (id: number) => Promise<{ ok: boolean; message?: string }>;
+  toggleAccountStatus: (id: number) => Promise<{ ok: boolean; message?: string }>;
 
   // Sinkronisasi dari backend (server menang, seed dibuang).
   refreshReservations: () => Promise<boolean>;
@@ -420,8 +428,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       syncStatus,
 
       facilityById: (id) => facilities.find((f) => f.id === id),
-      isSlotTaken: (facilityId, slotStart, excludeId) =>
-        isSlotBooked(reservations, facilityId, slotStart, excludeId),
+      isSlotTaken: (facilityId, slotStart, excludeId, tanggal, currentUserIdentifier) =>
+        isSlotBooked(
+          reservations,
+          facilityId,
+          slotStart,
+          excludeId,
+          tanggal,
+          currentUserIdentifier || currentUser?.nama || currentUser?.email
+        ),
 
       login: async (email, password) => {
         // Hanya akun backend terverifikasi (akun demo mock dihapus).
@@ -816,6 +831,27 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           setPendingAccounts((prev) => prev.filter((a) => a.id !== id));
           return { ok: true };
         },
+      deleteAccount: async (id: number) => {
+        const target = registeredAccounts.find((a) => a.id === id);
+        if (!target) return { ok: false, message: 'Akun tidak ditemukan.' };
+        setRegisteredAccounts((prev) => prev.filter((a) => a.id !== id));
+        return {
+          ok: true,
+          message: `Akun @${target.username} (${target.role}) berhasil dihapus dari sistem.`,
+        };
+      },
+      toggleAccountStatus: async (id: number) => {
+        const target = registeredAccounts.find((a) => a.id === id);
+        if (!target) return { ok: false, message: 'Akun tidak ditemukan.' };
+        const nextStatus = target.status === 'nonaktif' ? 'aktif' : 'nonaktif';
+        setRegisteredAccounts((prev) =>
+          prev.map((a) => (a.id === id ? { ...a, status: nextStatus } : a))
+        );
+        return {
+          ok: true,
+          message: `Akun @${target.username} berhasil di${nextStatus === 'nonaktif' ? 'nonaktifkan' : 'aktifkan kembali'}.`,
+        };
+      },
 
       refreshReservations,
       refreshReportsMine,

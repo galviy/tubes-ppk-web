@@ -33,6 +33,11 @@ function LaporKerusakanContent() {
     title: '',
     onConfirm: () => {},
   });
+  const [bannerNotice, setBannerNotice] = useState<{
+    type: 'success' | 'error';
+    title: string;
+    message: string;
+  } | null>(null);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -117,10 +122,15 @@ function LaporKerusakanContent() {
     }).then((result) => {
       setIsSubmitting(false);
       if (!result.ok) {
+        setBannerNotice({
+          type: 'error',
+          title: 'Pengiriman Laporan Gagal',
+          message: result.message || 'Laporan tidak dapat diproses oleh server. Silakan coba lagi.',
+        });
         setModalConfig({
           isOpen: true,
           title: 'Laporan Gagal Terkirim',
-          subtitle: result.message || 'Laporan tidak dapat diproses. Silakan coba lagi.',
+          subtitle: result.message || 'Laporan tidak dapat diproses oleh server. Silakan coba lagi.',
           confirmText: 'Mengerti',
           confirmVariant: 'danger',
           showInput: false,
@@ -135,12 +145,17 @@ function LaporKerusakanContent() {
       setFotoFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
 
+      setBannerNotice({
+        type: 'success',
+        title: 'Laporan Kerusakan Berhasil Terkirim',
+        message: 'Terima kasih atas laporan Anda. Laporan kerusakan telah masuk ke sistem dan akan segera ditindaklanjuti oleh petugas sarpras.',
+      });
       setModalConfig({
         isOpen: true,
         title: 'Laporan Kerusakan Terkirim',
         subtitle: 'Terima kasih atas laporan Anda. Laporan kerusakan telah masuk ke sistem dan akan segera ditindaklanjuti oleh petugas sarpras.',
         confirmText: 'Selesai',
-        confirmVariant: 'primary',
+        confirmVariant: 'success',
         showInput: false,
         onConfirm: () => {},
       });
@@ -153,6 +168,26 @@ function LaporKerusakanContent() {
         <h2>LAPORKAN KERUSAKAN FASILITAS</h2>
         <p>Isi formulir di bawah dengan bukti foto untuk mempercepat tindak lanjut perbaikan sarpras Universitas Diponegoro.</p>
       </div>
+
+      {/* Prominent Feedback Banner */}
+      {bannerNotice && (
+        <div className={`status-banner ${bannerNotice.type}`}>
+          <div>
+            <div className="status-banner-badge">
+              {bannerNotice.type === 'success' ? '✓ SUCCESS • BERHASIL' : '✕ FAILED • GAGAL'}
+            </div>
+            <div className="status-banner-title">{bannerNotice.title}</div>
+            <div className="status-banner-desc">{bannerNotice.message}</div>
+          </div>
+          <button
+            type="button"
+            className="status-banner-close"
+            onClick={() => setBannerNotice(null)}
+          >
+            ✕ Tutup
+          </button>
+        </div>
+      )}
 
       <div className="panel">
         <div className="form-grid">

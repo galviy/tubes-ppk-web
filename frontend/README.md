@@ -9,40 +9,72 @@ Sistem informasi berbasis web modern untuk pengelolaan izin reservasi ruangan/al
 | Kategori | Status | Keterangan |
 | :--- | :---: | :--- |
 | **TypeScript Typecheck** | ✅ Lulus | `npx tsc --noEmit` bersih tanpa ada kesalahan tipe data (0 errors). |
-| **Production Build** | ✅ Lulus | `npm run build` sukses mengompilasi dan meng-export 26 rute statis (`output: 'export'`). |
+| **Integrasi Backend** | ✅ Terhubung | Terintegrasi penuh ke Backend Go (`:8080`) dan Database MariaDB/MySQL Railway. |
+| **Production Build** | ✅ Lulus | `npm run build` berhasil dikompilasi (mode dinamis dengan reverse proxy `rewrites()`). |
+| **Autentikasi & Sesi** | ✅ Aman | Manajemen sesi dengan cookie HttpOnly `session_id` langsung dari backend Go (bebas CORS). |
 | **Interaktivitas UI** | ✅ Aman | Menggunakan Webpack (`--webpack`) dan `AppDataContext` client-side state management terpadu. |
 | **Akses Jaringan LAN** | ✅ Siap | Didukung konfigurasi `allowedDevOrigins` pada `next.config.js` untuk pengetesan lintas perangkat. |
 | **User Stories** | ✅ Lengkap | Mencakup hak akses Publik, Pengguna (Mhs/Dosen/Staf), Petugas Sarpras, dan Admin. |
 
 ---
 
-## 🚀 Panduan Menjalankan Aplikasi
+## 🚀 Panduan Menjalankan Aplikasi (Fullstack)
 
 ### 1. Prasyarat Sistem
 - **Node.js**: v18.18.0 atau versi yang lebih baru (disarankan LTS v20+)
 - **npm**: v9.0.0 atau lebih baru
+- **Golang**: v1.20+ (untuk menjalankan backend Go)
+- **Database**: MariaDB / MySQL (lokal atau cloud Railway)
 
-### 2. Instalasi & Eksekusi
+---
+
+### 2. Langkah 1: Konfigurasi & Jalankan Backend Go
+
+1. Pastikan file `.env` sudah tersedia di **root folder proyek** (`sipinjam/.env`):
+   ```env
+   DB_USERNAME="root"
+   DB_PASSWORD="hlgfFKhauveupgsaqDpqGrjefVZFgGGS"
+   DB_NAME="railway"
+   DB_IPADDRESS="centerbeam.proxy.rlwy.net"
+   DB_PORT="41220"
+   ```
+
+2. Buka terminal, masuk ke direktori `backend/`, lalu jalankan server:
+   ```bash
+   cd backend
+   go run .
+   ```
+   *Output yang menandakan backend berhasil:*
+   ```text
+   Berhasil terkoneksi ke database MySQL!
+   Backend is starting on :8080
+   ```
+
+---
+
+### 3. Langkah 2: Jalankan Frontend Next.js
+
+Buka terminal terpisah, masuk ke direktori `frontend/`:
 
 ```bash
-# 1. Pasang dependensi proyek
+# 1. Pasang dependensi frontend
 npm install
 
 # 2. Jalankan server pengembangan (Development Mode)
 npm run dev
 # Buka peramban di: http://localhost:3000
 
-# 3. Validasi typecheck TypeScript
+# 3. Validasi typecheck TypeScript (opsional)
 npx tsc --noEmit
 
-# 4. Bangun bundel produksi (mode dinamis, butuh `next start`)
+# 4. Bangun bundel produksi (Production Mode)
 npm run build
 npm run start
 # Buka peramban di: http://localhost:3000
 ```
 
-> **Catatan arsitektur (integrasi backend Go):**
-> Frontend memanggil backend via proxy `rewrites()` `/api/*` -> `http://127.0.0.1:8080/*` (lihat `next.config.js` + `lib/api.ts`), sehingga browser hanya kenal 1 origin dan cookie `session_id` HttpOnly tetap terkirim. Backend Go TIDAK diubah. Pastikan backend (`go run .` di `backend/`) dan MySQL (`tubes_ppk_web`) jalan sebelum login.
+> **Catatan Arsitektur (Proxy Rewrites):**  
+> Frontend memanggil API backend via proxy Next.js `rewrites()` dari `/api/*` diteruskan ke `http://127.0.0.1:8080/*` (lihat `next.config.js` + `lib/api.ts`). Dengan skema ini, browser hanya mengenali 1 origin (`localhost:3000`) sehingga cookie `session_id` HttpOnly tersimpan aman tanpa isu CORS.
 
 > **Catatan Bundler Webpack:**  
 > Skrip `npm run dev` dan `npm run build` secara eksplisit menambahkan flag `--webpack`. Konfigurasi ini menjamin keandalan *hydration* event handler form interaktif, date picker, dan modal dialog kustom pada Next.js 16 tanpa interupsi cache Turbopack.
@@ -52,9 +84,17 @@ npm run start
 
 ---
 
-## 👥 Akun Pengujian (Backend MySQL)
+## 👥 Akun Pengujian (Backend MySQL / Railway)
 
-Login hanya menerima akun backend terverifikasi (`POST /auth/login` + `GET /user/me` via `lib/api.ts`; akun demo mock dihapus). Contoh akun di database dev: `dosen01@example.com`. Untuk menambah akun: daftar via `/register` (masuk antrean pending backend) lalu verifikasi langsung di DB, atau buat via endpoint `POST /admin/create_user/*` dengan session admin.
+Login hanya menerima akun backend terverifikasi (`POST /auth/login` + `GET /user/me` via `lib/api.ts`). Berikut akun pengujian yang siap digunakan:
+
+| Peran | Email | Kata Sandi | Lingkup Hak Akses |
+| :--- | :--- | :--- | :--- |
+| **Admin** | `galvindoser@gmail.com` | `Test@123` | `/admin/*`: Master fasilitas, audit reservasi & laporan, verifikasi akun, rekap data & ekspor. |
+| **Petugas** | `petugas@sipinjam.ac.id` | `Petugas@123` | `/petugas/*`: Manajemen ketersediaan fasilitas, tindak lanjut & update status penanganan laporan kerusakan. |
+| **Pengguna (Mahasiswa)** | `galvin@gmail.com` | `Lol@123` | `/pengguna/*`: Pengajuan pinjam ruang/alat, pembatalan mandiri, lapor sarpras rusak + bukti foto. |
+
+> Untuk menambah akun baru: daftar mandiri via `/register` (masuk antrean pending backend) lalu diverifikasi langsung di DB, atau dibuat langsung via menu admin (`POST /admin/create_user/*`).
 
 ---
 
@@ -208,13 +248,26 @@ frontend/
 
 ---
 
-## 🔌 Integrasi ke Backend Go
+## 🔌 Integrasi ke Backend Go & Database MariaDB
 
-Frontend terhubung ke backend Go tanpa mock data:
+Frontend terhubung langsung ke backend Go tanpa data tiruan (*zero mock data*):
 
-1. **Central Data Layer**: `context/AppDataContext.tsx` memanggil backend via `lib/api.ts` (proxy `rewrites()` `/api/*` -> `http://127.0.0.1:8080/*`, cookie `session_id` HttpOnly). Modul tanpa endpoint backend (persetujuan/penolakan/pembatalan reservasi, ubah/hapus fasilitas, suspend akun, logout server, matriks slot publik) dinonaktifkan jujur di UI.
-2. **Lapisan Autentikasi**: `POST /auth/login` + `GET /user/me` (role `1/2/3` -> admin/petugas/pengguna). Hanya akun backend terverifikasi.
-3. **Konfigurasi Lingkungan**: `NEXT_PUBLIC_API_URL` (`/api`) dan `BACKEND_URL` di `.env.local` dan `config/site.ts`.
+1. **Central Data Layer**: Seluruh request data dialirkan melalui `context/AppDataContext.tsx` dan `lib/api.ts` memanfaatkan Next.js reverse proxy `rewrites()` (`/api/*` ➔ `http://127.0.0.1:8080/*`).
+2. **Autentikasi & Manajemen Sesi**:
+   - `POST /auth/login` memvalidasi kredensial dan menerbitkan cookie `session_id` (`HttpOnly`).
+   - `GET /user/me` mengambil data sesi aktif dan memetakan hak akses dashboard berdasarkan role:
+     - **Role 1**: Administrator (`/admin/*`)
+     - **Role 2**: Petugas Sarpras (`/petugas/*`)
+     - **Role 3**: Pengguna Civitas Akademika (`/pengguna/*`)
+3. **Endpoint Backend yang Terhubung**:
+   - **Fasilitas**: `GET /fasilitas`
+   - **Reservasi**: `POST /reservasi/create_reservasi` & `GET /reservasi/list_reservasi`
+   - **Pelaporan Kerusakan**: `POST /laporan/create_laporan` (*multipart/form-data* bukti foto) & `GET /laporan/list_laporan`
+   - **Operasional Petugas**: `GET /petugas/reports`, `PATCH /petugas/reports/{id}` (update status & catatan penanganan), `PATCH /petugas/facilities/{id}/status`
+   - **Administrasi**: `GET /admin/show_user`, `POST /admin/create_user/*`, verifikasi akun civitas akademika
+4. **Konfigurasi Lingkungan**:
+   - Backend Go membaca koneksi database MySQL/MariaDB dari file root `.env`.
+   - Frontend dapat mengarahkan `BACKEND_URL` melalui `.env.local` saat backend berjalan di cloud/Railway.
 
 ---
 

@@ -40,9 +40,8 @@ export default function PenggunaHomePage() {
       </div>
 
       <div className="alert info">
-        Slot yang kamu ajukan dikunci otomatis 10 menit selama proses pengisian formulir, dan butuh
-        persetujuan petugas sebelum berstatus <b>Disetujui</b>. Batas pembatalan sendiri adalah <b>2 jam</b>{' '}
-        sebelum jam mulai.
+        Pengajuan reservasi memerlukan persetujuan petugas sarpras sebelum berstatus <b>Disetujui</b>. Batas pembatalan mandiri adalah <b>2 jam</b>{' '}
+        sebelum jam kegiatan dimulai.
       </div>
 
       <div className="content-head" style={{ marginTop: 12 }}>
