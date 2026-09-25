@@ -20,8 +20,9 @@ const BLANK_FORM = {
 };
 
 export default function KelolaFasilitasPage() {
-  const { facilities, addFacility, setFacilityStatus } = useAppData();
+  const { facilities, addFacility, updateFacility, deleteFacility, setFacilityStatus } = useAppData();
 
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(BLANK_FORM);
 
   const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
@@ -34,7 +35,38 @@ export default function KelolaFasilitasPage() {
   const existingTypes = Array.from(new Set(facilities.map((f) => f.type))).filter(Boolean);
   const allTypeOptions = Array.from(new Set([...DEFAULT_TYPES, ...existingTypes]));
 
+  function startEdit(f: Facility) {
+    // Ubah via POST /admin/update_fasilitas/* (butuh refId + tipe backend).
+    if (f.refId === undefined || !f.tipe) {
+      setModalConfig({
+        isOpen: true,
+        title: 'Data Tidak Lengkap',
+        subtitle: `Data "${f.name}" tidak memiliki referensi backend sehingga tidak bisa diubah.`,
+        confirmText: 'Mengerti',
+        confirmVariant: 'warning',
+        showInput: false,
+        onConfirm: () => {},
+      });
+      return;
+    }
+    setEditingId(f.id);
+    const isKnown = allTypeOptions.includes(f.type);
+    setForm({
+      nama: f.name,
+      tipeSarana: f.tipe,
+      tipeSelect: isKnown ? f.type : '+baru',
+      tipeCustom: isKnown ? '' : f.type,
+      lokasi: f.loc,
+      kapasitas: String(f.cap),
+      deskripsi: f.desc,
+      kelengkapan: (f.amenities || []).join(', '),
+      image: f.image || '',
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   function cancelEdit() {
+    setEditingId(null);
     setForm(BLANK_FORM);
   }
 
@@ -110,8 +142,38 @@ export default function KelolaFasilitasPage() {
       image: form.image.trim() || undefined,
     };
 
-    // Tambah via backend (ubah/hapus tak punya endpoint -> tombolnya
-    // dihapus dari tabel; desc/amenities/image tidak punya kolom backend).
+    if (editingId) {
+      setIsSubmitting(true);
+      try {
+        const res = await updateFacility(editingId, payload);
+        if (!res.ok) {
+          setModalConfig({
+            isOpen: true,
+            title: 'Gagal Mengubah Fasilitas',
+            subtitle: res.message || 'Data fasilitas tidak dapat diproses.',
+            confirmText: 'Mengerti',
+            confirmVariant: 'danger',
+            showInput: false,
+            onConfirm: () => {},
+          });
+          return;
+        }
+        setModalConfig({
+          isOpen: true,
+          title: 'Fasilitas Diperbarui',
+          subtitle: `"${payload.name}" tersimpan di database backend.`,
+          confirmText: 'Selesai',
+          confirmVariant: 'primary',
+          showInput: false,
+          onConfirm: () => {},
+        });
+        cancelEdit();
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+    // Tambah via backend (desc/amenities/image tidak punya kolom backend).
     setIsSubmitting(true);
     try {
       const res = await addFacility({ ...payload, tipeSarana: form.tipeSarana });
@@ -142,18 +204,62 @@ export default function KelolaFasilitasPage() {
     }
   }
 
+  function handleDelete(f: Facility) {
+    // Hapus = nonaktifkan via backend (soft delete, FK reservasi/laporan aman).
+    if (f.refId === undefined || !f.tipe) {
+      setModalConfig({
+        isOpen: true,
+        title: 'Data Tidak Lengkap',
+        subtitle: `Data "${f.name}" tidak memiliki referensi backend sehingga tidak bisa dinonaktifkan.`,
+        confirmText: 'Mengerti',
+        confirmVariant: 'warning',
+        showInput: false,
+        onConfirm: () => {},
+      });
+      return;
+    }
+    setModalConfig({
+      isOpen: true,
+      title: 'Nonaktifkan Fasilitas',
+      subtitle: `"${f.name}" akan dinonaktifkan (status Nonaktif). Riwayat reservasi dan laporan yang merujuknya tetap terjaga. Lanjutkan?`,
+      confirmText: 'Nonaktifkan',
+      confirmVariant: 'danger',
+      showInput: false,
+      onConfirm: () => {
+        void deleteFacility(f.id).then((res) => {
+          if (!res.ok) {
+            setModalConfig({
+              isOpen: true,
+              title: 'Gagal Menonaktifkan',
+              subtitle: res.message || 'Data fasilitas tidak dapat diproses.',
+              confirmText: 'Mengerti',
+              confirmVariant: 'danger',
+              showInput: false,
+              onConfirm: () => {},
+            });
+          }
+        });
+      },
+    });
+  }
+
   return (
     <div>
       <div className="content-head">
         <h2>Kelola data fasilitas</h2>
-        <p>Tambah fasilitas dan atur status operasional. Ubah dan hapus menunggu endpoint backend.</p>
+        <p>Tambah, ubah, dan nonaktifkan fasilitas kampus Universitas Diponegoro.</p>
       </div>
 
       <div className="panel">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#181D24' }}>
-            Tambah fasilitas baru
+            {editingId ? 'Ubah data fasilitas' : 'Tambah fasilitas baru'}
           </h3>
+          {editingId && (
+            <span style={{ fontSize: 12, color: '#b59876', fontWeight: 600 }}>
+              Mode Pengeditan Aktif
+            </span>
+          )}
         </div>
 
         <div className="form-grid">
@@ -414,10 +520,10 @@ export default function KelolaFasilitasPage() {
 
         <div className="btn-row" style={{ marginTop: 16 }}>
           <button className="btn primary" onClick={() => void handleSubmit()} disabled={isSubmitting}>
-            {isSubmitting ? 'Menyimpan…' : 'Simpan fasilitas'}
+            {isSubmitting ? 'Menyimpan…' : editingId ? 'Simpan perubahan' : 'Simpan fasilitas'}
           </button>
           <button className="btn" onClick={cancelEdit}>
-            Reset
+            {editingId ? 'Batal' : 'Reset'}
           </button>
         </div>
       </div>
@@ -573,11 +679,11 @@ export default function KelolaFasilitasPage() {
                       <option value="nonaktif">Nonaktif</option>
                     </select>
 
-                    {/* No-op: backend belum menyediakan endpoint ubah/hapus */}
+                    {/* No-op dihapus: ubah/hapus wired ke backend */}
                     <button
                       type="button"
-                      title="Menunggu endpoint backend — tombol tidak melakukan apa-apa"
-                      onClick={() => {}}
+                      title="Ubah spesifikasi via backend"
+                      onClick={() => startEdit(f)}
                       style={{
                         padding: '5px 10px',
                         fontSize: 11,
@@ -594,8 +700,8 @@ export default function KelolaFasilitasPage() {
 
                     <button
                       type="button"
-                      title="Menunggu endpoint backend — tombol tidak melakukan apa-apa"
-                      onClick={() => {}}
+                      title="Nonaktifkan via backend (soft delete)"
+                      onClick={() => handleDelete(f)}
                       style={{
                         padding: '5px 10px',
                         fontSize: 11,

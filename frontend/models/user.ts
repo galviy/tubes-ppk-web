@@ -16,6 +16,7 @@ export interface BackendAccount {
   username: string;
   email: string;
   role: UserRole;
+  isVerified?: boolean;
 }
 
 export function mapBackendAccount(row: Record<string, unknown>): BackendAccount | null {
@@ -23,7 +24,10 @@ export function mapBackendAccount(row: Record<string, unknown>): BackendAccount 
   if (!Number.isFinite(id)) return null;
   const username = typeof row['username'] === 'string' ? (row['username'] as string) : '';
   const email = typeof row['email'] === 'string' ? (row['email'] as string) : '';
-  return { id, username, email, role: roleIdToUserRole(String(row['role'] ?? '')) };
+  const rawVer = row['is_verified'];
+  const isVerified =
+    typeof rawVer === 'number' ? rawVer === 1 : typeof rawVer === 'boolean' ? rawVer : undefined;
+  return { id, username, email, role: roleIdToUserRole(String(row['role'] ?? '')), isVerified };
 }
 
 // Hasil login — user dibentuk dari GET /user/me pasca POST /auth/login.

@@ -154,9 +154,15 @@ interface AppDataValue {
   addFacility: (
     input: Omit<Facility, 'id' | 'status'> & { tipeSarana?: 'ruangan' | 'alat' }
   ) => Promise<{ ok: boolean; message?: string }>;
+  updateFacility: (
+    id: string,
+    input: Omit<Facility, 'id' | 'status'>
+  ) => Promise<{ ok: boolean; message?: string }>;
+  deleteFacility: (id: string) => Promise<{ ok: boolean; message?: string }>;
   registerAccountDirectly: (
     input: DirectRegisterInput
   ) => Promise<{ ok: boolean; message?: string; account?: BackendAccount }>;
+  toggleAccountStatus: (id: number) => Promise<{ ok: boolean; message?: string }>;
   verifyPendingAccount: (id: number, approve: boolean) => Promise<{ ok: boolean; message?: string }>;
 
   // Sinkronisasi dari backend (server menang, seed dibuang).
@@ -731,6 +737,48 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         await refreshFacilities();
         return { ok: true };
       },
+      updateFacility: async (id, input) => {
+        const fac = facilities.find((f) => f.id === id);
+        if (!fac || fac.refId === undefined || !fac.tipe) {
+          return { ok: false, message: 'Hanya fasilitas backend yang bisa diubah.' };
+        }
+        // Pertahankan ketersediaan saat ini (avail/busy -> 1).
+        const statusInt = fac.status === 'repair' || fac.status === 'nonaktif' ? 0 : 1;
+        const res =
+          fac.tipe === 'alat'
+            ? await backendAdminPostForm('/admin/update_fasilitas/alat', {
+                id: fac.refId,
+                nama_alat: input.name.trim(),
+                jumlah_tersedia: input.cap,
+                banyak_alat: input.cap,
+                nama_kategori: input.type.trim(),
+                status: statusInt,
+              })
+            : await backendAdminPostForm('/admin/update_fasilitas/ruangan', {
+                id: fac.refId,
+                nama_ruangan: input.name.trim(),
+                status: statusInt,
+                kapasistas: input.cap,
+                lokasi: input.loc.trim(),
+                nama_kategori: input.type.trim(),
+              });
+        if (!res.ok) return { ok: false, message: res.message };
+        await refreshFacilities();
+        return { ok: true };
+      },
+      deleteFacility: async (id) => {
+        const fac = facilities.find((f) => f.id === id);
+        if (!fac || fac.refId === undefined || !fac.tipe) {
+          return { ok: false, message: 'Hanya fasilitas backend yang bisa dinonaktifkan.' };
+        }
+        // Soft delete: nonaktif via status (FK reservasi/laporan aman).
+        const res = await backendAdminPostForm(`/admin/delete_fasilitas/${fac.tipe}`, {
+          id: fac.refId,
+        });
+        if (!res.ok) return { ok: false, message: res.message };
+        await refreshFacilities();
+        return { ok: true };
+      },
       registerAccountDirectly: async (input: DirectRegisterInput) => {
         const exists = registeredAccounts.some(
           (a) => a.email.toLowerCase() === input.email.trim().toLowerCase()
@@ -788,34 +836,44 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         );
         return { ok: true, account: created };
       },
+      toggleAccountStatus: async (id) => {
+        const acc = registeredAccounts.find((a) => a.id === id);
+        if (!acc) return { ok: false, message: 'Akun tidak ditemukan.' };
+        // Suspend = is_verified 0 (tak bisa login); aktifkan = 1.
+        const next = acc.isVerified === false ? 1 : 0;
+        const res = await backendAdminPostForm('/admin/users/status', {
+          id,
+          is_verified: next,
+        });
+        if (!res.ok) return { ok: false, message: res.message };
+        await refreshAccounts();
+        return { ok: true };
+      },
       verifyPendingAccount: async (id, approve) => {
         const row = pendingAccounts.find((a) => a.id === id);
-        // Hanya baris backend (daftar pending selalu dari sync show_*_pending).
-        // POST /admin/verifikasi_{mhs,dosen,staff} dengan nama field berbeda
-        // per tipe (id_mhs / id_dosen / id_staff). Sisi TOLAK mustahil.
+        // Setuju/tolak via POST /admin/verifikasi_* dan /admin/tolak_*
+        // dengan nama field berbeda per tipe (id_mhs / id_dosen / id_staff).
         if (!row || row.backendId === undefined) {
           return { ok: false, message: 'Data pending tidak ditemukan.' };
         }
-        if (!approve) {
-          return { ok: false, message: 'Penolakan akun pending belum didukung backend.' };
-        }
-          const peranLower = row.peran.toLowerCase();
-          const path = peranLower.includes('dosen')
-            ? '/admin/verifikasi_dosen'
-            : peranLower.includes('staf') || peranLower.includes('staff')
-              ? '/admin/verifikasi_staff'
-              : '/admin/verifikasi_mhs';
-          const field =
-            path === '/admin/verifikasi_dosen'
-              ? 'id_dosen'
-              : path === '/admin/verifikasi_staff'
-                ? 'id_staff'
-                : 'id_mhs';
-          const res = await backendAdminPostForm(path, { [field]: row.backendId });
-          if (!res.ok) return { ok: false, message: res.message };
-          setPendingAccounts((prev) => prev.filter((a) => a.id !== id));
-          return { ok: true };
-        },
+        const peranLower = row.peran.toLowerCase();
+        const kind =
+          peranLower.includes('dosen') ? 'dosen'
+          : peranLower.includes('staf') || peranLower.includes('staff') ? 'staff'
+          : 'mhs';
+        const path = approve
+          ? `/admin/verifikasi_${kind}`
+          : `/admin/tolak_${kind}`;
+        const field = `id_${kind}`;
+        const res = await backendAdminPostForm(path, { [field]: row.backendId });
+        if (!res.ok) return { ok: false, message: res.message };
+        setPendingAccounts((prev) =>
+          approve
+            ? prev.filter((a) => a.id !== id)
+            : prev.map((a) => (a.id === id ? { ...a, status: 'ditolak' as const } : a)),
+        );
+        return { ok: true };
+      },
 
       refreshReservations,
       refreshReportsMine,

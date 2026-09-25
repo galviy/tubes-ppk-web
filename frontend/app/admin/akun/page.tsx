@@ -144,6 +144,7 @@ export default function KelolaAkunPage() {
     pendingAccounts,
     registeredAccounts,
     registerAccountDirectly,
+    toggleAccountStatus,
     verifyPendingAccount,
   } = useAppData();
 
@@ -905,18 +906,21 @@ export default function KelolaAkunPage() {
                   <th>Username</th>
                   <th>Email</th>
                   <th>Peran</th>
+                  <th>Status</th>
                   <th style={{ textAlign: 'center', width: 120 }}>Tindakan</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredAccounts.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', color: '#6B7280', padding: 24 }}>
+                    <td colSpan={6} style={{ textAlign: 'center', color: '#6B7280', padding: 24 }}>
                       Tidak ditemukan akun yang cocok dengan pencarian.
                     </td>
                   </tr>
                 ) : (
-                  filteredAccounts.map((acc) => (
+                  filteredAccounts.map((acc) => {
+                    const aktif = acc.isVerified !== false;
+                    return (
                     <tr key={acc.id}>
                       <td style={{ fontFamily: 'monospace', fontSize: 13 }}>{acc.id}</td>
                       <td style={{ fontWeight: 600, color: '#181D24' }}>@{acc.username}</td>
@@ -926,28 +930,47 @@ export default function KelolaAkunPage() {
                           {acc.role === 'admin' ? 'Admin' : acc.role === 'petugas' ? 'Petugas' : 'Pengguna'}
                         </span>
                       </td>
-                      {/* No-op: backend belum menyediakan endpoint suspend */}
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <span className={`pill ${aktif ? 'avail' : 'danger'}`} style={{ fontSize: 11 }}>
+                          {aktif ? 'Aktif' : 'Nonaktif'}
+                        </span>
+                      </td>
                       <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
                         <button
                           type="button"
-                          title="Menunggu endpoint backend — tombol tidak melakukan apa-apa"
-                          onClick={() => {}}
+                          title={aktif ? 'Nonaktifkan (is_verified=0, tak bisa login)' : 'Aktifkan kembali'}
+                          onClick={() => {
+                            void toggleAccountStatus(acc.id).then((res) => {
+                              if (!res.ok) {
+                                setModalConfig({
+                                  isOpen: true,
+                                  title: 'Gagal Mengubah Status',
+                                  subtitle: res.message || 'Status akun tidak dapat diproses.',
+                                  confirmText: 'Mengerti',
+                                  confirmVariant: 'danger',
+                                  showInput: false,
+                                  onConfirm: () => {},
+                                });
+                              }
+                            });
+                          }}
                           style={{
                             padding: '4px 10px',
                             fontSize: 11,
                             fontWeight: 600,
                             borderRadius: 4,
                             cursor: 'pointer',
-                            border: '1px solid #FECACA',
-                            background: '#FEF2F2',
-                            color: '#DC2626',
+                            border: aktif ? '1px solid #FECACA' : '1px solid #86EFAC',
+                            background: aktif ? '#FEF2F2' : '#F0FDF4',
+                            color: aktif ? '#DC2626' : '#166534',
                           }}
                         >
-                          Nonaktifkan
+                          {aktif ? 'Nonaktifkan' : 'Aktifkan'}
                         </button>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -1030,19 +1053,20 @@ export default function KelolaAkunPage() {
                   </td>
                   <td style={{ whiteSpace: 'nowrap', textAlign: 'left' }}>
                     {a.status === 'menunggu' ? (
-                      // Setujui wired ke backend; Tolak no-op (tak ada endpoint).
+                      // Setujui + Tolak wired ke backend (tolak_mhs/dosen/staff).
                       <select
                         className="table-select-action"
                         value="menunggu"
                         onChange={(e) => {
                           const val = e.target.value;
                           e.target.value = 'menunggu';
-                          if (val === 'setuju') {
-                            void verifyPendingAccount(a.id, true).then((res) => {
+                          if (val === 'setuju' || val === 'tolak') {
+                            const approve = val === 'setuju';
+                            void verifyPendingAccount(a.id, approve).then((res) => {
                               if (!res.ok) {
                                 setModalConfig({
                                   isOpen: true,
-                                  title: 'Verifikasi Gagal',
+                                  title: approve ? 'Verifikasi Gagal' : 'Penolakan Gagal',
                                   subtitle:
                                     res.message || 'Status verifikasi tidak dapat diproses.',
                                   confirmText: 'Mengerti',
