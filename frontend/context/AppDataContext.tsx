@@ -15,7 +15,7 @@ import {
   backendCreateLaporan,
   backendCreateReservasiAlat,
   backendCreateReservasiRuangan,
-  backendKetersediaanFasilitas,
+  backendJadwalFasilitas,
   backendListFasilitas,
   backendListLaporanSaya,
   backendListPetugasReservasi,
@@ -67,6 +67,7 @@ function mapBackendFasilitas(b: BackendFasilitas): Facility {
     type: b.type,
     loc: b.loc,
     cap: b.cap,
+    tersedia: typeof b.jumlah_tersedia === 'number' ? b.jumlah_tersedia : undefined,
     desc: b.desc,
     amenities: Array.isArray(b.amenities) ? b.amenities : [],
     status,
@@ -223,7 +224,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     async (tanggal: string): Promise<Record<string, Set<string>>> => {
       if (!tanggal) return {};
       try {
-        const res = await backendKetersediaanFasilitas({ tanggal, hari: 1 });
+        const res = await backendJadwalFasilitas({ tanggal, hari: 1 });
         if (res.ok && Array.isArray(res.data)) {
           const map: Record<string, Set<string>> = {};
           for (const item of res.data as Array<{

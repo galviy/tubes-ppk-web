@@ -329,8 +329,85 @@ func ruanganTersedia(status string) bool {
 	}
 }
 
+// statusSlotRuangan: APPROVED mengunci slot, PENDING hanya menandainya
+// "menunggu" tanpa memblokir pemohon lain, fasilitas nonaktif selalu tertutup.
+func statusSlotRuangan(r models.Ruangan, slotMulai, slotSelesai time.Time, usage []repositories.ReservasiTerpakai) models.SlotKetersediaan {
+	if !ruanganTersedia(r.Status) {
+		return models.SlotKetersediaan{
+			Mulai:   slotMulai.Format("15:04"),
+			Selesai: slotSelesai.Format("15:04"),
+			Status:  models.SlotNonaktif,
+		}
+	}
+
+	menunggu := false
+	for _, u := range usage {
+		if u.RuanganId == nil || *u.RuanganId != r.Id || !u.Mulai.Before(slotSelesai) || !u.Selesai.After(slotMulai) {
+			continue
+		}
+		if u.StatusKode == models.ReservasiApproved {
+			return models.SlotKetersediaan{
+				Mulai:   slotMulai.Format("15:04"),
+				Selesai: slotSelesai.Format("15:04"),
+				Status:  models.SlotTerpakai,
+			}
+		}
+		menunggu = true
+	}
+
+	status := models.SlotTersedia
+	if menunggu {
+		status = models.SlotMenunggu
+	}
+	return models.SlotKetersediaan{
+		Mulai:    slotMulai.Format("15:04"),
+		Selesai:  slotSelesai.Format("15:04"),
+		Tersedia: true,
+		Status:   status,
+	}
+}
+
+// statusSlotAlat: kuota hanya berkurang oleh APPROVED; PENDING sekadar
+// menandai slot "menunggu" selama stok masih ada.
+func statusSlotAlat(a models.Alat, slotMulai, slotSelesai time.Time, usage []repositories.ReservasiTerpakai) models.SlotKetersediaan {
+	if a.Status == 0 {
+		return models.SlotKetersediaan{
+			Mulai:   slotMulai.Format("15:04"),
+			Selesai: slotSelesai.Format("15:04"),
+			Status:  models.SlotNonaktif,
+		}
+	}
+
+	terpakai := 0
+	menunggu := false
+	for _, u := range usage {
+		if u.AlatId == nil || *u.AlatId != a.Id || !u.Mulai.Before(slotSelesai) || !u.Selesai.After(slotMulai) {
+			continue
+		}
+		if u.StatusKode == models.ReservasiApproved {
+			terpakai += u.Jumlah
+		} else {
+			menunggu = true
+		}
+	}
+
+	status := models.SlotTersedia
+	tersedia := terpakai < a.BanyakAlat
+	if !tersedia {
+		status = models.SlotTerpakai
+	} else if menunggu {
+		status = models.SlotMenunggu
+	}
+	return models.SlotKetersediaan{
+		Mulai:    slotMulai.Format("15:04"),
+		Selesai:  slotSelesai.Format("15:04"),
+		Tersedia: tersedia,
+		Status:   status,
+	}
+}
+
 // Ketersediaan menghitung slot 30 menit untuk semua fasilitas selama beberapa hari.
-// Hanya reservasi APPROVED yang memblokir (aturan global).
+// Hanya reservasi APPROVED yang memblokir (aturan global); PENDING ditandai "menunggu".
 func Ketersediaan(tipe string, tanggalMulai time.Time, jumlahHari int) ([]models.KetersediaanFasilitas, error) {
 	if jumlahHari <= 0 {
 		jumlahHari = 1
@@ -338,7 +415,7 @@ func Ketersediaan(tipe string, tanggalMulai time.Time, jumlahHari int) ([]models
 
 	awal := time.Date(tanggalMulai.Year(), tanggalMulai.Month(), tanggalMulai.Day(), 0, 0, 0, 0, tanggalMulai.Location())
 	akhir := awal.AddDate(0, 0, jumlahHari)
-	usage, err := repositories.ListReservasiApprovedRange(awal, akhir)
+	usage, err := repositories.ListReservasiAktifRange(awal, akhir)
 	if err != nil {
 		return nil, err
 	}
@@ -365,20 +442,7 @@ func Ketersediaan(tipe string, tanggalMulai time.Time, jumlahHari int) ([]models
 				for menit := jamOperasionalMulaiMenit; menit < jamOperasionalSelesaiMenit; menit += menitSlot {
 					slotMulai := tanggal.Add(time.Duration(menit) * time.Minute)
 					slotSelesai := slotMulai.Add(menitSlot * time.Minute)
-					tersedia := ruanganTersedia(r.Status)
-					if tersedia {
-						for _, u := range usage {
-							if u.RuanganId != nil && *u.RuanganId == r.Id && u.Mulai.Before(slotSelesai) && u.Selesai.After(slotMulai) {
-								tersedia = false
-								break
-							}
-						}
-					}
-					blok.Slot = append(blok.Slot, models.SlotKetersediaan{
-						Mulai:    slotMulai.Format("15:04"),
-						Selesai:  slotSelesai.Format("15:04"),
-						Tersedia: tersedia,
-					})
+					blok.Slot = append(blok.Slot, statusSlotRuangan(r, slotMulai, slotSelesai, usage))
 				}
 				ketersediaan.Hari = append(ketersediaan.Hari, blok)
 			}
@@ -406,18 +470,7 @@ func Ketersediaan(tipe string, tanggalMulai time.Time, jumlahHari int) ([]models
 				for menit := jamOperasionalMulaiMenit; menit < jamOperasionalSelesaiMenit; menit += menitSlot {
 					slotMulai := tanggal.Add(time.Duration(menit) * time.Minute)
 					slotSelesai := slotMulai.Add(menitSlot * time.Minute)
-					terpakai := 0
-					for _, u := range usage {
-						if u.AlatId != nil && *u.AlatId == a.Id && u.Mulai.Before(slotSelesai) && u.Selesai.After(slotMulai) {
-							terpakai += u.Jumlah
-						}
-					}
-					tersedia := a.Status != 0 && terpakai < a.BanyakAlat
-					blok.Slot = append(blok.Slot, models.SlotKetersediaan{
-						Mulai:    slotMulai.Format("15:04"),
-						Selesai:  slotSelesai.Format("15:04"),
-						Tersedia: tersedia,
-					})
+					blok.Slot = append(blok.Slot, statusSlotAlat(a, slotMulai, slotSelesai, usage))
 				}
 				ketersediaan.Hari = append(ketersediaan.Hari, blok)
 			}

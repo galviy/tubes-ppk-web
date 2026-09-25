@@ -845,7 +845,7 @@ function KelolaFasilitasContent() {
                       <span style={{ fontWeight: 600, color: '#b59876', fontSize: 13 }}>{f.type}</span>
                     </td>
                     <td>{f.loc}</td>
-                    <td>{f.cap} {isAlat ? 'unit' : 'orang'}</td>
+                    <td>{isAlat ? f.tersedia ?? f.cap : f.cap} {isAlat ? 'unit' : 'orang'}</td>
                     <td>
                       <span
                         className={`pill ${

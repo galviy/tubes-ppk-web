@@ -52,7 +52,7 @@ export default function FacilityCard({ facility, onOpenDetail }: FacilityCardPro
         <div className="card-foot">
           <div className="capacity">
             {isAlat ? (
-              <>Jumlah tersedia <b>{facility.cap} unit</b></>
+              <>Jumlah tersedia <b>{facility.tersedia ?? facility.cap} unit</b></>
             ) : (
               <>Kapasitas <b>{facility.cap} orang</b></>
             )}

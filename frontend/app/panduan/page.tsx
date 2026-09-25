@@ -183,7 +183,7 @@ export default function PanduanPage() {
             </h2>
           </div>
           <ul style={{ margin: 0, paddingLeft: 22, color: 'rgba(255, 255, 255, 0.85)', fontSize: 13.5, lineHeight: 1.8 }}>
-            <li>Permohonan reservasi diajukan paling lambat 1 hari sebelum kegiatan berlangsung.</li>
+            <li>Permohonan reservasi diajukan paling cepat H+2, yaitu minimal 2 hari sebelum kegiatan berlangsung.</li>
             <li>Slot waktu berlaku kelipatan 30 menit dari pukul 07.00 sampai dengan 20.00 WIB.</li>
             <li>Pemohon wajib menjaga kebersihan, ketertiban, dan keutuhan fasilitas yang digunakan.</li>
             <li>Jika terjadi kerusakan selama pemakaian, pemohon segera melapor melalui portal SiPinjam.</li>

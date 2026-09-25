@@ -147,6 +147,7 @@ func SetupRoutes() *http.ServeMux {
 	mux.HandleFunc("GET /fasilitas/ruangan", publik_fasilitas.ListRuangan)
 	mux.HandleFunc("GET /fasilitas/alat", publik_fasilitas.ListAlat)
 	mux.HandleFunc("GET /fasilitas/ketersediaan", publik_fasilitas.Ketersediaan)
+	mux.HandleFunc("GET /jadwal", publik_fasilitas.Ketersediaan)
 
 	mux.Handle(
 		"GET /user/me",

@@ -208,6 +208,7 @@ export interface BackendFasilitas {
   type: string;
   loc: string;
   cap: number;
+  jumlah_tersedia?: number;
   desc: string;
   amenities: string[];
   status: string;
@@ -329,17 +330,54 @@ export function backendPetugasDashboardCount() {
   return apiFetch<{ reservasi_menunggu: number; laporan_baru: number }>('/petugas/dashboard/count');
 }
 
-export function backendKetersediaanFasilitas(params?: {
+// ---------- Jadwal (controller/fasilitas/ketersediaan.go) ----------
+
+export type SlotStatusBackend = 'tersedia' | 'menunggu' | 'terpakai' | 'nonaktif';
+
+export interface BackendJadwalSlot {
+  mulai: string;
+  selesai: string;
+  tersedia: boolean;
+  status: SlotStatusBackend;
+}
+
+export interface BackendJadwalHari {
+  tanggal: string;
+  slot: BackendJadwalSlot[];
+}
+
+export interface BackendJadwalFasilitas {
+  id: string;
+  ref_id: number;
+  tipe: 'ruangan' | 'alat';
+  nama: string;
+  lokasi: string;
+  hari: BackendJadwalHari[];
+}
+
+export function backendJadwalFasilitas(params: {
+  tanggal: string;
   tipe?: 'ruangan' | 'alat';
-  tanggal?: string;
   hari?: number;
 }) {
   const q = new URLSearchParams();
-  if (params?.tipe) q.set('tipe', params.tipe);
-  if (params?.tanggal) q.set('tanggal', params.tanggal);
-  if (params?.hari) q.set('hari', String(params.hari));
-  const qs = q.toString() ? `?${q.toString()}` : '';
-  return apiFetch<Record<string, unknown>[]>(`/fasilitas/ketersediaan${qs}`);
+  q.set('tanggal', params.tanggal);
+  if (params.tipe) q.set('tipe', params.tipe);
+  if (params.hari) q.set('hari', String(params.hari));
+  return apiFetch<BackendJadwalFasilitas[]>(`/jadwal?${q.toString()}`);
+}
+
+export function mapJadwalStatus(v: unknown): SlotStatusBackend {
+  switch (String(v ?? '').toLowerCase()) {
+    case 'terpakai':
+      return 'terpakai';
+    case 'menunggu':
+      return 'menunggu';
+    case 'nonaktif':
+      return 'nonaktif';
+    default:
+      return 'tersedia';
+  }
 }
 
 // Konverter form frontend -> body backend (frontend-only, tanpa ubah Go).

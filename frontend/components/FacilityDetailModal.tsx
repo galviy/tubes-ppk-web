@@ -52,7 +52,7 @@ export default function FacilityDetailModal({ facility, onClose }: FacilityDetai
         <div className="modal-info-grid">
           <div>
             <span className="lbl-sm">{isAlat ? 'Jumlah Tersedia' : 'Kapasitas'}</span>
-            <div>{facility.cap} {isAlat ? 'unit' : 'orang'}</div>
+            <div>{isAlat ? facility.tersedia ?? facility.cap : facility.cap} {isAlat ? 'unit' : 'orang'}</div>
           </div>
           <div><span className="lbl-sm">Kelengkapan</span><div>{facility.amenities.join(', ') || '-'}</div></div>
         </div>

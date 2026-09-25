@@ -80,10 +80,20 @@ type Reservasi struct {
 	Riwayat                []ReservasiRiwayat `json:"riwayat,omitempty"`
 }
 
+// Status satu slot jadwal. Menunggu berarti ada pengajuan PENDING yang
+// belum mengunci slot; terpakai berarti sudah APPROVED dan mengunci.
+const (
+	SlotTersedia = "tersedia"
+	SlotMenunggu = "menunggu"
+	SlotTerpakai = "terpakai"
+	SlotNonaktif = "nonaktif"
+)
+
 type SlotKetersediaan struct {
 	Mulai    string `json:"mulai"`
 	Selesai  string `json:"selesai"`
 	Tersedia bool   `json:"tersedia"`
+	Status   string `json:"status"`
 }
 
 type KetersediaanHari struct {

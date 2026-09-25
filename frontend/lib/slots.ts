@@ -55,38 +55,40 @@ export function formatDateIndo(dateStr: string | null | undefined): string {
   return cleanStr;
 }
 
+// Selaras aturan backend (services.reservasi_service.go: hariMinimalPengajuan):
+// reservasi paling cepat H+2, yaitu minimal 2 hari sebelum tanggal kegiatan.
+export const HARI_MINIMAL_PENGAJUAN = 2;
+
 /**
- * Cek apakah reservasi untuk tanggal target masih memenuhi batas waktu:
- * Maksimal reservasi diajukan pada H-1 pukul 00.00 WIB.
- * Contoh: Reservasi untuk tanggal 25 maksimal diajukan tanggal 24 pukul 00.00 WIB.
+ * Cek apakah reservasi untuk tanggal target memenuhi batas waktu:
+ * paling cepat H+2 (hari ini dan besok belum bisa dipesan).
+ * Contoh: hari ini tanggal 25, tanggal paling awal yang bisa dipesan adalah 27.
  */
 export function isReservationDeadlineValid(targetDateStr: string, now: Date = new Date()): boolean {
   if (!targetDateStr) return false;
   const parts = targetDateStr.split('-').map(Number);
   if (parts.length !== 3) return false;
   const [y, m, d] = parts;
-  // Batas deadline: targetDate minus 1 hari pada pukul 00:00:00 waktu lokal
-  const deadline = new Date(y, m - 1, d - 1, 0, 0, 0, 0);
-  return now.getTime() < deadline.getTime();
+  const target = new Date(y, m - 1, d, 0, 0, 0, 0);
+  const earliest = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() + HARI_MINIMAL_PENGAJUAN,
+    0,
+    0,
+    0,
+    0
+  );
+  return target.getTime() >= earliest.getTime();
 }
 
 /**
  * Mendapatkan tanggal paling awal yang masih bisa direservasi saat ini (default date picker).
- * Jika hari ini tanggal 25 pukul 08:00, deadline untuk tanggal 25 & 26 sudah lewat,
- * sehingga tanggal paling awal yang memenuhi syarat adalah tanggal 27.
+ * Jika hari ini tanggal 25, tanggal paling awal yang memenuhi syarat adalah tanggal 27.
  */
 export function getEarliestReservableDate(now: Date = new Date()): string {
-  const candidate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  while (true) {
-    candidate.setDate(candidate.getDate() + 1);
-    const y = candidate.getFullYear();
-    const m = String(candidate.getMonth() + 1).padStart(2, '0');
-    const d = String(candidate.getDate()).padStart(2, '0');
-    const dateStr = `${y}-${m}-${d}`;
-    if (isReservationDeadlineValid(dateStr, now)) {
-      return dateStr;
-    }
-  }
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + HARI_MINIMAL_PENGAJUAN);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 export function currentHHMM(): string {
@@ -94,22 +96,24 @@ export function currentHHMM(): string {
   return `${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
+export type SlotBooking = 'avail' | 'pending' | 'booked';
+
 /**
- * Cek apakah suatu slot pada fasilitas tertentu sudah terisi/dikunci:
- * 1. Jika sudah disetujui (approved oleh admin) -> Kunci abu-abu untuk SEMUA ORANG.
- * 2. Jika dipesan oleh orang yang sama (currentUser) -> Kunci abu-abu untuk orang tersebut,
- *    sehingga dia tidak bisa double-booking di jam yang sama. Jadwal lain tetap bisa dia pilih.
- * 3. Jika dipesan oleh orang lain dan status masih pending -> Tetap TERSEDIA (hijau) untuk orang lain,
- *    karena konsepnya cepat-cepatan (siapa cepat dia dapat saat diapprove admin).
+ * Klasifikasi klaim satu slot:
+ * 1. Sudah disetujui admin -> 'booked', terkunci untuk SEMUA ORANG.
+ * 2. Masih menunggu milik orang yang sama -> 'pending', mengunci dirinya
+ *    sendiri agar tidak double-booking.
+ * 3. Masih menunggu milik orang lain -> 'avail', tetap bisa diperebutkan
+ *    (siapa cepat dia dapat saat petugas menyetujui).
  */
-export function isSlotBooked(
+export function getSlotBooking(
   reservations: Reservation[],
   facilityId: string,
   slotStart: string,
   excludeId?: number,
   tanggal?: string,
   currentUserIdentifier?: string
-): boolean {
+): SlotBooking {
   const active = reservations.filter(
     (r) =>
       r.facilityId === facilityId &&
@@ -121,25 +125,34 @@ export function isSlotBooked(
       slotStart < r.end
   );
 
-  if (active.length === 0) return false;
+  if (active.length === 0) return 'avail';
 
-  // 1. Jika sudah disetujui admin, slot mutlak terkunci untuk semua orang
-  const isApproved = active.some((r) => r.status === 'disetujui');
-  if (isApproved) return true;
+  if (active.some((r) => r.status === 'disetujui')) return 'booked';
 
-  // 2. Jika dipesan oleh orang yang sama (currentUser), kunci abu-abu untuk dirinya
   if (currentUserIdentifier) {
     const normUser = currentUserIdentifier.trim().toLowerCase();
-    const isBookedBySameUser = active.some((r) => {
+    const milikSendiri = active.some((r) => {
       const p = (r.pemohon || '').trim().toLowerCase();
       return p === normUser || (p && normUser && (normUser.includes(p) || p.includes(normUser)));
     });
-    if (isBookedBySameUser) return true;
+    if (milikSendiri) return 'pending';
   }
 
-  // 3. Jika orang lain dan status masih menunggu:
-  // Orang lain tetap bisa book (konsep cepat-cepatan)
-  return false;
+  return 'avail';
+}
+
+export function isSlotBooked(
+  reservations: Reservation[],
+  facilityId: string,
+  slotStart: string,
+  excludeId?: number,
+  tanggal?: string,
+  currentUserIdentifier?: string
+): boolean {
+  return (
+    getSlotBooking(reservations, facilityId, slotStart, excludeId, tanggal, currentUserIdentifier) !==
+    'avail'
+  );
 }
 
 /**
@@ -187,18 +200,50 @@ export function hasRangeConflict(
   return undefined;
 }
 
-/** Tentukan status visual satu slot untuk sebuah fasilitas dan tanggal spesifik. */
+/** Petakan status slot dari endpoint /jadwal backend ke status visual. */
+export function backendStatusToSlotState(status: string, tersedia: boolean): SlotState {
+  switch (status) {
+    case 'terpakai':
+      return 'booked';
+    case 'menunggu':
+      return 'pending';
+    case 'nonaktif':
+      return 'maint';
+    default:
+      return tersedia ? 'avail' : 'booked';
+  }
+}
+
+/**
+ * Tentukan status visual satu slot. Status dari backend (jadwal publik)
+ * diprioritaskan; tanpa data backend, hitung dari reservasi lokal.
+ */
 export function getSlotState(
   facility: Facility,
   slotStart: string,
   reservations: Reservation[],
   tanggal?: string,
-  currentUserIdentifier?: string
+  currentUserIdentifier?: string,
+  backend?: { status: string; tersedia: boolean }
 ): SlotState {
   if (facility.status === 'repair' || facility.status === 'nonaktif') return 'maint';
-  if (isSlotBooked(reservations, facility.id, slotStart, undefined, tanggal, currentUserIdentifier)) {
-    return 'booked';
+
+  let state: SlotState;
+  if (backend) {
+    state = backendStatusToSlotState(backend.status, backend.tersedia);
+  } else {
+    const booking = getSlotBooking(
+      reservations,
+      facility.id,
+      slotStart,
+      undefined,
+      tanggal,
+      currentUserIdentifier
+    );
+    state = booking === 'avail' ? 'avail' : booking;
   }
+
+  if (state !== 'avail' && state !== 'pending') return state;
 
   const today = getTodayDateString();
   if (!tanggal || tanggal === today) {
@@ -207,5 +252,5 @@ export function getSlotState(
     return 'passed';
   }
 
-  return 'avail';
+  return state;
 }

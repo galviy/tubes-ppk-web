@@ -193,7 +193,7 @@ export default function PetugasFasilitasPage() {
                     <td style={{ color: '#4B5563', fontSize: 13 }}>{f.type}</td>
                     <td style={{ color: '#4B5563', fontSize: 13 }}>{f.loc}</td>
                     <td style={{ color: '#4B5563', fontSize: 13 }}>
-                      {f.cap ? `${f.cap} ${isAlat ? 'unit' : 'orang'}` : '-'}
+                      {isAlat ? `${f.tersedia ?? f.cap} unit` : f.cap ? `${f.cap} orang` : '-'}
                     </td>
                 <td>
                   <span

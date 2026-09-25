@@ -54,10 +54,10 @@ function JadwalContent() {
             </h1>
             <p className="ochoco-page-subtitle">
               Pengecekan slot waktu 30 menit real-time untuk seluruh fasilitas akademik Universitas Diponegoro.
-              Pilih fasilitas di bawah ini untuk melihat ketersediaan slot hari ini tanpa harus login.
+              Pilih tanggal mulai hari ini hingga beberapa hari ke depan, lalu pilih fasilitasnya, tanpa perlu login.
             </p>
             <div className="alert info" style={{ marginTop: 12 }}>
-              <b>Ketentuan Batas Waktu Reservasi</b>: Pengajuan peminjaman fasilitas wajib dilakukan paling lambat <b>H-1 pukul 00.00 WIB</b> sebelum tanggal kegiatan (contoh: reservasi untuk tanggal 25 maksimal diajukan pada tanggal 24 pukul 00.00 WIB). Verifikasi dan persetujuan jadwal akan diproses oleh petugas sarpras.
+              <b>Ketentuan Batas Waktu Reservasi</b>: Pengajuan peminjaman fasilitas paling cepat <b>H+2</b>, yaitu minimal dua hari sebelum tanggal kegiatan (contoh: reservasi untuk tanggal 27 paling cepat diajukan pada tanggal 25). Verifikasi dan persetujuan jadwal akan diproses oleh petugas sarpras.
             </div>
           </div>
 

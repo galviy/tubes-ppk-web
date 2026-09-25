@@ -1,47 +1,32 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
-import { generateTimeSlots, getSlotState, getTodayDateString, formatDateIndo } from '@/lib/slots';
-import { SlotState } from '@/models/facility';
-import { backendKetersediaanFasilitas } from '@/lib/api';
 import {
-  isRuanganFacility,
-  isAlatFacility,
-  DEFAULT_ROOM_CATEGORIES,
-  DEFAULT_ALAT_CATEGORIES,
-} from '@/models/facilities-data';
+  generateTimeSlots,
+  getSlotState,
+  getTodayDateString,
+  formatDateIndo,
+} from '@/lib/slots';
+import { SlotState } from '@/models/facility';
+import { backendJadwalFasilitas, mapJadwalStatus, SlotStatusBackend } from '@/lib/api';
 
 const SLOTS = generateTimeSlots();
-
-const DAY_NAMES = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-
-function formatFullDate(dateStr: string) {
-  const parts = dateStr.split('-').map(Number);
-  if (parts.length !== 3) return dateStr;
-  const dt = new Date(parts[0], parts[1] - 1, parts[2]);
-  const dayName = DAY_NAMES[dt.getDay()] || '';
-  return `${dayName}, ${formatDateIndo(dateStr)}`;
-}
-
-function shiftDay(dateStr: string, delta: number): string {
-  const parts = dateStr.split('-').map(Number);
-  if (parts.length !== 3) return dateStr;
-  const dt = new Date(parts[0], parts[1] - 1, parts[2]);
-  dt.setDate(dt.getDate() + delta);
-  const y = dt.getFullYear();
-  const m = String(dt.getMonth() + 1).padStart(2, '0');
-  const d = String(dt.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
 
 function pad(n: number) {
   return n.toString().padStart(2, '0');
 }
 
+function addDays(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d + days);
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 const STATUS_LABEL: Record<SlotState, string> = {
   passed: 'Waktu Lewat',
   avail: 'Tersedia',
+  pending: 'Menunggu Persetujuan',
   booked: 'Terpakai',
   maint: 'Tidak Aktif',
 };
@@ -62,116 +47,85 @@ interface SchedulePreviewProps {
 export default function SchedulePreview({ activeFacilityId, onSelectFacility }: SchedulePreviewProps) {
   const { facilities, reservations } = useAppData();
   const [now, setNow] = useState<Date | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>(() => getTodayDateString());
-  const [tabType, setTabType] = useState<'ruangan' | 'alat'>(() => {
-    const current = facilities.find((f) => f.id === activeFacilityId);
-    return current && isAlatFacility(current) ? 'alat' : 'ruangan';
-  });
-  const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
-  const [publicUnavailable, setPublicUnavailable] = useState<Record<string, Set<string>>>({});
-  const tabsRef = useRef<HTMLDivElement>(null);
+  const [today, setToday] = useState('');
+  const [selectedDate, setSelectedDate] = useState('');
+  const [backendSlots, setBackendSlots] = useState<
+    Record<string, Record<string, { status: SlotStatusBackend; tersedia: boolean }>>
+  >({});
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleError, setScheduleError] = useState('');
 
   useEffect(() => {
-    setNow(new Date());
+    const nowDate = new Date();
+    setNow(nowDate);
+    const todayStr = getTodayDateString();
+    setToday(todayStr);
+    setSelectedDate(todayStr);
     const id = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(id);
   }, []);
 
-  // Ambil ketersediaan slot dari endpoint publik backend GET /fasilitas/ketersediaan berdasarkan selectedDate
+  // Ambil status tiap slot dari endpoint publik GET /jadwal (menunggu vs terpakai).
   useEffect(() => {
+    if (!selectedDate) return;
     let cancelled = false;
     (async () => {
-      const res = await backendKetersediaanFasilitas({ tanggal: selectedDate, hari: 1 });
-      if (cancelled || !res.ok || !Array.isArray(res.data)) return;
-      const unavailMap: Record<string, Set<string>> = {};
-      for (const item of res.data as Array<{
-        id: string;
-        hari?: Array<{ slot?: Array<{ mulai: string; tersedia: boolean }> }>;
-      }>) {
-        const facId = item.id;
-        const slotsSet = new Set<string>();
-        for (const h of item.hari || []) {
-          for (const s of h.slot || []) {
-            if (!s.tersedia) {
-              slotsSet.add(s.mulai);
+      setScheduleLoading(true);
+      setScheduleError('');
+      const res = await backendJadwalFasilitas({ tanggal: selectedDate, hari: 1 });
+      if (cancelled) return;
+      if (res.ok && Array.isArray(res.data)) {
+        const next: Record<string, Record<string, { status: SlotStatusBackend; tersedia: boolean }>> = {};
+        for (const item of res.data) {
+          const perSlot: Record<string, { status: SlotStatusBackend; tersedia: boolean }> = {};
+          for (const hari of item.hari ?? []) {
+            if (hari.tanggal && hari.tanggal !== selectedDate) continue;
+            for (const slot of hari.slot ?? []) {
+              perSlot[slot.mulai] = {
+                status: mapJadwalStatus(slot.status),
+                tersedia: Boolean(slot.tersedia),
+              };
             }
           }
+          next[item.id] = perSlot;
         }
-        unavailMap[facId] = slotsSet;
+        setBackendSlots(next);
+      } else {
+        setBackendSlots({});
+        setScheduleError(res.message || 'Jadwal publik gagal dimuat.');
       }
-      setPublicUnavailable(unavailMap);
+      setScheduleLoading(false);
     })();
     return () => {
       cancelled = true;
     };
   }, [selectedDate]);
 
-  // Auto-scroll active chip into view horizontally when active facility changes
+  const facility = facilities.find((f) => f.id === activeFacilityId) ?? facilities[0];
+
   useEffect(() => {
-    if (tabsRef.current) {
-      const activeEl = tabsRef.current.querySelector('.sched-fac-tab.active') as HTMLElement | null;
-      if (activeEl) {
-        activeEl.scrollIntoView({ inline: 'nearest', behavior: 'smooth', block: 'nearest' });
-      }
+    if (facilities.length > 0 && (!activeFacilityId || !facilities.some((f) => f.id === activeFacilityId))) {
+      onSelectFacility(facilities[0].id);
     }
-  }, [activeFacilityId]);
-
-  const scrollTabs = (direction: 'left' | 'right') => {
-    if (tabsRef.current) {
-      tabsRef.current.scrollBy({
-        left: direction === 'left' ? -220 : 220,
-        behavior: 'smooth',
-      });
-    }
-  };
-
-  const countRuangan = useMemo(() => facilities.filter(isRuanganFacility).length, [facilities]);
-  const countAlat = useMemo(() => facilities.filter(isAlatFacility).length, [facilities]);
-
-  const tabFacilities = useMemo(() => {
-    return facilities.filter(tabType === 'alat' ? isAlatFacility : isRuanganFacility);
-  }, [facilities, tabType]);
-
-  const categories = useMemo(() => {
-    if (tabType === 'ruangan') {
-      const existing = Array.from(new Set(facilities.filter(isRuanganFacility).map((f) => f.type))).filter(Boolean);
-      const all = Array.from(new Set([...DEFAULT_ROOM_CATEGORIES, ...existing]));
-      return ['Semua', ...all];
-    } else {
-      const existing = Array.from(new Set(facilities.filter(isAlatFacility).map((f) => f.type))).filter(Boolean);
-      const all = Array.from(new Set([...DEFAULT_ALAT_CATEGORIES, ...existing]));
-      return ['Semua', ...all];
-    }
-  }, [facilities, tabType]);
-
-  const filteredFacilities = useMemo(() => {
-    if (selectedCategory === 'Semua') return tabFacilities;
-    return tabFacilities.filter((f) => f.type === selectedCategory);
-  }, [tabFacilities, selectedCategory]);
-
-  const facility = tabFacilities.find((f) => f.id === activeFacilityId) ?? tabFacilities[0] ?? facilities[0];
-
-  // Pastikan fasilitas aktif sesuai dengan tab yang sedang aktif
-  useEffect(() => {
-    if (tabFacilities.length > 0 && !tabFacilities.some((f) => f.id === activeFacilityId)) {
-      onSelectFacility(tabFacilities[0].id);
-    }
-  }, [tabFacilities, activeFacilityId, onSelectFacility]);
+  }, [facilities, activeFacilityId, onSelectFacility]);
 
   const slotStates = useMemo(() => {
     if (!now || !facility) return SLOTS.map(() => 'passed' as SlotState);
-    const unavail = publicUnavailable[facility.id];
-    return SLOTS.map((slot) => {
-      const baseState = getSlotState(facility, slot.start, reservations, selectedDate);
-      if (baseState === 'avail' && unavail && unavail.has(slot.start)) {
-        return 'booked';
-      }
-      return baseState;
-    });
-  }, [facility, reservations, now, publicUnavailable, selectedDate]);
+    const perSlot = backendSlots[facility.id];
+    return SLOTS.map((slot) =>
+      getSlotState(facility, slot.start, reservations, selectedDate, undefined, perSlot?.[slot.start])
+    );
+  }, [facility, reservations, now, backendSlots, selectedDate]);
 
   const availableCount = slotStates.filter((s) => s === 'avail').length;
   const availablePct = Math.round((availableCount / SLOTS.length) * 100);
+
+  function shiftDate(days: number) {
+    if (!selectedDate) return;
+    const next = addDays(selectedDate, days);
+    if (today && next < today) return;
+    setSelectedDate(next);
+  }
 
   if (!facility) {
     return (
@@ -195,9 +149,9 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           </div>
           <div>
             <div className="sched-title">
-              Pratinjau Ketersediaan Jadwal ({formatFullDate(selectedDate)})
+              Pratinjau Ketersediaan Jadwal{selectedDate && ` (${formatDateIndo(selectedDate)})`}
             </div>
-            <p className="sched-sub">Pilih fasilitas dan tanggal untuk melihat ketersediaan slot waktu secara real-time.</p>
+            <p className="sched-sub">Pilih tanggal dan fasilitas untuk melihat ketersediaan slot secara real-time.</p>
           </div>
         </div>
         <div className="server-clock-badge">
@@ -206,257 +160,51 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
         </div>
       </div>
 
-      {/* Sub-tab Switcher: Ruangan vs Alat */}
-      <div
-        style={{
-          display: 'flex',
-          gap: 8,
-          margin: '16px 0 4px',
-          borderBottom: '1px solid #E5E0D8',
-          paddingBottom: 10,
-          flexWrap: 'wrap',
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => {
-            setTabType('ruangan');
-            setSelectedCategory('Semua');
-          }}
-          style={{
-            padding: '8px 18px',
-            borderRadius: 6,
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: 'pointer',
-            border: tabType === 'ruangan' ? '1px solid #181D24' : '1px solid #D5D0C7',
-            background: tabType === 'ruangan' ? '#181D24' : '#FFFFFF',
-            color: tabType === 'ruangan' ? '#FFFFFF' : '#4B5563',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            transition: 'all 0.15s ease',
-          }}
-        >
-          Jadwal Ruangan ({countRuangan})
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setTabType('alat');
-            setSelectedCategory('Semua');
-          }}
-          style={{
-            padding: '8px 18px',
-            borderRadius: 6,
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: 'pointer',
-            border: tabType === 'alat' ? '1px solid #181D24' : '1px solid #D5D0C7',
-            background: tabType === 'alat' ? '#181D24' : '#FFFFFF',
-            color: tabType === 'alat' ? '#FFFFFF' : '#4B5563',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            transition: 'all 0.15s ease',
-          }}
-        >
-          Jadwal Alat ({countAlat})
-        </button>
-      </div>
-
-      {/* Calendar Date Navigation Bar */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-          padding: '12px 16px',
-          background: '#FAF8F5',
-          border: '1px solid #E5E0D8',
-          borderRadius: 6,
-          margin: '12px 0 14px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      {/* Pemilih tanggal: hari ini dan sesudahnya, tanggal lampau ditutup */}
+      <div className="sched-date-bar">
+        <div className="sched-date-nav">
           <button
             type="button"
-            onClick={() => setSelectedDate((d) => shiftDay(d, -1))}
-            style={{
-              padding: '7px 12px',
-              borderRadius: 4,
-              border: '1px solid #D5D0C7',
-              background: '#FFFFFF',
-              color: '#181D24',
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              fontFamily: 'inherit',
-            }}
+            className="sched-date-btn"
+            onClick={() => shiftDate(-1)}
+            disabled={!today || selectedDate <= today}
             aria-label="Hari sebelumnya"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-            Hari Sebelumnya
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
-
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => {
-              if (e.target.value) setSelectedDate(e.target.value);
-            }}
-            style={{
-              padding: '6px 12px',
-              borderRadius: 4,
-              border: '1px solid #b59876',
-              background: '#FFFFFF',
-              color: '#181D24',
-              fontSize: 13,
-              fontWeight: 600,
-              fontFamily: 'inherit',
-              cursor: 'pointer',
-              outline: 'none',
-            }}
-          />
-
+          <label className="sched-date-input-wrap">
+            <span className="lbl-sm">Tanggal</span>
+            <input
+              type="date"
+              className="sched-date-input"
+              value={selectedDate}
+              min={today || undefined}
+              onChange={(e) => {
+                if (e.target.value) setSelectedDate(e.target.value);
+              }}
+            />
+          </label>
           <button
             type="button"
-            onClick={() => setSelectedDate((d) => shiftDay(d, 1))}
-            style={{
-              padding: '7px 12px',
-              borderRadius: 4,
-              border: '1px solid #D5D0C7',
-              background: '#FFFFFF',
-              color: '#181D24',
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              fontFamily: 'inherit',
-            }}
-            aria-label="Hari selanjutnya"
+            className="sched-date-btn"
+            onClick={() => shiftDate(1)}
+            aria-label="Hari berikutnya"
           >
-            Hari Selanjutnya
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
-
-          {selectedDate !== getTodayDateString() && (
-            <button
-              type="button"
-              onClick={() => setSelectedDate(getTodayDateString())}
-              style={{
-                padding: '7px 12px',
-                borderRadius: 4,
-                border: '1px solid #b59876',
-                background: '#15171A',
-                color: '#b59876',
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-              }}
-            >
-              Kembali ke Hari Ini
-            </button>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#181D24' }}>
-            {formatFullDate(selectedDate)}
-          </span>
-          {selectedDate === getTodayDateString() ? (
-            <span
-              style={{
-                fontSize: 13.5,
-                fontWeight: 700,
-                color: '#15803D',
-                background: '#DCFCE7',
-                border: '1px solid #BBF7D0',
-                padding: '2px 8px',
-                borderRadius: 4,
-                letterSpacing: '0.04em',
-              }}
-            >
-              HARI INI
-            </span>
-          ) : selectedDate < getTodayDateString() ? (
-            <span
-              style={{
-                fontSize: 13.5,
-                fontWeight: 600,
-                color: '#4B5563',
-                background: '#F3F4F6',
-                border: '1px solid #E5E7EB',
-                padding: '2px 8px',
-                borderRadius: 4,
-              }}
-            >
-              Riwayat Lalu
-            </span>
-          ) : (
-            <span
-              style={{
-                fontSize: 13.5,
-                fontWeight: 600,
-                color: '#854D0E',
-                background: '#FEF9C3',
-                border: '1px solid #FEF08A',
-                padding: '2px 8px',
-                borderRadius: 4,
-              }}
-            >
-              Jadwal Mendatang
-            </span>
-          )}
         </div>
       </div>
 
-      {/* Toolbar: Category filter + Quick Select dropdown for large datasets */}
+      {/* Toolbar: pemilih fasilitas */}
       <div className="sched-toolbar">
-        <div className="sched-cat-filter">
-          {categories.map((cat) => {
-            const count = cat === 'Semua' ? tabFacilities.length : tabFacilities.filter((f) => f.type === cat).length;
-            const isActive = selectedCategory === cat;
-            return (
-              <button
-                key={cat}
-                type="button"
-                className={`sched-cat-btn ${isActive ? 'active' : ''}`}
-                onClick={() => setSelectedCategory(cat)}
-              >
-                {cat} ({count})
-              </button>
-            );
-          })}
-        </div>
-
         <div className="sched-quick-select-wrap">
-          <label className="sched-quick-label">Pilih {tabType === 'ruangan' ? 'Ruangan' : 'Alat'}:</label>
+          <label className="sched-quick-label">Pilih Fasilitas:</label>
           <select
             className="sched-quick-select"
             value={activeFacilityId}
-            onChange={(e) => {
-              const nextId = e.target.value;
-              onSelectFacility(nextId);
-              const targetFac = tabFacilities.find((f) => f.id === nextId);
-              if (targetFac && selectedCategory !== 'Semua' && targetFac.type !== selectedCategory) {
-                setSelectedCategory('Semua');
-              }
-            }}
+            onChange={(e) => onSelectFacility(e.target.value)}
           >
-            {tabFacilities.map((f) => (
+            {facilities.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.name} ({f.loc}) • {f.status === 'repair' ? 'Perbaikan' : f.status === 'nonaktif' ? 'Nonaktif' : 'Tersedia'}
               </option>
@@ -465,48 +213,14 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
         </div>
       </div>
 
-      {/* Facility selector chips - horizontally scrollable */}
-      <div className="sched-fac-tabs-wrapper">
-        <button
-          type="button"
-          className="sched-fac-scroll-btn left"
-          onClick={() => scrollTabs('left')}
-          aria-label="Scroll kiri"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </button>
-        <div className="sched-fac-tabs" ref={tabsRef}>
-          {filteredFacilities.length === 0 ? (
-            <div style={{ padding: '8px 16px', fontSize: 13, color: '#6B7280' }}>
-              Tidak ada {tabType === 'ruangan' ? 'ruangan' : 'alat'} untuk kategori ini.
-            </div>
-          ) : (
-            filteredFacilities.map((f) => {
-              const isActive = f.id === activeFacilityId;
-              const isRepair = f.status === 'repair' || f.status === 'nonaktif';
-              return (
-                <button
-                  key={f.id}
-                  type="button"
-                  className={`sched-fac-tab ${isActive ? 'active' : ''}`}
-                  onClick={() => onSelectFacility(f.id)}
-                >
-                  <span className={`fac-dot ${isRepair ? 'repair' : 'avail'}`} />
-                  <span className="sched-fac-name">{f.name}</span>
-                </button>
-              );
-            })
-          )}
-        </div>
-        <button
-          type="button"
-          className="sched-fac-scroll-btn right"
-          onClick={() => scrollTabs('right')}
-          aria-label="Scroll kanan"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </button>
-      </div>
+      {scheduleError && (
+        <p className="sched-status-note error" role="status">
+          {scheduleError} Menampilkan perkiraan dari data lokal.
+        </p>
+      )}
+      {scheduleLoading && !scheduleError && (
+        <p className="sched-status-note" role="status">Memuat status slot...</p>
+      )}
 
       <div className="sched-info-row">
         <div className="sched-info-cell">
@@ -514,19 +228,18 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           <b>{facility.name}</b>
         </div>
         <div className="sched-info-cell">
-          <span className="lbl-sm">{isAlatFacility(facility) ? 'Jumlah Tersedia' : 'Kapasitas'}</span>
-          <b>{facility.cap} {isAlatFacility(facility) ? 'unit' : 'orang'}</b>
+          <span className="lbl-sm">{facility.tipe === 'alat' ? 'Jumlah Tersedia' : 'Kapasitas'}</span>
+          <b>
+            {facility.tipe === 'alat' ? (facility.tersedia ?? facility.cap) : facility.cap}{' '}
+            {facility.tipe === 'alat' ? 'unit' : 'orang'}
+          </b>
         </div>
         <div className="sched-info-cell">
           <span className="lbl-sm">Zona Operasional</span>
           <b>07.00 - 20.00 WIB</b>
         </div>
         <div className="sched-info-cell sched-avail-meter">
-          <span className="lbl-sm">
-            {selectedDate === getTodayDateString()
-              ? 'Slot Tersedia Hari Ini'
-              : `Slot Tersedia (${formatDateIndo(selectedDate)})`}
-          </span>
+          <span className="lbl-sm">Slot Tersedia</span>
           <div className="meter-row">
             <div className="meter-track"><div className="meter-fill" style={{ width: `${availablePct}%` }} /></div>
             <b>{availableCount}/{SLOTS.length}</b>
@@ -556,12 +269,6 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           </div>
         );
       })}
-
-      <div className="sched-legend">
-        <div className="leg"><span className="sq avail" />Tersedia untuk Reservasi</div>
-        <div className="leg"><span className="sq booked" />Terpakai / Sedang Dipesan</div>
-        <div className="leg"><span className="sq passed" />Waktu Lewat / Tidak Aktif</div>
-      </div>
 
       <div className="privacy-box">
         <div className="icon">
