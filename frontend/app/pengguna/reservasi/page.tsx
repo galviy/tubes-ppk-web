@@ -528,9 +528,6 @@ function AjukanReservasiContent() {
                 setEndTime('');
               }}
             />
-            <span className="field-hint" style={{ color: '#4B5563', fontSize: 12 }}>
-              ⏰ Batas Reservasi: Maksimal reservasi diajukan pada <b>H-1 pukul 00.00 WIB</b> (misal: reservasi tgl 25 maksimal diajukan tgl 24 pukul 00.00 WIB).
-            </span>
           </div>
 
           {/* Start Time Dropdown (Always opens downward) */}

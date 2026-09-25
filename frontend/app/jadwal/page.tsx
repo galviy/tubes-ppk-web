@@ -11,9 +11,10 @@ import { useAppData } from '@/context/AppDataContext';
 function JadwalContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { currentUser, facilityById } = useAppData();
-  const [activeFacilityId, setActiveFacilityId] = useState(searchParams.get('facility') || 'aula');
-  const facility = facilityById(activeFacilityId);
+  const { currentUser, facilityById, facilities } = useAppData();
+  const [activeFacilityId, setActiveFacilityId] = useState(searchParams.get('facility') || '');
+
+  const facility = (activeFacilityId ? facilityById(activeFacilityId) : null) ?? facilities[0];
 
   function goOrLogin(path: string) {
     router.push(currentUser ? path : '/login');
@@ -55,9 +56,7 @@ function JadwalContent() {
               Pilih fasilitas di bawah ini untuk melihat ketersediaan slot hari ini tanpa harus login.
             </p>
             <div className="alert info" style={{ marginTop: 12 }}>
-              Matriks hanya menandai reservasi <b>milik sendiri</b> sebagai terpakai — backend belum menyediakan
-              endpoint ketersediaan publik. Konfirmasi akhir dilakukan sistem saat pengajuan (ruangan yang
-              sudah disetujui orang lain akan ditolak).
+              <b>Ketentuan Batas Waktu Reservasi</b>: Pengajuan peminjaman fasilitas wajib dilakukan paling lambat <b>H-1 pukul 00.00 WIB</b> sebelum tanggal kegiatan (contoh: reservasi untuk tanggal 25 maksimal diajukan pada tanggal 24 pukul 00.00 WIB). Verifikasi dan persetujuan jadwal akan diproses oleh petugas sarpras.
             </div>
           </div>
 
@@ -66,17 +65,17 @@ function JadwalContent() {
           <div className="jadwal-cta-panel">
             <div>
               <div className="lbl-sm" style={{ color: '#b59876', marginBottom: 4 }}>TINDAK LANJUT FASILITAS</div>
-              <h3>Sudah menemukan slot yang kosong untuk {facility?.name}?</h3>
+              <h3>Sudah menemukan slot yang kosong untuk {facility?.name || 'fasilitas ini'}?</h3>
               <p>
                 Ajukan permohonan reservasi sekarang, atau laporkan kendala/kerusakan fisik jika fasilitas
                 ini membutuhkan perbaikan dari petugas.
               </p>
             </div>
             <div className="btn-row">
-              <button className="btn primary" onClick={() => goOrLogin(`/pengguna/reservasi?facility=${activeFacilityId}`)}>
+              <button className="btn primary" onClick={() => goOrLogin(`/pengguna/reservasi?facility=${facility?.id || activeFacilityId}`)}>
                 Ajukan Reservasi
               </button>
-              <button className="btn ghost-danger" onClick={() => goOrLogin(`/pengguna/lapor?facility=${activeFacilityId}`)}>
+              <button className="btn ghost-danger" onClick={() => goOrLogin(`/pengguna/lapor?facility=${facility?.id || activeFacilityId}`)}>
                 Laporkan Kerusakan
               </button>
             </div>
