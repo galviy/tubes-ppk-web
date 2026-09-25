@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { ReservationStatus } from '@/models/reservation';
 import { formatDateIndo } from '@/lib/slots';
@@ -18,6 +18,8 @@ export default function PetugasReservasiPage() {
   const { reservations, facilityById, updateReservationStatus, petugasCancelReservation } = useAppData();
 
   const [filterStatus, setFilterStatus] = useState<string>('semua');
+  const [filterTanggal, setFilterTanggal] = useState<string>('');
+  const [sortMode, setSortMode] = useState<'antrean' | 'terbaru'>('antrean');
   const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
     isOpen: false,
     title: '',
@@ -25,17 +27,25 @@ export default function PetugasReservasiPage() {
   });
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Kelompokkan per status (menunggu dulu), lalu pengajuan paling awal di atas
-  // supaya antrean persetujuan mengikuti siapa yang memesan lebih dulu.
-  const sorted = [...reservations].sort((a, b) => {
-    const order: Record<string, number> = { menunggu: 1, disetujui: 2, ditolak: 3, dibatalkan: 4, selesai: 5 };
-    const byStatus = (order[a.status] || 6) - (order[b.status] || 6);
-    if (byStatus !== 0) return byStatus;
-    const byCreated = a.createdAt.localeCompare(b.createdAt);
-    return byCreated !== 0 ? byCreated : (a.backendId ?? a.id) - (b.backendId ?? b.id);
-  });
+  // Saring per status dan tanggal kegiatan, lalu urutkan.
+  // Mode 'antrean': menunggu dulu, pengajuan paling awal di atas (siapa cepat dia dapat).
+  // Mode 'terbaru': pengajuan paling baru di atas.
+  const filtered = useMemo(() => {
+    let list = filterStatus === 'semua' ? reservations : reservations.filter((r) => r.status === filterStatus);
+    if (filterTanggal) list = list.filter((r) => r.tanggal === filterTanggal);
 
-  const filtered = filterStatus === 'semua' ? sorted : sorted.filter((r) => r.status === filterStatus);
+    return [...list].sort((a, b) => {
+      if (sortMode === 'terbaru') {
+        const byNewest = b.createdAt.localeCompare(a.createdAt);
+        return byNewest !== 0 ? byNewest : (b.backendId ?? b.id) - (a.backendId ?? a.id);
+      }
+      const order: Record<string, number> = { menunggu: 1, disetujui: 2, ditolak: 3, dibatalkan: 4, selesai: 5 };
+      const byStatus = (order[a.status] || 6) - (order[b.status] || 6);
+      if (byStatus !== 0) return byStatus;
+      const byCreated = a.createdAt.localeCompare(b.createdAt);
+      return byCreated !== 0 ? byCreated : (a.backendId ?? a.id) - (b.backendId ?? b.id);
+    });
+  }, [reservations, filterStatus, filterTanggal, sortMode]);
 
   function handleApprove(id: number, facilityName: string, pemohon: string) {
     setModalConfig({
@@ -154,6 +164,76 @@ export default function PetugasReservasiPage() {
         ))}
       </div>
 
+      {/* Filter tanggal kegiatan + pilihan urutan */}
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 18 }}>
+        <label
+          style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 600, color: '#6B7280' }}
+        >
+          Tanggal kegiatan
+          <input
+            type="date"
+            value={filterTanggal}
+            onChange={(e) => setFilterTanggal(e.target.value)}
+            style={{
+              padding: '6px 10px',
+              borderRadius: 4,
+              border: '1px solid #E5E0D8',
+              fontFamily: 'inherit',
+              fontSize: 12,
+              fontWeight: 600,
+              color: '#181D24',
+              background: '#FFFFFF',
+              cursor: 'pointer',
+            }}
+          />
+        </label>
+        {filterTanggal && (
+          <button
+            type="button"
+            onClick={() => setFilterTanggal('')}
+            style={{
+              padding: '6px 12px',
+              borderRadius: 4,
+              border: '1px solid #E5E0D8',
+              background: '#FFFFFF',
+              color: '#6B7280',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Tampilkan semua tanggal
+          </button>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#6B7280' }}>Urutkan</span>
+          {[
+            { key: 'antrean', label: 'Antrean' },
+            { key: 'terbaru', label: 'Terbaru' },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setSortMode(tab.key as 'antrean' | 'terbaru')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 4,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                border: sortMode === tab.key ? '1px solid #b59876' : '1px solid #E5E0D8',
+                background: sortMode === tab.key ? '#15171a' : '#FFFFFF',
+                color: sortMode === tab.key ? '#b59876' : '#6B7280',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Table matching Reference Image 3 */}
       <div className="panel table-scroll" style={{ padding: 0, overflow: 'hidden' }}>
         <table>
@@ -172,7 +252,7 @@ export default function PetugasReservasiPage() {
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ textAlign: 'center', padding: '36px', color: '#6B7280' }}>
-                  Tidak ada data reservasi dalam kategori ini.
+                  Tidak ada reservasi yang cocok dengan filter ini.
                 </td>
               </tr>
             ) : (
