@@ -3,6 +3,7 @@
 import { Reservation, ReservationStatus } from '@/models/reservation';
 import { Facility } from '@/models/facility';
 import { canSelfCancel, formatDeadline, getCancellationDeadline } from '@/lib/cancellation';
+import { formatDateIndo } from '@/lib/slots';
 
 const STATUS_PILL: Record<ReservationStatus, [string, string]> = {
   menunggu: ['busy', 'Menunggu'],
@@ -12,7 +13,7 @@ const STATUS_PILL: Record<ReservationStatus, [string, string]> = {
 };
 
 function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 interface ReservationDetailModalProps {
@@ -46,7 +47,7 @@ export default function ReservationDetailModal({ reservation, facility, onClose,
           <div><span>ID Reservasi</span><b>r{reservation.id}</b></div>
           <div><span>Fasilitas</span><b>{facility?.name}</b></div>
           <div><span>Lokasi</span><b>{facility?.loc}</b></div>
-          <div><span>Tanggal</span><b>{reservation.tanggal}</b></div>
+          <div><span>Tanggal</span><b>{formatDateIndo(reservation.tanggal)}</b></div>
           <div><span>Waktu</span><b>{reservation.start} - {reservation.end}</b></div>
           <div>
             <span>{facility?.type?.toLowerCase() === 'alat' ? 'Jumlah unit' : 'Jumlah peserta'}</span>

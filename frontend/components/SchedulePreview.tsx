@@ -29,9 +29,9 @@ const STATUS_LABEL: Record<SlotState, string> = {
 // Slot dikelompokkan per periode waktu supaya lebih cepat dipindai
 const PERIODS = [
   { label: 'Pagi', from: '07:00', to: '10:00' },
-  { label: 'Siang', from: '10:00', to: '13:00' },
-  { label: 'Sore', from: '13:00', to: '16:00' },
-  { label: 'Malam', from: '16:00', to: '20:00' },
+  { label: 'Siang', from: '10:00', to: '15:00' },
+  { label: 'Sore', from: '15:00', to: '18:00' },
+  { label: 'Malam', from: '18:00', to: '20:00' },
 ];
 
 interface SchedulePreviewProps {

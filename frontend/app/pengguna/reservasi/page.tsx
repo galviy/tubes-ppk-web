@@ -9,6 +9,7 @@ import {
   getTodayDateString,
   isReservationDeadlineValid,
   getEarliestReservableDate,
+  formatDateIndo,
 } from '@/lib/slots';
 import { TimeSlot } from '@/models/facility';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
@@ -167,9 +168,9 @@ function DownwardTimeSelect({
 // 4 Periode waktu yang persis sama dengan halaman Jadwal Ketersediaan
 const PERIODS = [
   { label: 'PAGI', from: '07:00', to: '10:00' },
-  { label: 'SIANG', from: '10:00', to: '13:00' },
-  { label: 'SORE', from: '13:00', to: '16:00' },
-  { label: 'MALAM', from: '16:00', to: '20:00' },
+  { label: 'SIANG', from: '10:00', to: '15:00' },
+  { label: 'SORE', from: '15:00', to: '18:00' },
+  { label: 'MALAM', from: '18:00', to: '20:00' },
 ];
 
 function AjukanReservasiContent() {
@@ -183,6 +184,14 @@ function AjukanReservasiContent() {
       availableFacilities[0]?.id ||
       ''
   );
+
+  // Sinkronkan facilityId ketika daftar fasilitas selesai dimuat dari backend
+  useEffect(() => {
+    if (availableFacilities.length > 0 && (!facilityId || !availableFacilities.some((f) => f.id === facilityId))) {
+      const target = (preselect && availableFacilities.some((f) => f.id === preselect) && preselect) || availableFacilities[0].id;
+      setFacilityId(target);
+    }
+  }, [availableFacilities, facilityId, preselect]);
 
   const earliestDate = useMemo(() => getEarliestReservableDate(), []);
   const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
@@ -204,7 +213,7 @@ function AjukanReservasiContent() {
   const [startTime, setStartTime] = useState<string>('');
   const [endTime, setEndTime] = useState<string>('');
 
-  const facility = facilities.find((f) => f.id === facilityId);
+  const facility = facilities.find((f) => f.id === facilityId) || availableFacilities[0];
   const currentUserIdent = currentUser?.nama || currentUser?.email || '';
 
   // Daftar slot start yang berada dalam rentang [startTime, endTime)
@@ -353,7 +362,7 @@ function AjukanReservasiContent() {
     }
 
     const bookedFacilityName = facility.name;
-    const bookedTime = `${tanggal}, ${startTime} - ${endTime} WIB`;
+    const bookedTime = `${formatDateIndo(tanggal)}, ${startTime} - ${endTime} WIB`;
 
     setStartTime('');
     setEndTime('');
@@ -383,12 +392,12 @@ function AjukanReservasiContent() {
       setBannerNotice({
         type: 'error',
         title: 'Batas Waktu Reservasi Terlewat',
-        message: `Maksimal reservasi diajukan pada H-1 pukul 00.00 WIB (contoh: reservasi tanggal 25 maksimal diajukan tanggal 24 pukul 00.00 WIB). Tanggal ${tanggal} sudah tidak dapat dipesan. Silakan pilih mulai dari tanggal ${earliestDate}.`,
+        message: `Maksimal reservasi diajukan pada H-1 pukul 00.00 WIB (contoh: reservasi tanggal 25 maksimal diajukan tanggal 24 pukul 00.00 WIB). Tanggal ${formatDateIndo(tanggal)} sudah tidak dapat dipesan. Silakan pilih mulai dari tanggal ${formatDateIndo(earliestDate)}.`,
       });
       setModalConfig({
         isOpen: true,
         title: 'Batas Waktu Terlewat',
-        subtitle: `Maksimal reservasi diajukan pada H-1 pukul 00.00 WIB (contoh: reservasi tanggal 25 maksimal diajukan tanggal 24 pukul 00.00 WIB). Silakan pilih tanggal mulai dari ${earliestDate}.`,
+        subtitle: `Maksimal reservasi diajukan pada H-1 pukul 00.00 WIB (contoh: reservasi tanggal 25 maksimal diajukan tanggal 24 pukul 00.00 WIB). Silakan pilih tanggal mulai dari ${formatDateIndo(earliestDate)}.`,
         confirmText: 'Pilih Tanggal Lain',
         confirmVariant: 'danger',
         showInput: false,
@@ -412,12 +421,12 @@ function AjukanReservasiContent() {
       setBannerNotice({
         type: 'error',
         title: 'Rentang Jadwal Bentrok',
-        message: `Rentang jam yang dipilih (${startTime} - ${endTime} WIB) pada tanggal ${tanggal} bentrok dengan jadwal reservasi yang sudah terpakai atau disetujui. Silakan pilih rentang jam yang berstatus hijau (Tersedia).`,
+        message: `Rentang jam yang dipilih (${startTime} - ${endTime} WIB) pada tanggal ${formatDateIndo(tanggal)} bentrok dengan jadwal reservasi yang sudah terpakai atau disetujui. Silakan pilih rentang jam yang berstatus hijau (Tersedia).`,
       });
       setModalConfig({
         isOpen: true,
         title: 'Rentang Jadwal Bentrok',
-        subtitle: `Rentang jam yang dipilih (${startTime} - ${endTime} WIB) pada tanggal ${tanggal} bentrok dengan jadwal reservasi lain yang sudah terpakai atau disetujui. Silakan pilih rentang yang berstatus tersedia.`,
+        subtitle: `Rentang jam yang dipilih (${startTime} - ${endTime} WIB) pada tanggal ${formatDateIndo(tanggal)} bentrok dengan jadwal reservasi lain yang sudah terpakai atau disetujui. Silakan pilih rentang yang berstatus tersedia.`,
         confirmText: 'Pilih Jam Lain',
         confirmVariant: 'danger',
         showInput: false,
@@ -496,7 +505,7 @@ function AjukanReservasiContent() {
           {/* Facility Selection */}
           <div className="fgroup">
             <label>Fasilitas</label>
-            <select value={facilityId} onChange={(e) => handleFacilityChange(e.target.value)}>
+            <select value={facilityId || facility?.id || ''} onChange={(e) => handleFacilityChange(e.target.value)}>
               {availableFacilities.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.name} ({f.loc}) ({f.type?.toLowerCase() === 'alat' ? `tersedia ${f.cap} unit` : `maks. ${f.cap} orang`})
@@ -518,7 +527,7 @@ function AjukanReservasiContent() {
                   setBannerNotice({
                     type: 'error',
                     title: 'Batas Waktu Reservasi Terlewat',
-                    message: `Maksimal reservasi diajukan pada H-1 pukul 00.00 WIB. Tanggal ${val} tidak memenuhi syarat. Tanggal paling awal yang tersedia adalah ${earliestDate}.`,
+                    message: `Maksimal reservasi diajukan pada H-1 pukul 00.00 WIB. Tanggal ${formatDateIndo(val)} tidak memenuhi syarat. Tanggal paling awal yang tersedia adalah ${formatDateIndo(earliestDate)}.`,
                   });
                   setTanggal(earliestDate);
                 } else {
@@ -707,11 +716,11 @@ function AjukanReservasiContent() {
                   </div>
                   {hasConflict ? (
                     <div style={{ color: '#B91C1C', fontSize: 14, fontWeight: 600, marginTop: 4 }}>
-                      ⚠️ Rentang waktu ini bertabrakan dengan jadwal yang sudah disetujui / direservasi pada tanggal {tanggal}. Silakan pilih slot hijau yang tersedia.
+                      ⚠️ Rentang waktu ini bertabrakan dengan jadwal yang sudah disetujui / direservasi pada tanggal {formatDateIndo(tanggal)}. Silakan pilih slot hijau yang tersedia.
                     </div>
                   ) : (
                     <div style={{ color: '#166534', fontSize: 14, marginTop: 4 }}>
-                      Semua slot pada rentang ini berstatus tersedia dan siap diajukan untuk tanggal {tanggal}.
+                      Semua slot pada rentang ini berstatus tersedia dan siap diajukan untuk tanggal {formatDateIndo(tanggal)}.
                     </div>
                   )}
                 </div>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { ReservationStatus } from '@/models/reservation';
+import { formatDateIndo } from '@/lib/slots';
 
 const STATUS_CONFIG: Record<ReservationStatus, { pillClass: string; label: string }> = {
   menunggu: { pillClass: 'busy', label: 'Menunggu' },
@@ -148,7 +149,7 @@ export default function AdminSemuaReservasiPage() {
 
                     {/* JADWAL */}
                     <td style={{ whiteSpace: 'nowrap' }}>
-                      <div style={{ fontWeight: 600, color: '#181D24' }}>{r.tanggal}</div>
+                      <div style={{ fontWeight: 600, color: '#181D24' }}>{formatDateIndo(r.tanggal)}</div>
                       <div style={{ fontSize: 12, color: '#b59876', fontWeight: 500 }}>
                         {r.start} - {r.end} WIB
                       </div>
@@ -173,7 +174,7 @@ export default function AdminSemuaReservasiPage() {
 
                     {/* TANGGAL DIAJUKAN */}
                     <td style={{ whiteSpace: 'nowrap', fontSize: 12, color: '#6B7280' }}>
-                      {r.createdAt ? r.createdAt.slice(0, 10) : '2026-09-18'}
+                      {formatDateIndo(r.createdAt || '2026-09-18')}
                     </td>
                   </tr>
                 );

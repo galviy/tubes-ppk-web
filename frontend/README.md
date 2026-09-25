@@ -28,27 +28,18 @@ Sistem informasi berbasis web modern untuk pengelolaan izin reservasi ruangan/al
 
 ---
 
-### 2. Langkah 1: Konfigurasi & Jalankan Backend Go
+### 2. Langkah 1: Jalankan Backend Go
 
-1. Pastikan file `.env` sudah tersedia di **root folder proyek** (`sipinjam/.env`):
-   ```env
-   DB_USERNAME="root"
-   DB_PASSWORD="hlgfFKhauveupgsaqDpqGrjefVZFgGGS"
-   DB_NAME="railway"
-   DB_IPADDRESS="centerbeam.proxy.rlwy.net"
-   DB_PORT="41220"
-   ```
-
-2. Buka terminal, masuk ke direktori `backend/`, lalu jalankan server:
-   ```bash
-   cd backend
-   go run .
-   ```
-   *Output yang menandakan backend berhasil:*
-   ```text
-   Berhasil terkoneksi ke database MySQL!
-   Backend is starting on :8080
-   ```
+Buka terminal, masuk ke direktori `backend/`, lalu jalankan server:
+```bash
+cd backend
+go run .
+```
+*Output yang menandakan backend berhasil:*
+```text
+Berhasil terkoneksi ke database MySQL!
+Backend is starting on :8080
+```
 
 ---
 
