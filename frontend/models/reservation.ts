@@ -1,5 +1,11 @@
 // models/reservation.ts
-export type ReservationStatus = 'menunggu' | 'disetujui' | 'ditolak' | 'dibatalkan';
+export type ReservationStatus = 'menunggu' | 'disetujui' | 'ditolak' | 'dibatalkan' | 'selesai';
+
+export interface ReservationAlatItem {
+  id: number;
+  nama: string;
+  jumlah: number;
+}
 
 export interface Reservation {
   id: number;
@@ -17,4 +23,12 @@ export interface Reservation {
   // Server menang: sync mengganti baris backend + membuang seed.
   sumber?: 'mock' | 'backend';
   backendId?: number;
+  ruanganId?: number;
+  ruanganNama?: string;
+  alat?: ReservationAlatItem[];
+  alasanPenolakan?: string;
+  alasanPembatalan?: string;
+  statusKode?: string;
+  userId?: number;
+  username?: string;
 }

@@ -11,11 +11,19 @@ const STATUS_PILL: Record<ReservationStatus, [string, string]> = {
   disetujui: ['avail', 'Disetujui'],
   ditolak: ['danger', 'Ditolak'],
   dibatalkan: ['repair', 'Dibatalkan'],
+  selesai: ['avail', 'Selesai'],
 };
 
 export default function RiwayatReservasiPage() {
-  const { reservations, facilityById, currentUser } = useAppData();
-  const mine = reservations.filter((r) => r.pemohon === currentUser?.nama);
+  const { reservations, facilityById, currentUser, cancelReservation } = useAppData();
+  const currentIdent = currentUser?.nama || currentUser?.email || '';
+  const mine = reservations.filter(
+    (r) =>
+      !r.pemohon ||
+      r.pemohon === currentUser?.nama ||
+      r.pemohon === currentUser?.email ||
+      (currentIdent && r.pemohon.toLowerCase() === currentIdent.toLowerCase()),
+  );
   const [detailFor, setDetailFor] = useState<Reservation | null>(null);
 
   return (
@@ -37,12 +45,14 @@ export default function RiwayatReservasiPage() {
         )}
         {mine.map((r) => {
           const facility = facilityById(r.facilityId);
-          const [cls, label] = STATUS_PILL[r.status];
+          const [cls, label] = STATUS_PILL[r.status] || ['neutral', r.status];
           return (
             <div key={r.id} className="item-card">
               <div className="item-card-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <h3 style={{ fontSize: 17, margin: 0 }}>{facility?.name}</h3>
+                  <h3 style={{ fontSize: 17, margin: 0 }}>
+                    {facility?.name || r.ruanganNama || `Fasilitas #${r.facilityId}`}
+                  </h3>
                   <span className={`pill ${cls}`}>{label}</span>
                 </div>
                 <button className="btn ghost" onClick={() => setDetailFor(r)}>
@@ -67,7 +77,7 @@ export default function RiwayatReservasiPage() {
                   )}
                   <span className="meta-item">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                    {facility?.loc}
+                    {facility?.loc || '-'}
                   </span>
                 </div>
                 <div style={{ marginTop: 12, color: 'var(--ink-body)' }}>
@@ -84,7 +94,12 @@ export default function RiwayatReservasiPage() {
           reservation={detailFor}
           facility={facilityById(detailFor.facilityId)}
           onClose={() => setDetailFor(null)}
-          cancelNoop
+          onCancel={async (id, alasan) => {
+            const res = await cancelReservation(id, alasan);
+            if (!res.ok) {
+              throw new Error(res.message || 'Gagal membatalkan reservasi.');
+            }
+          }}
         />
       )}
     </div>

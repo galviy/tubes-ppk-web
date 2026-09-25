@@ -4,34 +4,121 @@ import { useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { ReservationStatus } from '@/models/reservation';
 import { formatDateIndo } from '@/lib/slots';
+import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
 
 const STATUS_CONFIG: Record<ReservationStatus, { pillClass: string; label: string }> = {
   menunggu: { pillClass: 'busy', label: 'Menunggu' },
   disetujui: { pillClass: 'avail', label: 'Disetujui' },
   ditolak: { pillClass: 'danger', label: 'Ditolak' },
   dibatalkan: { pillClass: 'neutral', label: 'Dibatalkan' },
+  selesai: { pillClass: 'avail', label: 'Selesai' },
 };
 
 export default function PetugasReservasiPage() {
-  const { reservations, facilityById } = useAppData();
+  const { reservations, facilityById, updateReservationStatus, petugasCancelReservation } = useAppData();
 
   const [filterStatus, setFilterStatus] = useState<string>('semua');
+  const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
+    isOpen: false,
+    title: '',
+    onConfirm: () => {},
+  });
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Sort: 'menunggu' first, then 'disetujui', then others
   const sorted = [...reservations].sort((a, b) => {
-    const order: Record<string, number> = { menunggu: 1, disetujui: 2, ditolak: 3, dibatalkan: 4 };
-    return (order[a.status] || 5) - (order[b.status] || 5);
+    const order: Record<string, number> = { menunggu: 1, disetujui: 2, ditolak: 3, dibatalkan: 4, selesai: 5 };
+    return (order[a.status] || 6) - (order[b.status] || 6);
   });
 
   const filtered = filterStatus === 'semua' ? sorted : sorted.filter((r) => r.status === filterStatus);
 
+  function handleApprove(id: number, facilityName: string, pemohon: string) {
+    setModalConfig({
+      isOpen: true,
+      title: 'Setujui Permohonan Reservasi',
+      subtitle: `Apakah Anda yakin ingin menyetujui reservasi ${facilityName} yang diajukan oleh ${pemohon}?`,
+      confirmText: 'Setujui',
+      confirmVariant: 'success',
+      showInput: false,
+      onConfirm: async () => {
+        const res = await updateReservationStatus(id, 'disetujui');
+        if (!res.ok) {
+          setFeedback({ type: 'error', message: res.message || 'Gagal menyetujui reservasi.' });
+        } else {
+          setFeedback({ type: 'success', message: 'Reservasi berhasil disetujui.' });
+        }
+      },
+    });
+  }
+
+  function handleReject(id: number, facilityName: string, pemohon: string) {
+    setModalConfig({
+      isOpen: true,
+      title: 'Tolak Permohonan Reservasi',
+      subtitle: `Berikan alasan penolakan reservasi ${facilityName} oleh ${pemohon} agar diketahui pemohon.`,
+      label: 'Alasan Penolakan',
+      placeholder: 'Contoh: Ruangan akan digunakan untuk kegiatan kedinasan fakultas...',
+      confirmText: 'Tolak Reservasi',
+      confirmVariant: 'danger',
+      showInput: true,
+      requireInput: true,
+      onConfirm: async (val) => {
+        const res = await updateReservationStatus(id, 'ditolak', val);
+        if (!res.ok) {
+          setFeedback({ type: 'error', message: res.message || 'Gagal menolak reservasi.' });
+        } else {
+          setFeedback({ type: 'success', message: 'Reservasi berhasil ditolak.' });
+        }
+      },
+    });
+  }
+
+  function handleCancelEmergency(id: number, facilityName: string, pemohon: string) {
+    setModalConfig({
+      isOpen: true,
+      title: 'Batalkan Reservasi (Kondisi Mendesak)',
+      subtitle: `Membatalkan reservasi ${facilityName} milik ${pemohon} yang telah disetujui sebelumnya.`,
+      label: 'Alasan Pembatalan',
+      placeholder: 'Contoh: Terjadi gangguan kelistrikan atau perbaikan darurat...',
+      confirmText: 'Batalkan Reservasi',
+      confirmVariant: 'danger',
+      showInput: true,
+      requireInput: true,
+      onConfirm: async (val) => {
+        const res = await petugasCancelReservation(id, val);
+        if (!res.ok) {
+          setFeedback({ type: 'error', message: res.message || 'Gagal membatalkan reservasi.' });
+        } else {
+          setFeedback({ type: 'success', message: 'Reservasi berhasil dibatalkan oleh petugas.' });
+        }
+      },
+    });
+  }
+
   return (
     <div>
-      {/* Header Split matching Reference Image 3 */}
+      {/* Header Split */}
       <div className="dash-split-header">
         <h2>Antrian reservasi</h2>
-        <p>Antrean read-only: backend belum menyediakan endpoint persetujuan/penolakan/pembatalan reservasi.</p>
+        <p>Kelola persetujuan, penolakan, dan pembatalan reservasi fasilitas kampus secara langsung.</p>
       </div>
+
+      {feedback && (
+        <div
+          className={`alert ${feedback.type === 'success' ? 'info' : 'danger'}`}
+          style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+        >
+          <span>{feedback.message}</span>
+          <button
+            type="button"
+            onClick={() => setFeedback(null)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Filter Chips */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
@@ -81,17 +168,13 @@ export default function PetugasReservasiPage() {
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ textAlign: 'center', padding: '36px', color: '#6B7280' }}>
-                  Tidak ada reservasi dalam kategori ini.
-                  <div style={{ fontSize: 12, marginTop: 8 }}>
-                    Catatan: backend hanya mengembalikan reservasi milik akun yang login — pengajuan
-                    milik pengguna lain (mis. 4 antrean PENDING saat ini) tidak terlihat di sini.
-                    Antrean lintas-pengguna membutuhkan endpoint backend yang belum tersedia.
-                  </div>
+                  Tidak ada data reservasi dalam kategori ini.
                 </td>
               </tr>
             ) : (
               filtered.map((r) => {
                 const fac = facilityById(r.facilityId);
+                const facilityName = fac?.name || r.ruanganNama || `Fasilitas #${r.facilityId}`;
                 const cfg = STATUS_CONFIG[r.status] || { pillClass: 'neutral', label: r.status };
 
                 return (
@@ -103,7 +186,7 @@ export default function PetugasReservasiPage() {
 
                     {/* FASILITAS */}
                     <td style={{ whiteSpace: 'nowrap' }}>
-                      <span style={{ fontWeight: 600, color: '#181D24' }}>{fac?.name || `Fasilitas #${r.facilityId}`}</span>
+                      <span style={{ fontWeight: 600, color: '#181D24' }}>{facilityName}</span>
                     </td>
 
                     {/* JADWAL */}
@@ -129,44 +212,56 @@ export default function PetugasReservasiPage() {
                       </span>
                     </td>
 
-                    {/* TINDAKAN (no-op: backend belum menyediakan endpoint) */}
+                    {/* TINDAKAN */}
                     <td style={{ whiteSpace: 'nowrap', textAlign: 'left' }}>
                       {r.status === 'menunggu' && (
-                        <select
-                          className="table-select-action"
-                          value="menunggu"
-                          title="Menunggu endpoint backend — pilihan tidak melakukan apa-apa"
-                          onChange={(e) => {
-                            e.target.value = 'menunggu';
-                          }}
-                        >
-                          <option value="menunggu">Menunggu</option>
-                          <option value="setuju">Setuju</option>
-                          <option value="tolak">Tolak</option>
-                        </select>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            type="button"
+                            className="btn primary"
+                            style={{ padding: '4px 10px', fontSize: 12 }}
+                            onClick={() => handleApprove(r.id, facilityName, r.pemohon)}
+                          >
+                            Setujui
+                          </button>
+                          <button
+                            type="button"
+                            className="btn ghost-danger"
+                            style={{ padding: '4px 10px', fontSize: 12 }}
+                            onClick={() => handleReject(r.id, facilityName, r.pemohon)}
+                          >
+                            Tolak
+                          </button>
+                        </div>
                       )}
 
                       {r.status === 'disetujui' && (
-                        <select
-                          className="table-select-action"
-                          value="setuju"
-                          title="Menunggu endpoint backend — pilihan tidak melakukan apa-apa"
-                          onChange={(e) => {
-                            e.target.value = 'setuju';
-                          }}
+                        <button
+                          type="button"
+                          className="btn ghost-danger"
+                          style={{ padding: '4px 10px', fontSize: 12 }}
+                          onClick={() => handleCancelEmergency(r.id, facilityName, r.pemohon)}
+                          title="Batalkan reservasi dalam kondisi darurat"
                         >
-                          <option value="setuju">Setuju</option>
-                          <option value="batal">Batal</option>
-                        </select>
+                          Batal (Darurat)
+                        </button>
                       )}
 
                       {r.status === 'ditolak' && (
-                        <span style={{ color: '#9CA3AF', fontSize: 12 }}>Ditolak</span>
+                        <span style={{ color: '#DC2626', fontSize: 12 }} title={r.catatanBatal || undefined}>
+                          Ditolak {r.catatanBatal ? `(${r.catatanBatal})` : ''}
+                        </span>
                       )}
 
                       {r.status === 'dibatalkan' && (
-                        <span style={{ color: '#9CA3AF', fontSize: 12 }} title={r.catatanBatal || undefined}>
-                          Dibatalkan
+                        <span style={{ color: '#6B7280', fontSize: 12 }} title={r.catatanBatal || undefined}>
+                          Dibatalkan {r.catatanBatal ? `(${r.catatanBatal})` : ''}
+                        </span>
+                      )}
+
+                      {r.status === 'selesai' && (
+                        <span style={{ color: '#059669', fontSize: 12 }}>
+                          Selesai
                         </span>
                       )}
                     </td>
@@ -177,6 +272,8 @@ export default function PetugasReservasiPage() {
           </tbody>
         </table>
       </div>
+
+      <ActionPromptModal config={modalConfig} onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))} />
     </div>
   );
 }

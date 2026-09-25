@@ -22,7 +22,7 @@ func listReservasi(w http.ResponseWriter, r *http.Request, tipe string) {
 	case middleware.RolePengguna:
 		id := sess.UserId
 		userId = &id
-	case middleware.RolePetugas:
+	case middleware.RolePetugas, middleware.RoleAdmin:
 		userId = nil
 	default:
 		utils.ResponseJSONMessage(w, "Forbidden", http.StatusForbidden, false)
@@ -109,10 +109,6 @@ func DetailReservasi(w http.ResponseWriter, r *http.Request) {
 	sess, ok := sesiUser(r)
 	if !ok || sess.UserId <= 0 {
 		utils.ResponseJSONMessage(w, "Unauthorized", http.StatusUnauthorized, false)
-		return
-	}
-	if sess.Role == middleware.RoleAdmin {
-		utils.ResponseJSONMessage(w, "Forbidden", http.StatusForbidden, false)
 		return
 	}
 

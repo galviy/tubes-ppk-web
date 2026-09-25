@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
-import { generateTimeSlots, getSlotState } from '@/lib/slots';
+import { generateTimeSlots, getSlotState, getTodayDateString } from '@/lib/slots';
 import { SlotState } from '@/models/facility';
+import { backendKetersediaanFasilitas } from '@/lib/api';
 
 const SLOTS = generateTimeSlots();
 
@@ -43,12 +44,43 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
   const { facilities, reservations } = useAppData();
   const [now, setNow] = useState<Date | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
+  const [publicUnavailable, setPublicUnavailable] = useState<Record<string, Set<string>>>({});
   const tabsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(id);
+  }, []);
+
+  // Ambil ketersediaan slot dari endpoint publik backend GET /fasilitas/ketersediaan
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const today = getTodayDateString();
+      const res = await backendKetersediaanFasilitas({ tanggal: today, hari: 1 });
+      if (cancelled || !res.ok || !Array.isArray(res.data)) return;
+      const unavailMap: Record<string, Set<string>> = {};
+      for (const item of res.data as Array<{
+        id: string;
+        hari?: Array<{ slot?: Array<{ mulai: string; tersedia: boolean }> }>;
+      }>) {
+        const facId = item.id;
+        const slotsSet = new Set<string>();
+        for (const h of item.hari || []) {
+          for (const s of h.slot || []) {
+            if (!s.tersedia) {
+              slotsSet.add(s.mulai);
+            }
+          }
+        }
+        unavailMap[facId] = slotsSet;
+      }
+      setPublicUnavailable(unavailMap);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Auto-scroll active chip into view horizontally when active facility changes
@@ -89,8 +121,15 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
 
   const slotStates = useMemo(() => {
     if (!now || !facility) return SLOTS.map(() => 'passed' as SlotState);
-    return SLOTS.map((slot) => getSlotState(facility, slot.start, reservations));
-  }, [facility, reservations, now]);
+    const unavail = publicUnavailable[facility.id];
+    return SLOTS.map((slot) => {
+      const baseState = getSlotState(facility, slot.start, reservations);
+      if (baseState === 'avail' && unavail && unavail.has(slot.start)) {
+        return 'booked';
+      }
+      return baseState;
+    });
+  }, [facility, reservations, now, publicUnavailable]);
 
   const availableCount = slotStates.filter((s) => s === 'avail').length;
   const availablePct = Math.round((availableCount / SLOTS.length) * 100);

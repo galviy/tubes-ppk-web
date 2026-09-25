@@ -4,18 +4,37 @@
 
 USE tubes_ppk_web;
 
--- 1. Reservasi: kolom yang dipakai kode tapi belum ada di schema.
-ALTER TABLE `reservasi`
-  ADD COLUMN IF NOT EXISTS `alasan_peminjaman` varchar(255) DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `alasan_pembatalan` varchar(255) DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `dibatalkan_oleh` int(11) DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `disetujui_oleh` int(11) DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `waktu_diproses` datetime DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `jumlah_peserta` int(11) DEFAULT NULL;
+-- 1 & 2. Penambahan kolom secara idempoten untuk MySQL
+DROP PROCEDURE IF EXISTS AddColIfNotExists;
+DELIMITER $$
+CREATE PROCEDURE AddColIfNotExists(
+    IN tbl_name VARCHAR(64),
+    IN col_name VARCHAR(64),
+    IN col_def  VARCHAR(255)
+)
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = tbl_name
+          AND COLUMN_NAME = col_name
+    ) THEN
+        SET @ddl = CONCAT('ALTER TABLE `', tbl_name, '` ADD COLUMN `', col_name, '` ', col_def);
+        PREPARE stmt FROM @ddl;
+        EXECUTE stmt;
+        DEALLOCATE PREPARE stmt;
+    END IF;
+END$$
+DELIMITER ;
 
--- 2. Satu reservasi boleh punya banyak alat + jumlah per alat.
-ALTER TABLE `alat_reservasi`
-  ADD COLUMN IF NOT EXISTS `jumlah` int(11) NOT NULL DEFAULT 1;
+CALL AddColIfNotExists('reservasi', 'alasan_peminjaman', 'varchar(255) DEFAULT NULL');
+CALL AddColIfNotExists('reservasi', 'alasan_pembatalan', 'varchar(255) DEFAULT NULL');
+CALL AddColIfNotExists('reservasi', 'dibatalkan_oleh', 'int(11) DEFAULT NULL');
+CALL AddColIfNotExists('reservasi', 'disetujui_oleh', 'int(11) DEFAULT NULL');
+CALL AddColIfNotExists('reservasi', 'waktu_diproses', 'datetime DEFAULT NULL');
+CALL AddColIfNotExists('reservasi', 'jumlah_peserta', 'int(11) DEFAULT NULL');
+CALL AddColIfNotExists('alat_reservasi', 'jumlah', 'int(11) NOT NULL DEFAULT 1');
+DROP PROCEDURE IF EXISTS AddColIfNotExists;
 
 -- Unique (id_reservasi) menghalangi banyak alat per reservasi.
 -- Index unik itu dipakai FK, jadi: lepas FK -> drop unique -> index biasa -> pasang FK lagi.

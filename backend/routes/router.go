@@ -197,7 +197,7 @@ func SetupRoutes() *http.ServeMux {
 		"GET /petugas/reservasi",
 		middleware.Auth(middleware.RequireRole(
 			http.HandlerFunc(petugas_reservasi.List),
-			middleware.RolePetugas,
+			middleware.RolePetugas, middleware.RoleAdmin,
 		)),
 	)
 	mux.Handle(

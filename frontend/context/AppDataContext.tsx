@@ -11,22 +11,28 @@ import {
   backendAdminList,
   backendAdminPostForm,
   backendAvailable,
+  backendCancelReservasi,
   backendCreateLaporan,
   backendCreateReservasiAlat,
   backendCreateReservasiRuangan,
   backendListFasilitas,
   backendListLaporanSaya,
+  backendListPetugasReservasi,
+  backendListReservasi,
   backendListReservasiAlat,
   backendListReservasiRuangan,
   backendListSemuaLaporan,
   backendLogin,
   backendMe,
+  backendPetugasCancelReservasi,
+  backendPetugasUpdateReservasi,
   backendRegisterDosen,
   backendRegisterMhs,
   backendRegisterStaff,
   backendUpdateFasilitasStatus,
   backendUpdateLaporan,
   mapBackendReport,
+  mapBackendReservasi,
   mapPendingDosen,
   mapPendingMhs,
   mapPendingStaff,
@@ -138,6 +144,7 @@ interface AppDataValue {
   submitReservation: (
     input: Omit<Reservation, 'id' | 'pemohon' | 'status' | 'createdAt'>
   ) => Promise<{ ok: boolean; message?: string }>;
+  cancelReservation: (id: number, alasan: string) => Promise<{ ok: boolean; message?: string }>;
   submitReport: (
     input: Omit<Report, 'id' | 'pelapor' | 'status' | 'catatan' | 'createdAt'> & {
       fotoFile?: File | null;
@@ -149,6 +156,15 @@ interface AppDataValue {
     id: number,
     status: Report['status'],
     catatan?: string
+  ) => Promise<{ ok: boolean; message?: string }>;
+  updateReservationStatus: (
+    id: number,
+    status: 'disetujui' | 'ditolak',
+    alasanPenolakan?: string
+  ) => Promise<{ ok: boolean; message?: string }>;
+  petugasCancelReservation: (
+    id: number,
+    alasan: string
   ) => Promise<{ ok: boolean; message?: string }>;
   setFacilityStatus: (
     facilityId: string,
@@ -248,24 +264,42 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const refreshReservations = useCallback(async (): Promise<boolean> => {
     if (!sessionUser) return false;
+    const isOfficer = sessionUser.role === 'petugas' || sessionUser.role === 'admin';
+    const res = isOfficer
+      ? await backendListPetugasReservasi({ limit: 100 })
+      : await backendListReservasi({ limit: 100 });
+
+    if (res.ok && Array.isArray(res.data)) {
+      const rows: Reservation[] = [];
+      for (const row of res.data) {
+        const m = mapBackendReservasi(row);
+        if (m) {
+          rows.push({
+            ...m,
+            pemohon: m.pemohon || sessionUser.nama,
+            sumber: 'backend',
+          });
+        }
+      }
+      rows.sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
+      setReservations(rows);
+      return true;
+    }
+
+    // Fallback: per-jenis ruangan dan alat jika endpoint tunggal gagal
     const [ru, al] = await Promise.all([
       backendListReservasiRuangan(100),
       backendListReservasiAlat(100),
     ]);
-    // Per-jenis dan null-tolerant: backend me-return "data":null untuk
-    // jenis yang kosong (bukan error). Hanya batal bila KEDUANYA gagal
-    // agar satu jenis kosong tak menenggelamkan jenis berisi.
     if (!ru.ok && !al.ok) return false;
     const rows: Reservation[] = [];
     for (const row of ru.data ?? []) {
-      const m = mapReservasiRuangan(row);
-      if (m) rows.push({ ...m, pemohon: sessionUser.nama, sumber: 'backend' });
-      else console.warn('[sync] baris reservasi ruangan terbuang (tak terparse)', row);
+      const m = mapBackendReservasi(row);
+      if (m) rows.push({ ...m, pemohon: m.pemohon || sessionUser.nama, sumber: 'backend' });
     }
     for (const row of al.data ?? []) {
-      const m = mapReservasiAlat(row);
-      if (m) rows.push({ ...m, pemohon: sessionUser.nama, sumber: 'backend' });
-      else console.warn('[sync] baris reservasi alat terbuang (tak terparse)', row);
+      const m = mapBackendReservasi(row);
+      if (m) rows.push({ ...m, pemohon: m.pemohon || sessionUser.nama, sumber: 'backend' });
     }
     rows.sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
     setReservations(rows);
@@ -585,18 +619,54 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (!res.ok) {
           return { ok: false, message: res.message };
         }
-        // Cerminkan ke state lokal agar riwayat/jadwal/dashboard langsung
-        // menampilkannya (lifecycle approve tetap mock sampai ada endpoint).
-        setReservations((prev) => [
-          ...prev,
-          {
-            ...input,
-            id: genId(),
-            pemohon: user.nama,
-            status: 'menunggu',
-            createdAt: new Date().toISOString(),
-          },
-        ]);
+        // Sinkronkan data dari server agar id backend, status, dan riwayat presisi
+        await refreshReservations();
+        return { ok: true };
+      },
+
+      cancelReservation: async (id: number, alasan: string) => {
+        if (!alasan.trim()) {
+          return { ok: false, message: 'Alasan pembatalan wajib diisi.' };
+        }
+        const target = reservations.find((r) => r.id === id);
+        const backendId = target?.backendId ?? id;
+        const res = await backendCancelReservasi(backendId, alasan.trim());
+        if (!res.ok) {
+          return { ok: false, message: res.message };
+        }
+        await refreshReservations();
+        return { ok: true };
+      },
+
+      updateReservationStatus: async (
+        id: number,
+        status: 'disetujui' | 'ditolak',
+        alasanPenolakan = '',
+      ) => {
+        if (status === 'ditolak' && !alasanPenolakan.trim()) {
+          return { ok: false, message: 'Alasan penolakan wajib diisi.' };
+        }
+        const target = reservations.find((r) => r.id === id);
+        const backendId = target?.backendId ?? id;
+        const res = await backendPetugasUpdateReservasi(backendId, status, alasanPenolakan.trim());
+        if (!res.ok) {
+          return { ok: false, message: res.message };
+        }
+        await refreshReservations();
+        return { ok: true };
+      },
+
+      petugasCancelReservation: async (id: number, alasan: string) => {
+        if (!alasan.trim()) {
+          return { ok: false, message: 'Alasan pembatalan wajib diisi.' };
+        }
+        const target = reservations.find((r) => r.id === id);
+        const backendId = target?.backendId ?? id;
+        const res = await backendPetugasCancelReservasi(backendId, alasan.trim());
+        if (!res.ok) {
+          return { ok: false, message: res.message };
+        }
+        await refreshReservations();
         return { ok: true };
       },
       submitReport: async (input) => {

@@ -234,6 +234,7 @@ export interface CreateReservasiRuanganInput {
   waktu_peminjaman: string; // "YYYY-MM-DD HH:MM:SS"
   waktu_peminjaman_selesai: string; // "YYYY-MM-DD HH:MM:SS"
   alasan_peminjaman: string;
+  jumlah_peserta: number;
 }
 
 export function backendCreateReservasiRuangan(input: CreateReservasiRuanganInput) {
@@ -260,12 +261,85 @@ export function backendCreateReservasiAlat(input: CreateReservasiAlatInput) {
   });
 }
 
+export function backendListReservasi(params?: { status?: string; limit?: number; page?: number }) {
+  const q = new URLSearchParams();
+  if (params?.status) q.set('status', params.status);
+  if (params?.limit) q.set('limit', String(params.limit));
+  if (params?.page) q.set('page', String(params.page));
+  const qs = q.toString() ? `?${q.toString()}` : '';
+  return apiFetch<Record<string, unknown>[]>(`/reservasi${qs}`);
+}
+
 export function backendListReservasiRuangan(limit = 50) {
-  return apiFetch<Record<string, unknown>[]>(`/reservasi/list_reservasi/ruangan?limit=${limit}`);
+  return apiFetch<Record<string, unknown>[]>(`/reservasi/ruangan?limit=${limit}`);
 }
 
 export function backendListReservasiAlat(limit = 50) {
-  return apiFetch<Record<string, unknown>[]>(`/reservasi/list_reservasi/alat?limit=${limit}`);
+  return apiFetch<Record<string, unknown>[]>(`/reservasi/alat?limit=${limit}`);
+}
+
+export function backendDetailReservasi(id: number) {
+  return apiFetch<Record<string, unknown>>(`/reservasi/${id}`);
+}
+
+export function backendCancelReservasi(id: number, alasan_pembatalan: string) {
+  return apiFetch<never>(`/reservasi/${id}/cancel`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ alasan_pembatalan }),
+  });
+}
+
+export function backendListPetugasReservasi(params?: {
+  tipe?: 'ruangan' | 'alat';
+  status?: string;
+  limit?: number;
+  page?: number;
+}) {
+  const q = new URLSearchParams();
+  if (params?.tipe) q.set('tipe', params.tipe);
+  if (params?.status) q.set('status', params.status);
+  if (params?.limit) q.set('limit', String(params.limit));
+  if (params?.page) q.set('page', String(params.page));
+  const qs = q.toString() ? `?${q.toString()}` : '';
+  return apiFetch<Record<string, unknown>[]>(`/petugas/reservasi${qs}`);
+}
+
+export function backendPetugasUpdateReservasi(
+  id: number,
+  status: 'disetujui' | 'ditolak',
+  alasan_penolakan = '',
+) {
+  return apiFetch<never>(`/petugas/reservasi/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status, alasan_penolakan }),
+  });
+}
+
+export function backendPetugasCancelReservasi(id: number, alasan_pembatalan: string) {
+  return apiFetch<never>(`/petugas/reservasi/${id}/cancel`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ alasan_pembatalan }),
+  });
+}
+
+export function backendPetugasDashboardCount() {
+  return apiFetch<{ reservasi_menunggu: number; laporan_baru: number }>('/petugas/dashboard/count');
+}
+
+export function backendKetersediaanFasilitas(params?: {
+  tipe?: 'ruangan' | 'alat';
+  tanggal?: string;
+  hari?: number;
+}) {
+  const q = new URLSearchParams();
+  if (params?.tipe) q.set('tipe', params.tipe);
+  if (params?.tanggal) q.set('tanggal', params.tanggal);
+  if (params?.hari) q.set('hari', String(params.hari));
+  const qs = q.toString() ? `?${q.toString()}` : '';
+  return apiFetch<Record<string, unknown>[]>(`/fasilitas/ketersediaan${qs}`);
 }
 
 // Konverter form frontend -> body backend (frontend-only, tanpa ubah Go).
@@ -297,6 +371,9 @@ export function toCreateReservasiBody(
   if (!alasan) {
     return { kind: 'unsupported', reason: 'Tujuan penggunaan wajib diisi.' };
   }
+  if (alasan.length > 255) {
+    return { kind: 'unsupported', reason: 'Alasan peminjaman maksimal 255 karakter.' };
+  }
   const refId = facility.refId;
   const tipe = facility.tipe;
   if (typeof refId !== 'number' || !Number.isInteger(refId) || refId <= 0 || !tipe) {
@@ -326,6 +403,7 @@ export function toCreateReservasiBody(
       waktu_peminjaman,
       waktu_peminjaman_selesai,
       alasan_peminjaman: alasan,
+      jumlah_peserta: peserta && peserta >= 1 ? Math.floor(peserta) : 1,
     },
   };
 }
@@ -394,7 +472,7 @@ function str(v: unknown): string {
   return typeof v === 'string' ? v : '';
 }
 
-export type FrontendReservasiStatus = 'menunggu' | 'disetujui' | 'ditolak' | 'dibatalkan';
+export type FrontendReservasiStatus = 'menunggu' | 'disetujui' | 'ditolak' | 'dibatalkan' | 'selesai';
 
 export function mapReservasiStatus(s: unknown): FrontendReservasiStatus {
   switch (String(s ?? '').toUpperCase()) {
@@ -408,6 +486,9 @@ export function mapReservasiStatus(s: unknown): FrontendReservasiStatus {
     case 'CANCELED':
     case 'DIBATALKAN':
       return 'dibatalkan';
+    case 'DONE':
+    case 'SELESAI':
+      return 'selesai';
     case 'PENDING':
     case 'MENUNGGU':
     default:
@@ -427,50 +508,79 @@ export interface MappedReservasi {
   status: FrontendReservasiStatus;
   createdAt: string;
   catatanBatal: string;
+  pemohon?: string;
+  ruanganId?: number;
+  ruanganNama?: string;
+  alat?: { id: number; nama: string; jumlah: number }[];
+  statusKode?: string;
+  userId?: number;
 }
 
-// Baris GET /reservasi/list_reservasi/ruangan (W-keys + Ruangan_reservasi int).
+// Mapper universal yang mendukung respons controller/reservasi/*.go baru maupun lawas
+export function mapBackendReservasi(row: Record<string, unknown>): MappedReservasi | null {
+  const id = num(row['id']);
+  if (id === undefined) return null;
+
+  const ruanganId = num(row['ruangan_id'] ?? row['Ruangan_reservasi']);
+  const alatList = Array.isArray(row['alat'])
+    ? (row['alat'] as { id: number; nama: string; jumlah: number }[])
+    : [];
+  const alatId =
+    num(row['alat_id'] ?? row['Alat_reservasi']) ??
+    (alatList.length > 0 ? num(alatList[0].id) : undefined);
+
+  let facilityId = '';
+  if (ruanganId !== undefined && ruanganId > 0) {
+    facilityId = `ruangan-${ruanganId}`;
+  } else if (alatId !== undefined && alatId > 0) {
+    facilityId = `alat-${alatId}`;
+  } else {
+    facilityId = 'ruangan-0';
+  }
+
+  const t = splitBackendWaktu(
+    str(row['waktu_peminjaman'] ?? row['Waktu_peminjaman']),
+    str(row['waktu_peminjaman_selesai'] ?? row['Waktu_peminjaman_selesai']),
+  );
+  const dibuat = str(row['waktu_reservasi_dibuat'] ?? row['Waktu_reservasi_dibuat']);
+
+  const pesertaNum =
+    num(row['jumlah_peserta'] ?? row['Jumlah_peserta']) ??
+    (alatList.length > 0 ? num(alatList[0].jumlah) : num(row['Jumlah']));
+
+  const alasanPenolakan = str(row['alasan_penolakan'] ?? row['Alasan_penolakan']);
+  const alasanPembatalan = str(row['alasan_pembatalan'] ?? row['Alasan_pembatalan']);
+  const catatanBatal = alasanPenolakan || alasanPembatalan || '';
+
+  const statusRaw = row['status'] ?? row['status_kode'] ?? row['Status_reservasi'];
+
+  return {
+    id,
+    backendId: id,
+    facilityId,
+    tanggal: t.tanggal,
+    start: t.start,
+    end: t.end,
+    tujuan: str(row['alasan_peminjaman'] ?? row['Alasan_peminjaman']),
+    peserta: pesertaNum,
+    status: mapReservasiStatus(statusRaw),
+    createdAt: dibuat ? new Date(dibuat).toISOString() : new Date().toISOString(),
+    catatanBatal,
+    pemohon: str(row['username'] ?? row['Username'] ?? ''),
+    ruanganId,
+    ruanganNama: typeof row['ruangan_nama'] === 'string' ? row['ruangan_nama'] : undefined,
+    alat: alatList,
+    statusKode: str(row['status_kode']),
+    userId: num(row['user_id']),
+  };
+}
+
 export function mapReservasiRuangan(row: Record<string, unknown>): MappedReservasi | null {
-  const id = num(row['id']);
-  const refId = num(row['Ruangan_reservasi']);
-  if (id === undefined || refId === undefined) return null;
-  const t = splitBackendWaktu(str(row['Waktu_peminjaman']), str(row['Waktu_peminjaman_selesai']));
-  const dibuat = str(row['Waktu_reservasi_dibuat']);
-  return {
-    id,
-    backendId: id,
-    facilityId: `ruangan-${refId}`,
-    tanggal: t.tanggal,
-    start: t.start,
-    end: t.end,
-    tujuan: str(row['Alasan_peminjaman']),
-    peserta: undefined,
-    status: mapReservasiStatus(row['Status_reservasi']),
-    createdAt: dibuat ? new Date(dibuat).toISOString() : new Date().toISOString(),
-    catatanBatal: str(row['Alasan_penolakan']),
-  };
+  return mapBackendReservasi(row);
 }
 
-// Baris GET /reservasi/list_reservasi/alat (+ Alat_reservasi int, Jumlah).
 export function mapReservasiAlat(row: Record<string, unknown>): MappedReservasi | null {
-  const id = num(row['id']);
-  const refId = num(row['Alat_reservasi']);
-  if (id === undefined || refId === undefined) return null;
-  const t = splitBackendWaktu(str(row['Waktu_peminjaman']), str(row['Waktu_peminjaman_selesai']));
-  const dibuat = str(row['Waktu_reservasi_dibuat']);
-  return {
-    id,
-    backendId: id,
-    facilityId: `alat-${refId}`,
-    tanggal: t.tanggal,
-    start: t.start,
-    end: t.end,
-    tujuan: str(row['Alasan_peminjaman']),
-    peserta: num(row['Jumlah']),
-    status: mapReservasiStatus(row['Status_reservasi']),
-    createdAt: dibuat ? new Date(dibuat).toISOString() : new Date().toISOString(),
-    catatanBatal: str(row['Alasan_penolakan']),
-  };
+  return mapBackendReservasi(row);
 }
 
 export type FrontendReportStatus = 'baru' | 'diproses' | 'selesai' | 'ditolak';

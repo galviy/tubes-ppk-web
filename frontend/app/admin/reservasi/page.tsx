@@ -10,6 +10,7 @@ const STATUS_CONFIG: Record<ReservationStatus, { pillClass: string; label: strin
   disetujui: { pillClass: 'avail', label: 'Disetujui' },
   ditolak: { pillClass: 'danger', label: 'Ditolak' },
   dibatalkan: { pillClass: 'neutral', label: 'Dibatalkan' },
+  selesai: { pillClass: 'avail', label: 'Selesai' },
 };
 
 export default function AdminSemuaReservasiPage() {
