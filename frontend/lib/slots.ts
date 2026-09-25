@@ -28,6 +28,33 @@ export function getTodayDateString(): string {
   return `${y}-${m}-${day}`;
 }
 
+export const INDO_MONTHS = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
+
+/**
+ * Format string tanggal YYYY-MM-DD atau ISO menjadi format teks ejaan Indonesia (misal: "24 September 2026").
+ */
+export function formatDateIndo(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+  const cleanStr = String(dateStr).trim();
+  const match = cleanStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (match) {
+    const year = match[1];
+    const monthIndex = parseInt(match[2], 10) - 1;
+    const day = parseInt(match[3], 10);
+    if (monthIndex >= 0 && monthIndex < 12) {
+      return `${day} ${INDO_MONTHS[monthIndex]} ${year}`;
+    }
+  }
+  const d = new Date(cleanStr);
+  if (!Number.isNaN(d.getTime())) {
+    return `${d.getDate()} ${INDO_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  }
+  return cleanStr;
+}
+
 /**
  * Cek apakah reservasi untuk tanggal target masih memenuhi batas waktu:
  * Maksimal reservasi diajukan pada H-1 pukul 00.00 WIB.

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { ReportStatus } from '@/models/report';
 import ReportFoto from '@/components/ReportFoto';
+import { formatDateIndo } from '@/lib/slots';
 
 const STATUS_CONFIG: Record<ReportStatus, { pillClass: string; label: string }> = {
   baru: { pillClass: 'busy', label: 'Baru' },
@@ -188,7 +189,7 @@ export default function AdminSemuaLaporanPage() {
 
                     {/* TANGGAL */}
                     <td style={{ whiteSpace: 'nowrap', fontSize: 12, color: '#6B7280' }}>
-                      {r.createdAt ? r.createdAt.slice(0, 10) : '2026-09-18'}
+                      {formatDateIndo(r.createdAt || '2026-09-18')}
                     </td>
                   </tr>
                 );

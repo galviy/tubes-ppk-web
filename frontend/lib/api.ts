@@ -360,6 +360,19 @@ export function splitBackendWaktu(
   mulai: string,
   selesai: string,
 ): { tanggal: string; start: string; end: string } {
+  if (!mulai || !selesai) return { tanggal: '', start: '', end: '' };
+
+  // Ambil angka YYYY-MM-DD dan HH:mm langsung dari string agar tidak tergeser zona waktu (+7 jam WIB)
+  const matchS = mulai.match(/(\d{4})-(\d{1,2})-(\d{1,2})[T ](\d{1,2}):(\d{1,2})/);
+  const matchE = selesai.match(/(\d{4})-(\d{1,2})-(\d{1,2})[T ](\d{1,2}):(\d{1,2})/);
+
+  if (matchS && matchE) {
+    const tanggal = `${matchS[1]}-${pad2(Number(matchS[2]))}-${pad2(Number(matchS[3]))}`;
+    const start = `${pad2(Number(matchS[4]))}:${pad2(Number(matchS[5]))}`;
+    const end = `${pad2(Number(matchE[4]))}:${pad2(Number(matchE[5]))}`;
+    return { tanggal, start, end };
+  }
+
   const s = new Date(mulai);
   const e = new Date(selesai);
   const valid = !Number.isNaN(s.getTime()) && !Number.isNaN(e.getTime());

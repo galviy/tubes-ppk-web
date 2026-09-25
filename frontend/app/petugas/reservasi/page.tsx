@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { ReservationStatus } from '@/models/reservation';
+import { formatDateIndo } from '@/lib/slots';
 
 const STATUS_CONFIG: Record<ReservationStatus, { pillClass: string; label: string }> = {
   menunggu: { pillClass: 'busy', label: 'Menunggu' },
@@ -107,7 +108,7 @@ export default function PetugasReservasiPage() {
 
                     {/* JADWAL */}
                     <td style={{ whiteSpace: 'nowrap', fontSize: 13 }}>
-                      <div>{r.tanggal}</div>
+                      <div>{formatDateIndo(r.tanggal)}</div>
                       <div style={{ color: '#6B7280', fontSize: 12 }}>{r.start} - {r.end}</div>
                     </td>
 
