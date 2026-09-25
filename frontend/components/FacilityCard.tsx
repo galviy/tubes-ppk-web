@@ -1,4 +1,5 @@
 import { Facility } from '@/models/facility';
+import { isAlatFacility } from '@/models/facilities-data';
 
 const statusBadge: Record<Facility['status'], { cls: string; label: string }> = {
   avail: { cls: 'avail', label: 'Tersedia' },
@@ -14,6 +15,7 @@ interface FacilityCardProps {
 
 export default function FacilityCard({ facility, onOpenDetail }: FacilityCardProps) {
   const badge = statusBadge[facility.status];
+  const isAlat = isAlatFacility(facility);
 
   return (
     <div className="card card-clickable" onClick={() => onOpenDetail(facility.id)}>
@@ -49,7 +51,7 @@ export default function FacilityCard({ facility, onOpenDetail }: FacilityCardPro
         </div>
         <div className="card-foot">
           <div className="capacity">
-            {facility.type?.toLowerCase() === 'alat' ? (
+            {isAlat ? (
               <>Jumlah tersedia <b>{facility.cap} unit</b></>
             ) : (
               <>Kapasitas <b>{facility.cap} orang</b></>

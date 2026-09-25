@@ -3,7 +3,7 @@
 // lokasi, kapasitas, dan status. Dipakai oleh halaman Beranda.
 
 import { Facility } from '@/models/facility';
-import { FacilityCategory } from '@/models/facilities-data';
+import { FacilityCategory, isAlatFacility } from '@/models/facilities-data';
 
 export interface FacilityFilters {
   category: FacilityCategory;
@@ -34,7 +34,7 @@ export function filterFacilities(list: Facility[], filters: FacilityFilters): Fa
       const isFilterUnit = filters.kapasitas.includes('unit');
       const isFilterOrang = filters.kapasitas.includes('orang');
 
-      if (f.type?.toLowerCase() === 'alat') {
+      if (isAlatFacility(f)) {
         // Alat diukur dalam jumlah unit, bukan kapasitas orang
         if (isFilterOrang) return false;
         if (isFilterUnit) {

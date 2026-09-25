@@ -5,6 +5,12 @@ import { useAppData } from '@/context/AppDataContext';
 import { generateTimeSlots, getSlotState, getTodayDateString, formatDateIndo } from '@/lib/slots';
 import { SlotState } from '@/models/facility';
 import { backendKetersediaanFasilitas } from '@/lib/api';
+import {
+  isRuanganFacility,
+  isAlatFacility,
+  DEFAULT_ROOM_CATEGORIES,
+  DEFAULT_ALAT_CATEGORIES,
+} from '@/models/facilities-data';
 
 const SLOTS = generateTimeSlots();
 
@@ -57,6 +63,10 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
   const { facilities, reservations } = useAppData();
   const [now, setNow] = useState<Date | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(() => getTodayDateString());
+  const [tabType, setTabType] = useState<'ruangan' | 'alat'>(() => {
+    const current = facilities.find((f) => f.id === activeFacilityId);
+    return current && isAlatFacility(current) ? 'alat' : 'ruangan';
+  });
   const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
   const [publicUnavailable, setPublicUnavailable] = useState<Record<string, Set<string>>>({});
   const tabsRef = useRef<HTMLDivElement>(null);
@@ -115,22 +125,38 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
     }
   };
 
+  const countRuangan = useMemo(() => facilities.filter(isRuanganFacility).length, [facilities]);
+  const countAlat = useMemo(() => facilities.filter(isAlatFacility).length, [facilities]);
+
+  const tabFacilities = useMemo(() => {
+    return facilities.filter(tabType === 'alat' ? isAlatFacility : isRuanganFacility);
+  }, [facilities, tabType]);
+
   const categories = useMemo(() => {
-    return ['Semua', ...Array.from(new Set(facilities.map((f) => f.type))).filter(Boolean)];
-  }, [facilities]);
+    if (tabType === 'ruangan') {
+      const existing = Array.from(new Set(facilities.filter(isRuanganFacility).map((f) => f.type))).filter(Boolean);
+      const all = Array.from(new Set([...DEFAULT_ROOM_CATEGORIES, ...existing]));
+      return ['Semua', ...all];
+    } else {
+      const existing = Array.from(new Set(facilities.filter(isAlatFacility).map((f) => f.type))).filter(Boolean);
+      const all = Array.from(new Set([...DEFAULT_ALAT_CATEGORIES, ...existing]));
+      return ['Semua', ...all];
+    }
+  }, [facilities, tabType]);
 
   const filteredFacilities = useMemo(() => {
-    if (selectedCategory === 'Semua') return facilities;
-    return facilities.filter((f) => f.type === selectedCategory);
-  }, [facilities, selectedCategory]);
+    if (selectedCategory === 'Semua') return tabFacilities;
+    return tabFacilities.filter((f) => f.type === selectedCategory);
+  }, [tabFacilities, selectedCategory]);
 
-  const facility = facilities.find((f) => f.id === activeFacilityId) ?? facilities[0];
+  const facility = tabFacilities.find((f) => f.id === activeFacilityId) ?? tabFacilities[0] ?? facilities[0];
 
+  // Pastikan fasilitas aktif sesuai dengan tab yang sedang aktif
   useEffect(() => {
-    if (facilities.length > 0 && (!activeFacilityId || !facilities.some((f) => f.id === activeFacilityId))) {
-      onSelectFacility(facilities[0].id);
+    if (tabFacilities.length > 0 && !tabFacilities.some((f) => f.id === activeFacilityId)) {
+      onSelectFacility(tabFacilities[0].id);
     }
-  }, [facilities, activeFacilityId, onSelectFacility]);
+  }, [tabFacilities, activeFacilityId, onSelectFacility]);
 
   const slotStates = useMemo(() => {
     if (!now || !facility) return SLOTS.map(() => 'passed' as SlotState);
@@ -180,6 +206,65 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
         </div>
       </div>
 
+      {/* Sub-tab Switcher: Ruangan vs Alat */}
+      <div
+        style={{
+          display: 'flex',
+          gap: 8,
+          margin: '16px 0 4px',
+          borderBottom: '1px solid #E5E0D8',
+          paddingBottom: 10,
+          flexWrap: 'wrap',
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            setTabType('ruangan');
+            setSelectedCategory('Semua');
+          }}
+          style={{
+            padding: '8px 18px',
+            borderRadius: 6,
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: 'pointer',
+            border: tabType === 'ruangan' ? '1px solid #181D24' : '1px solid #D5D0C7',
+            background: tabType === 'ruangan' ? '#181D24' : '#FFFFFF',
+            color: tabType === 'ruangan' ? '#FFFFFF' : '#4B5563',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            transition: 'all 0.15s ease',
+          }}
+        >
+          Jadwal Ruangan ({countRuangan})
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setTabType('alat');
+            setSelectedCategory('Semua');
+          }}
+          style={{
+            padding: '8px 18px',
+            borderRadius: 6,
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: 'pointer',
+            border: tabType === 'alat' ? '1px solid #181D24' : '1px solid #D5D0C7',
+            background: tabType === 'alat' ? '#181D24' : '#FFFFFF',
+            color: tabType === 'alat' ? '#FFFFFF' : '#4B5563',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            transition: 'all 0.15s ease',
+          }}
+        >
+          Jadwal Alat ({countAlat})
+        </button>
+      </div>
+
       {/* Calendar Date Navigation Bar */}
       <div
         style={{
@@ -192,7 +277,7 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           background: '#FAF8F5',
           border: '1px solid #E5E0D8',
           borderRadius: 6,
-          margin: '16px 0 14px',
+          margin: '12px 0 14px',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -342,7 +427,7 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
       <div className="sched-toolbar">
         <div className="sched-cat-filter">
           {categories.map((cat) => {
-            const count = cat === 'Semua' ? facilities.length : facilities.filter((f) => f.type === cat).length;
+            const count = cat === 'Semua' ? tabFacilities.length : tabFacilities.filter((f) => f.type === cat).length;
             const isActive = selectedCategory === cat;
             return (
               <button
@@ -358,20 +443,20 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
         </div>
 
         <div className="sched-quick-select-wrap">
-          <label className="sched-quick-label">Pilih Fasilitas:</label>
+          <label className="sched-quick-label">Pilih {tabType === 'ruangan' ? 'Ruangan' : 'Alat'}:</label>
           <select
             className="sched-quick-select"
             value={activeFacilityId}
             onChange={(e) => {
               const nextId = e.target.value;
               onSelectFacility(nextId);
-              const targetFac = facilities.find((f) => f.id === nextId);
+              const targetFac = tabFacilities.find((f) => f.id === nextId);
               if (targetFac && selectedCategory !== 'Semua' && targetFac.type !== selectedCategory) {
                 setSelectedCategory('Semua');
               }
             }}
           >
-            {facilities.map((f) => (
+            {tabFacilities.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.name} ({f.loc}) • {f.status === 'repair' ? 'Perbaikan' : f.status === 'nonaktif' ? 'Nonaktif' : 'Tersedia'}
               </option>
@@ -391,21 +476,27 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </button>
         <div className="sched-fac-tabs" ref={tabsRef}>
-          {filteredFacilities.map((f) => {
-            const isActive = f.id === activeFacilityId;
-            const isRepair = f.status === 'repair' || f.status === 'nonaktif';
-            return (
-              <button
-                key={f.id}
-                type="button"
-                className={`sched-fac-tab ${isActive ? 'active' : ''}`}
-                onClick={() => onSelectFacility(f.id)}
-              >
-                <span className={`fac-dot ${isRepair ? 'repair' : 'avail'}`} />
-                <span className="sched-fac-name">{f.name}</span>
-              </button>
-            );
-          })}
+          {filteredFacilities.length === 0 ? (
+            <div style={{ padding: '8px 16px', fontSize: 13, color: '#6B7280' }}>
+              Tidak ada {tabType === 'ruangan' ? 'ruangan' : 'alat'} untuk kategori ini.
+            </div>
+          ) : (
+            filteredFacilities.map((f) => {
+              const isActive = f.id === activeFacilityId;
+              const isRepair = f.status === 'repair' || f.status === 'nonaktif';
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  className={`sched-fac-tab ${isActive ? 'active' : ''}`}
+                  onClick={() => onSelectFacility(f.id)}
+                >
+                  <span className={`fac-dot ${isRepair ? 'repair' : 'avail'}`} />
+                  <span className="sched-fac-name">{f.name}</span>
+                </button>
+              );
+            })
+          )}
         </div>
         <button
           type="button"
@@ -423,8 +514,8 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           <b>{facility.name}</b>
         </div>
         <div className="sched-info-cell">
-          <span className="lbl-sm">{facility.type?.toLowerCase() === 'alat' ? 'Jumlah Tersedia' : 'Kapasitas'}</span>
-          <b>{facility.cap} {facility.type?.toLowerCase() === 'alat' ? 'unit' : 'orang'}</b>
+          <span className="lbl-sm">{isAlatFacility(facility) ? 'Jumlah Tersedia' : 'Kapasitas'}</span>
+          <b>{facility.cap} {isAlatFacility(facility) ? 'unit' : 'orang'}</b>
         </div>
         <div className="sched-info-cell">
           <span className="lbl-sm">Zona Operasional</span>

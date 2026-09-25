@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import SchedulePreview from '@/components/SchedulePreview';
 import { useAppData } from '@/context/AppDataContext';
+import { isAlatFacility } from '@/models/facilities-data';
 
 function JadwalContent() {
   const router = useRouter();
@@ -72,7 +73,10 @@ function JadwalContent() {
               </p>
             </div>
             <div className="btn-row">
-              <button className="btn primary" onClick={() => goOrLogin(`/pengguna/reservasi?facility=${facility?.id || activeFacilityId}`)}>
+              <button className="btn primary" onClick={() => {
+                const facType = facility && isAlatFacility(facility) ? 'alat' : 'ruangan';
+                goOrLogin(`/pengguna/reservasi?facility=${facility?.id || activeFacilityId}&tipe=${facType}`);
+              }}>
                 Ajukan Reservasi
               </button>
               <button className="btn ghost-danger" onClick={() => goOrLogin(`/pengguna/lapor?facility=${facility?.id || activeFacilityId}`)}>
