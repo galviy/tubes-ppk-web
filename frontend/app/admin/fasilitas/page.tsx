@@ -1,16 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
 import { Facility } from '@/models/facility';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
-
-const DEFAULT_TYPES = ['Ruang Kelas', 'Aula', 'Laboratorium', 'Lapangan', 'Alat'];
+import {
+  DEFAULT_ROOM_CATEGORIES,
+  DEFAULT_ALAT_CATEGORIES,
+  isAlatFacility,
+  isRuanganFacility,
+} from '@/models/facilities-data';
 
 const BLANK_FORM = {
   nama: '',
   tipeSarana: 'ruangan' as 'ruangan' | 'alat',
-  tipeSelect: DEFAULT_TYPES[0],
+  tipeSelect: DEFAULT_ROOM_CATEGORIES[0],
   tipeCustom: '',
   lokasi: '',
   kapasitas: '',
@@ -19,7 +24,7 @@ const BLANK_FORM = {
   image: '',
 };
 
-export default function KelolaFasilitasPage() {
+function KelolaFasilitasContent() {
   const {
     facilities,
     addFacility,
@@ -29,9 +34,20 @@ export default function KelolaFasilitasPage() {
     refreshFacilities,
   } = useAppData();
 
+  const searchParams = useSearchParams();
+  const tipeParam = searchParams.get('tipe');
+
   useEffect(() => {
     refreshFacilities();
   }, [refreshFacilities]);
+
+  const [tabType, setTabType] = useState<'semua' | 'ruangan' | 'alat'>(() => {
+    if (tipeParam === 'alat') return 'alat';
+    if (tipeParam === 'ruangan') return 'ruangan';
+    return 'semua';
+  });
+  const [filterCategory, setFilterCategory] = useState<string>('semua');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(BLANK_FORM);
@@ -42,12 +58,60 @@ export default function KelolaFasilitasPage() {
     onConfirm: () => {},
   });
 
-  // Dynamic type options derived from facilities + defaults
-  const existingTypes = Array.from(new Set(facilities.map((f) => f.type))).filter(Boolean);
-  const allTypeOptions = Array.from(new Set([...DEFAULT_TYPES, ...existingTypes]));
+  // Dynamic type options separated strictly by sarana type (ruangan vs alat)
+  const roomTypeOptions = useMemo(() => {
+    const existing = Array.from(new Set(facilities.filter(isRuanganFacility).map((f) => f.type))).filter(Boolean);
+    return Array.from(new Set([...DEFAULT_ROOM_CATEGORIES, ...existing]));
+  }, [facilities]);
+
+  const alatTypeOptions = useMemo(() => {
+    const existing = Array.from(new Set(facilities.filter(isAlatFacility).map((f) => f.type))).filter(Boolean);
+    return Array.from(new Set([...DEFAULT_ALAT_CATEGORIES, ...existing]));
+  }, [facilities]);
+
+  const currentTypeOptions = form.tipeSarana === 'alat' ? alatTypeOptions : roomTypeOptions;
+
+  function handleTipeSaranaChange(newTipe: 'ruangan' | 'alat') {
+    const options = newTipe === 'alat' ? alatTypeOptions : roomTypeOptions;
+    setForm((f) => ({
+      ...f,
+      tipeSarana: newTipe,
+      tipeSelect: options[0] || '+baru',
+      tipeCustom: '',
+    }));
+  }
+
+  const countRuangan = facilities.filter(isRuanganFacility).length;
+  const countAlat = facilities.filter(isAlatFacility).length;
+
+  // Category filter options for master table
+  const tableCategoryOptions = useMemo(() => {
+    if (tabType === 'ruangan') {
+      return [{ value: 'semua', label: 'Semua Kategori Ruangan' }, ...roomTypeOptions.map((c) => ({ value: c, label: c }))];
+    } else if (tabType === 'alat') {
+      return [{ value: 'semua', label: 'Semua Kategori Alat' }, ...alatTypeOptions.map((c) => ({ value: c, label: c }))];
+    }
+    const all = Array.from(new Set([...roomTypeOptions, ...alatTypeOptions]));
+    return [{ value: 'semua', label: 'Semua Kategori' }, ...all.map((c) => ({ value: c, label: c }))];
+  }, [tabType, roomTypeOptions, alatTypeOptions]);
+
+  // Filtered facilities for master table
+  const filteredFacilities = facilities.filter((f) => {
+    const isAlat = isAlatFacility(f);
+    if (tabType === 'ruangan' && isAlat) return false;
+    if (tabType === 'alat' && !isAlat) return false;
+    if (filterCategory !== 'semua' && f.type !== filterCategory) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchName = f.name.toLowerCase().includes(q);
+      const matchLoc = f.loc.toLowerCase().includes(q);
+      const matchType = f.type.toLowerCase().includes(q);
+      return matchName || matchLoc || matchType;
+    }
+    return true;
+  });
 
   function startEdit(f: Facility) {
-    // Ubah via POST /admin/update_fasilitas/* (butuh refId + tipe backend).
     if (f.refId === undefined || !f.tipe) {
       setModalConfig({
         isOpen: true,
@@ -61,7 +125,8 @@ export default function KelolaFasilitasPage() {
       return;
     }
     setEditingId(f.id);
-    const isKnown = allTypeOptions.includes(f.type);
+    const targetOptions = f.tipe === 'alat' ? alatTypeOptions : roomTypeOptions;
+    const isKnown = targetOptions.includes(f.type);
     setForm({
       nama: f.name,
       tipeSarana: f.tipe,
@@ -287,40 +352,40 @@ export default function KelolaFasilitasPage() {
 
           {/* Jenis Sarana (menentukan endpoint backend) */}
           <div className="fgroup">
-              <label>Jenis sarana *</label>
-              <div style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '8px 0' }}>
-                {(['ruangan', 'alat'] as const).map((t) => (
-                  <label key={t} style={{ display: 'inline-flex', gap: 6, alignItems: 'center', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                    <input
-                      type="radio"
-                      name="tipeSarana"
-                      checked={form.tipeSarana === t}
-                      onChange={() => setForm((f) => ({ ...f, tipeSarana: t }))}
-                    />
-                    {t === 'ruangan' ? 'Ruangan' : 'Alat'}
-                  </label>
-                ))}
-              </div>
+            <label>Jenis sarana *</label>
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '8px 0' }}>
+              {(['ruangan', 'alat'] as const).map((t) => (
+                <label key={t} style={{ display: 'inline-flex', gap: 6, alignItems: 'center', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="tipeSarana"
+                    checked={form.tipeSarana === t}
+                    onChange={() => handleTipeSaranaChange(t)}
+                  />
+                  {t === 'ruangan' ? 'Ruangan' : 'Alat'}
+                </label>
+              ))}
             </div>
+          </div>
 
-          {/* Tipe Fasilitas (Fleksibel: Pilihan ada + Bisa Tipe Baru) */}
+          {/* Tipe Fasilitas (Kategori Ruangan vs Kategori Alat) */}
           <div className="fgroup">
-            <label>Tipe Fasilitas *</label>
+            <label>{form.tipeSarana === 'alat' ? 'Kategori Alat *' : 'Kategori Ruangan *'}</label>
             <select
               value={form.tipeSelect}
               onChange={(e) => setForm((f) => ({ ...f, tipeSelect: e.target.value }))}
             >
-              {allTypeOptions.map((t) => (
+              {currentTypeOptions.map((t) => (
                 <option key={t} value={t}>
                   {t}
                 </option>
               ))}
-              <option value="+baru">Lainnya...</option>
+              <option value="+baru">+ Tambah Kategori Baru...</option>
             </select>
             {form.tipeSelect === '+baru' && (
               <input
                 style={{ marginTop: 8 }}
-                placeholder="Ketik nama tipe baru, contoh: Studio, Coworking Space, dsb."
+                placeholder={form.tipeSarana === 'alat' ? 'Ketik kategori alat baru, contoh: Sound System, Drone, dsb.' : 'Ketik kategori ruangan baru, contoh: Studio, Coworking Space, dsb.'}
                 value={form.tipeCustom}
                 onChange={(e) => setForm((f) => ({ ...f, tipeCustom: e.target.value }))}
                 required
@@ -334,28 +399,21 @@ export default function KelolaFasilitasPage() {
             <input
               value={form.lokasi}
               onChange={(e) => setForm((f) => ({ ...f, lokasi: e.target.value }))}
-              placeholder="Contoh: Gedung A / Gedung TI / Outdoor"
+              placeholder={form.tipeSarana === 'alat' ? 'Contoh: Ruang Pengelola Sarpras / Gedung TI' : 'Contoh: Gedung A / Gedung FSM'}
               required
             />
           </div>
 
           {/* Kapasitas / Jumlah Tersedia */}
           <div className="fgroup">
-            {(() => {
-              const isFormAlat = (form.tipeSelect === '+baru' ? form.tipeCustom : form.tipeSelect)?.toLowerCase() === 'alat';
-              return (
-                <>
-                  <label>{isFormAlat ? 'Jumlah Tersedia (unit) *' : 'Kapasitas (orang) *'}</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={form.kapasitas}
-                    onChange={(e) => setForm((f) => ({ ...f, kapasitas: e.target.value }))}
-                    placeholder={isFormAlat ? 'Contoh: 5' : 'Contoh: 45'}
-                  />
-                </>
-              );
-            })()}
+            <label>{form.tipeSarana === 'alat' ? 'Jumlah Unit Tersedia *' : 'Kapasitas Ruangan (orang) *'}</label>
+            <input
+              type="number"
+              min={1}
+              value={form.kapasitas}
+              onChange={(e) => setForm((f) => ({ ...f, kapasitas: e.target.value }))}
+              placeholder={form.tipeSarana === 'alat' ? 'Contoh: 5' : 'Contoh: 45'}
+            />
           </div>
 
           {/* Kelengkapan Fasilitas (Amenities) */}
@@ -541,16 +599,142 @@ export default function KelolaFasilitasPage() {
 
       {/* Tabel Master Fasilitas */}
       <div className="panel table-scroll" style={{ padding: 0 }}>
-        <div style={{ padding: '14px 20px 10px', borderBottom: '1px solid #E5E0D8' }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: '#181D24', margin: 0 }}>
-            Daftar Fasilitas Kampus ({facilities.length} fasilitas terdaftar)
-          </h3>
+        {/* Sub-tab Switcher: Semua, Ruangan, Alat */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 8,
+            padding: '16px 20px 12px',
+            borderBottom: '1px solid #E5E0D8',
+            flexWrap: 'wrap',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setTabType('semua');
+              setFilterCategory('semua');
+            }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 6,
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer',
+              border: tabType === 'semua' ? '1px solid #181D24' : '1px solid #D5D0C7',
+              background: tabType === 'semua' ? '#181D24' : '#FFFFFF',
+              color: tabType === 'semua' ? '#FFFFFF' : '#4B5563',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            Semua Fasilitas ({facilities.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setTabType('ruangan');
+              setFilterCategory('semua');
+            }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 6,
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer',
+              border: tabType === 'ruangan' ? '1px solid #181D24' : '1px solid #D5D0C7',
+              background: tabType === 'ruangan' ? '#181D24' : '#FFFFFF',
+              color: tabType === 'ruangan' ? '#FFFFFF' : '#4B5563',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              transition: 'all 0.15s ease',
+            }}
+          >
+            Fasilitas Ruangan ({countRuangan})
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setTabType('alat');
+              setFilterCategory('semua');
+            }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 6,
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer',
+              border: tabType === 'alat' ? '1px solid #181D24' : '1px solid #D5D0C7',
+              background: tabType === 'alat' ? '#181D24' : '#FFFFFF',
+              color: tabType === 'alat' ? '#FFFFFF' : '#4B5563',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              transition: 'all 0.15s ease',
+            }}
+          >
+            Fasilitas Alat ({countAlat})
+          </button>
         </div>
+
+        {/* Filter Bar: Kategori & Search */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '12px 20px',
+            borderBottom: '1px solid #E5E0D8',
+            flexWrap: 'wrap',
+            gap: 12,
+            background: '#FAF8F5',
+          }}
+        >
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 13.5, fontWeight: 600, color: '#374151' }}>Filter Kategori:</span>
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              style={{
+                padding: '6px 12px',
+                fontSize: 13,
+                borderRadius: 6,
+                border: '1px solid #D5D0C7',
+                background: '#FFFFFF',
+              }}
+            >
+              {tableCategoryOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type="text"
+              placeholder="Cari fasilitas / gedung..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                padding: '6px 12px',
+                fontSize: 13,
+                borderRadius: 6,
+                border: '1px solid #D5D0C7',
+                minWidth: 220,
+                background: '#FFFFFF',
+              }}
+            />
+          </div>
+        </div>
+
         <table>
           <thead>
             <tr>
-              <th>Fasilitas</th>
               <th>Tipe</th>
+              <th>Fasilitas</th>
+              <th>Kategori</th>
               <th>Lokasi</th>
               <th>Kapasitas / Jumlah</th>
               <th>Status Operasional</th>
@@ -558,178 +742,209 @@ export default function KelolaFasilitasPage() {
             </tr>
           </thead>
           <tbody>
-            {facilities.map((f) => (
-              <tr key={f.id}>
-                {/* Foto & Nama */}
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div
-                      style={{
-                        width: 44,
-                        height: 34,
-                        borderRadius: 4,
-                        overflow: 'hidden',
-                        background: '#15171a',
-                        flexShrink: 0,
-                        border: '1px solid #D5D0C7',
-                      }}
-                    >
-                      {f.image ? (
-                        <img
-                          src={f.image}
-                          alt={f.name}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#b59876',
-                            fontSize: 12.5,
-                            fontWeight: 700,
-                          }}
-                        >
-                          UNDIP
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 600, color: '#181D24' }}>{f.name}</div>
-                      <div style={{ fontSize: 13.5, color: '#6B7280', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {f.desc}
-                      </div>
-                      {f.amenities && f.amenities.length > 0 && (
-                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
-                          {f.amenities.slice(0, 3).map((am, idx) => (
-                            <span
-                              key={idx}
-                              style={{
-                                fontSize: 12.5,
-                                padding: '1px 5px',
-                                borderRadius: 3,
-                                background: '#F5EFEB',
-                                color: '#8A6D4B',
-                                fontWeight: 500,
-                              }}
-                            >
-                              {am}
-                            </span>
-                          ))}
-                          {f.amenities.length > 3 && (
-                            <span style={{ fontSize: 12.5, color: '#9CA3AF' }}>+{f.amenities.length - 3}</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <span style={{ fontWeight: 600, color: '#b59876', fontSize: 13 }}>{f.type}</span>
-                </td>
-                <td>{f.loc}</td>
-                <td>{f.cap} {f.type?.toLowerCase() === 'alat' ? 'unit' : 'orang'}</td>
-                <td>
-                  <span
-                    className={`pill ${
-                      f.status === 'repair' ? 'busy' : f.status === 'nonaktif' ? 'danger' : f.status === 'busy' ? 'busy' : 'avail'
-                    }`}
-                  >
-                    {f.status === 'repair'
-                      ? 'Perbaikan'
-                      : f.status === 'nonaktif'
-                      ? 'Nonaktif'
-                      : f.status === 'busy'
-                      ? 'Terpakai'
-                      : 'Aktif'}
-                  </span>
-                </td>
-                <td style={{ whiteSpace: 'nowrap', textAlign: 'left' }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                    <select
-                      className="table-select-action"
-                      value={f.status === 'busy' ? 'avail' : f.status}
-                      onChange={(e) => {
-                        void setFacilityStatus(f.id, e.target.value as Facility['status']).then(
-                          (res) => {
-                            if (!res.ok) {
-                              setModalConfig({
-                                isOpen: true,
-                                title: 'Gagal Mengubah Status',
-                                subtitle: res.message || 'Status fasilitas tidak dapat diproses.',
-                                confirmText: 'Mengerti',
-                                confirmVariant: 'danger',
-                                showInput: false,
-                                onConfirm: () => {},
-                              });
-                            }
-                          },
-                        );
-                      }}
-                      style={{
-                        borderColor:
-                          f.status === 'repair'
-                            ? '#FCD34D'
-                            : f.status === 'nonaktif'
-                            ? '#FECACA'
-                            : '#86EFAC',
-                        color:
-                          f.status === 'repair'
-                            ? '#92400E'
-                            : f.status === 'nonaktif'
-                            ? '#DC2626'
-                            : '#166534',
-                        fontWeight: 600,
-                      }}
-                    >
-                      <option value="avail">Aktif</option>
-                      <option value="repair">Perbaikan</option>
-                      <option value="nonaktif">Nonaktif</option>
-                    </select>
-
-                    {/* No-op dihapus: ubah/hapus wired ke backend */}
-                    <button
-                      type="button"
-                      title="Ubah spesifikasi via backend"
-                      onClick={() => startEdit(f)}
-                      style={{
-                        padding: '5px 10px',
-                        fontSize: 13.5,
-                        fontWeight: 600,
-                        border: '1px solid #D5D0C7',
-                        background: '#FFFFFF',
-                        borderRadius: 4,
-                        cursor: 'pointer',
-                        color: '#181D24',
-                      }}
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      type="button"
-                      title="Nonaktifkan via backend (soft delete)"
-                      onClick={() => handleDelete(f)}
-                      style={{
-                        padding: '5px 10px',
-                        fontSize: 13.5,
-                        fontWeight: 600,
-                        border: '1px solid #FECACA',
-                        background: '#FEF2F2',
-                        borderRadius: 4,
-                        cursor: 'pointer',
-                        color: '#DC2626',
-                      }}
-                    >
-                      Hapus
-                    </button>
-                  </div>
+            {filteredFacilities.length === 0 ? (
+              <tr>
+                <td colSpan={7} style={{ textAlign: 'center', color: '#6B7280', padding: 28 }}>
+                  Tidak ada fasilitas {tabType === 'ruangan' ? 'ruangan' : tabType === 'alat' ? 'alat' : ''} yang sesuai dengan filter.
                 </td>
               </tr>
-            ))}
+            ) : (
+              filteredFacilities.map((f) => {
+                const isAlat = isAlatFacility(f);
+
+                return (
+                  <tr key={f.id}>
+                    {/* Tipe Badge */}
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          padding: '3px 8px',
+                          borderRadius: 4,
+                          background: isAlat ? '#FEF3C7' : '#EFF6FF',
+                          color: isAlat ? '#92400E' : '#1E40AF',
+                          border: isAlat ? '1px solid #FDE68A' : '1px solid #DBEAFE',
+                        }}
+                      >
+                        {isAlat ? 'Alat' : 'Ruangan'}
+                      </span>
+                    </td>
+
+                    {/* Foto & Nama */}
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div
+                          style={{
+                            width: 44,
+                            height: 34,
+                            borderRadius: 4,
+                            overflow: 'hidden',
+                            background: '#15171a',
+                            flexShrink: 0,
+                            border: '1px solid #D5D0C7',
+                          }}
+                        >
+                          {f.image ? (
+                            <img
+                              src={f.image}
+                              alt={f.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#b59876',
+                                fontSize: 12.5,
+                                fontWeight: 700,
+                              }}
+                            >
+                              UNDIP
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 600, color: '#181D24' }}>{f.name}</div>
+                          <div style={{ fontSize: 13.5, color: '#6B7280', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {f.desc}
+                          </div>
+                          {f.amenities && f.amenities.length > 0 && (
+                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                              {f.amenities.slice(0, 3).map((am, idx) => (
+                                <span
+                                  key={idx}
+                                  style={{
+                                    fontSize: 12.5,
+                                    padding: '1px 5px',
+                                    borderRadius: 3,
+                                    background: '#F5EFEB',
+                                    color: '#8A6D4B',
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  {am}
+                                </span>
+                              ))}
+                              {f.amenities.length > 3 && (
+                                <span style={{ fontSize: 12.5, color: '#9CA3AF' }}>+{f.amenities.length - 3}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span style={{ fontWeight: 600, color: '#b59876', fontSize: 13 }}>{f.type}</span>
+                    </td>
+                    <td>{f.loc}</td>
+                    <td>{f.cap} {isAlat ? 'unit' : 'orang'}</td>
+                    <td>
+                      <span
+                        className={`pill ${
+                          f.status === 'repair' ? 'busy' : f.status === 'nonaktif' ? 'danger' : f.status === 'busy' ? 'busy' : 'avail'
+                        }`}
+                      >
+                        {f.status === 'repair'
+                          ? 'Perbaikan'
+                          : f.status === 'nonaktif'
+                          ? 'Nonaktif'
+                          : f.status === 'busy'
+                          ? 'Terpakai'
+                          : 'Aktif'}
+                      </span>
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap', textAlign: 'left' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        <select
+                          className="table-select-action"
+                          value={f.status === 'busy' ? 'avail' : f.status}
+                          onChange={(e) => {
+                            void setFacilityStatus(f.id, e.target.value as Facility['status']).then(
+                              (res) => {
+                                if (!res.ok) {
+                                  setModalConfig({
+                                    isOpen: true,
+                                    title: 'Gagal Mengubah Status',
+                                    subtitle: res.message || 'Status fasilitas tidak dapat diproses.',
+                                    confirmText: 'Mengerti',
+                                    confirmVariant: 'danger',
+                                    showInput: false,
+                                    onConfirm: () => {},
+                                  });
+                                }
+                              },
+                            );
+                          }}
+                          style={{
+                            borderColor:
+                              f.status === 'repair'
+                                ? '#FCD34D'
+                                : f.status === 'nonaktif'
+                                ? '#FECACA'
+                                : '#86EFAC',
+                            color:
+                              f.status === 'repair'
+                                ? '#92400E'
+                                : f.status === 'nonaktif'
+                                ? '#DC2626'
+                                : '#166534',
+                            fontWeight: 600,
+                          }}
+                        >
+                          <option value="avail">Aktif</option>
+                          <option value="repair">Perbaikan</option>
+                          <option value="nonaktif">Nonaktif</option>
+                        </select>
+
+                        <button
+                          type="button"
+                          title="Ubah spesifikasi via backend"
+                          onClick={() => startEdit(f)}
+                          style={{
+                            padding: '5px 10px',
+                            fontSize: 13.5,
+                            fontWeight: 600,
+                            border: '1px solid #D5D0C7',
+                            background: '#FFFFFF',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            color: '#181D24',
+                          }}
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          title="Nonaktifkan via backend (soft delete)"
+                          onClick={() => handleDelete(f)}
+                          style={{
+                            padding: '5px 10px',
+                            fontSize: 13.5,
+                            fontWeight: 600,
+                            border: '1px solid #FECACA',
+                            background: '#FEF2F2',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            color: '#DC2626',
+                          }}
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
@@ -739,5 +954,13 @@ export default function KelolaFasilitasPage() {
         onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))}
       />
     </div>
+  );
+}
+
+export default function KelolaFasilitasPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 24, color: '#6B7280' }}>Memuat data fasilitas...</div>}>
+      <KelolaFasilitasContent />
+    </Suspense>
   );
 }

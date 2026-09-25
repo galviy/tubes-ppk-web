@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Reservation, ReservationStatus } from '@/models/reservation';
 import { Facility } from '@/models/facility';
+import { isAlatReservation } from '@/models/facilities-data';
 import { canSelfCancel, formatDeadline, getCancellationDeadline } from '@/lib/cancellation';
 import { formatDateIndo } from '@/lib/slots';
 
@@ -86,8 +87,8 @@ export default function ReservationDetailModal({
           <div><span>Tanggal</span><b>{formatDateIndo(reservation.tanggal)}</b></div>
           <div><span>Waktu</span><b>{reservation.start} - {reservation.end}</b></div>
           <div>
-            <span>{facility?.type?.toLowerCase() === 'alat' ? 'Jumlah unit' : 'Jumlah peserta'}</span>
-            <b>{reservation.peserta ? `${reservation.peserta} ${facility?.type?.toLowerCase() === 'alat' ? 'unit' : 'orang'}` : '-'}</b>
+            <span>{isAlatReservation(reservation, facility) ? 'Jumlah unit' : 'Jumlah peserta'}</span>
+            <b>{reservation.peserta ? `${reservation.peserta} ${isAlatReservation(reservation, facility) ? 'unit' : 'orang'}` : '-'}</b>
           </div>
           <div><span>Tujuan</span><b>{reservation.tujuan}</b></div>
           <div><span>Status</span><b>{label}</b></div>

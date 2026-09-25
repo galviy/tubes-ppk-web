@@ -1,10 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
 import { ReservationStatus } from '@/models/reservation';
 import { formatDateIndo } from '@/lib/slots';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
+import {
+  isAlatReservation,
+  isRuanganFacility,
+  isAlatFacility,
+  DEFAULT_ROOM_CATEGORIES,
+  DEFAULT_ALAT_CATEGORIES,
+} from '@/models/facilities-data';
 
 const STATUS_CONFIG: Record<ReservationStatus, { pillClass: string; label: string }> = {
   menunggu: { pillClass: 'busy', label: 'Menunggu' },
@@ -14,7 +22,7 @@ const STATUS_CONFIG: Record<ReservationStatus, { pillClass: string; label: strin
   selesai: { pillClass: 'avail', label: 'Selesai' },
 };
 
-export default function PetugasReservasiPage() {
+function PetugasReservasiContent() {
   const {
     reservations,
     facilityById,
@@ -23,11 +31,20 @@ export default function PetugasReservasiPage() {
     refreshReservations,
   } = useAppData();
 
+  const searchParams = useSearchParams();
+  const tipeParam = searchParams.get('tipe');
+
   useEffect(() => {
     refreshReservations();
   }, [refreshReservations]);
 
+  const [tabType, setTabType] = useState<'semua' | 'ruangan' | 'alat'>(() => {
+    if (tipeParam === 'alat') return 'alat';
+    if (tipeParam === 'ruangan') return 'ruangan';
+    return 'semua';
+  });
   const [filterStatus, setFilterStatus] = useState<string>('semua');
+  const [filterCategory, setFilterCategory] = useState<string>('semua');
   const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
     isOpen: false,
     title: '',
@@ -44,13 +61,43 @@ export default function PetugasReservasiPage() {
     return () => clearTimeout(timer);
   }, [feedback]);
 
+  const countRuangan = reservations.filter((r) => !isAlatReservation(r, facilityById(r.facilityId))).length;
+  const countAlat = reservations.filter((r) => isAlatReservation(r, facilityById(r.facilityId))).length;
+
+  // Kategori dinamis sesuai sub-tab yang dipilih
+  const categoryOptions = useMemo(() => {
+    if (tabType === 'ruangan') {
+      const fromFac = Array.from(
+        new Set(reservations.map((r) => facilityById(r.facilityId)).filter(isRuanganFacility).map((f) => f?.type))
+      ).filter(Boolean) as string[];
+      const list = Array.from(new Set([...DEFAULT_ROOM_CATEGORIES, ...fromFac]));
+      return [{ value: 'semua', label: 'Semua Kategori Ruangan' }, ...list.map((c) => ({ value: c, label: c }))];
+    } else if (tabType === 'alat') {
+      const fromFac = Array.from(
+        new Set(reservations.map((r) => facilityById(r.facilityId)).filter(isAlatFacility).map((f) => f?.type))
+      ).filter(Boolean) as string[];
+      const list = Array.from(new Set([...DEFAULT_ALAT_CATEGORIES, ...fromFac]));
+      return [{ value: 'semua', label: 'Semua Kategori Alat' }, ...list.map((c) => ({ value: c, label: c }))];
+    } else {
+      return [{ value: 'semua', label: 'Semua Kategori' }];
+    }
+  }, [tabType, reservations, facilityById]);
+
   // Sort: 'menunggu' first, then 'disetujui', then others
   const sorted = [...reservations].sort((a, b) => {
     const order: Record<string, number> = { menunggu: 1, disetujui: 2, ditolak: 3, dibatalkan: 4, selesai: 5 };
     return (order[a.status] || 6) - (order[b.status] || 6);
   });
 
-  const filtered = filterStatus === 'semua' ? sorted : sorted.filter((r) => r.status === filterStatus);
+  const filtered = sorted.filter((r) => {
+    const fac = facilityById(r.facilityId);
+    const isAlat = isAlatReservation(r, fac);
+    if (tabType === 'ruangan' && isAlat) return false;
+    if (tabType === 'alat' && !isAlat) return false;
+    if (filterStatus !== 'semua' && r.status !== filterStatus) return false;
+    if (filterCategory !== 'semua' && fac?.type !== filterCategory) return false;
+    return true;
+  });
 
   function handleApprove(id: number, facilityName: string, pemohon: string) {
     setModalConfig({
@@ -200,34 +247,113 @@ export default function PetugasReservasiPage() {
         </div>
       )}
 
-      {/* Filter Chips */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+      {/* Sub-tab: Pilihan Antrian Reservasi Ruangan vs Alat */}
+      <div
+        role="tablist"
+        aria-label="Pilihan Jenis Reservasi"
+        style={{
+          display: 'flex',
+          gap: 8,
+          marginBottom: 16,
+          borderBottom: '2px solid #E5E0D8',
+          paddingBottom: 2,
+        }}
+      >
         {[
-          { key: 'semua', label: `Semua (${reservations.length})` },
-          { key: 'menunggu', label: `Menunggu (${reservations.filter((r) => r.status === 'menunggu').length})` },
-          { key: 'disetujui', label: `Disetujui (${reservations.filter((r) => r.status === 'disetujui').length})` },
-          { key: 'ditolak', label: `Ditolak (${reservations.filter((r) => r.status === 'ditolak').length})` },
-          { key: 'dibatalkan', label: `Dibatalkan (${reservations.filter((r) => r.status === 'dibatalkan').length})` },
-        ].map((tab) => (
+          { key: 'semua', label: 'Semua Antrian', count: reservations.length },
+          { key: 'ruangan', label: 'Reservasi Ruangan', count: countRuangan },
+          { key: 'alat', label: 'Reservasi Alat', count: countAlat },
+        ].map((t) => (
           <button
-            key={tab.key}
+            key={t.key}
             type="button"
-            onClick={() => setFilterStatus(tab.key)}
+            role="tab"
+            aria-selected={tabType === t.key}
+            onClick={() => {
+              setTabType(t.key as 'semua' | 'ruangan' | 'alat');
+              setFilterCategory('semua');
+            }}
             style={{
-              padding: '7px 14px',
-              borderRadius: 4,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '9px 18px',
+              borderRadius: '6px 6px 0 0',
               fontSize: 14,
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: 'pointer',
-              border: filterStatus === tab.key ? '1px solid #b59876' : '1px solid #E5E0D8',
-              background: filterStatus === tab.key ? '#15171a' : '#FFFFFF',
-              color: filterStatus === tab.key ? '#b59876' : '#6B7280',
+              border: tabType === t.key ? '1px solid #b59876' : '1px solid transparent',
+              borderBottom: tabType === t.key ? '3px solid #b59876' : '3px solid transparent',
+              background: tabType === t.key ? '#15171a' : '#FFFFFF',
+              color: tabType === t.key ? '#b59876' : '#6B7280',
+              marginBottom: -2,
               transition: 'all 0.15s ease',
             }}
           >
-            {tab.label}
+            <span>{t.label}</span>
+            <span
+              style={{
+                fontSize: 12,
+                padding: '2px 8px',
+                borderRadius: 10,
+                background: tabType === t.key ? '#2A2E35' : '#F3F0EB',
+                color: tabType === t.key ? '#D5C4A1' : '#6B7280',
+              }}
+            >
+              {t.count}
+            </span>
           </button>
         ))}
+      </div>
+
+      {/* Filter Row: Status Chips & Category Dropdown */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 18 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {[
+            { key: 'semua', label: `Semua (${reservations.length})` },
+            { key: 'menunggu', label: `Menunggu (${reservations.filter((r) => r.status === 'menunggu').length})` },
+            { key: 'disetujui', label: `Disetujui (${reservations.filter((r) => r.status === 'disetujui').length})` },
+            { key: 'ditolak', label: `Ditolak (${reservations.filter((r) => r.status === 'ditolak').length})` },
+            { key: 'dibatalkan', label: `Dibatalkan (${reservations.filter((r) => r.status === 'dibatalkan').length})` },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setFilterStatus(tab.key)}
+              style={{
+                padding: '7px 14px',
+                borderRadius: 4,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: 'pointer',
+                border: filterStatus === tab.key ? '1px solid #b59876' : '1px solid #E5E0D8',
+                background: filterStatus === tab.key ? '#15171a' : '#FFFFFF',
+                color: filterStatus === tab.key ? '#b59876' : '#6B7280',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Category dropdown if filtering by ruangan or alat */}
+        {tabType !== 'semua' && categoryOptions.length > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: '#4B5563' }}>Kategori:</label>
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              style={{ padding: '6px 12px', fontSize: 13, borderRadius: 6, border: '1px solid #D5D0C7' }}
+            >
+              {categoryOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Table matching Reference Image 3 */}
@@ -254,6 +380,7 @@ export default function PetugasReservasiPage() {
             ) : (
               filtered.map((r) => {
                 const fac = facilityById(r.facilityId);
+                const isAlat = isAlatReservation(r, fac);
                 const facilityName = fac?.name || r.ruanganNama || `Fasilitas #${r.facilityId}`;
                 const cfg = STATUS_CONFIG[r.status] || { pillClass: 'neutral', label: r.status };
 
@@ -266,7 +393,18 @@ export default function PetugasReservasiPage() {
 
                     {/* FASILITAS */}
                     <td style={{ whiteSpace: 'nowrap' }}>
-                      <span style={{ fontWeight: 600, color: '#181D24' }}>{facilityName}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontWeight: 600, color: '#181D24' }}>{facilityName}</span>
+                        <span
+                          className="pill neutral"
+                          style={{ fontSize: 11, padding: '1px 6px', fontWeight: 600 }}
+                        >
+                          {isAlat ? 'Alat' : 'Ruangan'}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 13, color: '#6B7280' }}>
+                        {fac?.type || '-'} • {fac?.loc || '-'}
+                      </div>
                     </td>
 
                     {/* JADWAL */}
@@ -277,7 +415,7 @@ export default function PetugasReservasiPage() {
 
                     {/* PESERTA / UNIT */}
                     <td style={{ whiteSpace: 'nowrap', fontSize: 13 }}>
-                      {r.peserta ? `${r.peserta} ${fac?.type?.toLowerCase() === 'alat' ? 'unit' : 'orang'}` : '-'}
+                      {r.peserta ? `${r.peserta} ${isAlat ? 'unit' : 'orang'}` : '-'}
                     </td>
 
                     {/* TUJUAN */}
@@ -355,5 +493,13 @@ export default function PetugasReservasiPage() {
 
       <ActionPromptModal config={modalConfig} onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))} />
     </div>
+  );
+}
+
+export default function PetugasReservasiPage() {
+  return (
+    <Suspense fallback={null}>
+      <PetugasReservasiContent />
+    </Suspense>
   );
 }

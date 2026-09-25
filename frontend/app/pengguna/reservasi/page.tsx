@@ -13,6 +13,12 @@ import {
 } from '@/lib/slots';
 import { TimeSlot } from '@/models/facility';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
+import {
+  isAlatFacility,
+  isRuanganFacility,
+  DEFAULT_ROOM_CATEGORIES,
+  DEFAULT_ALAT_CATEGORIES,
+} from '@/models/facilities-data';
 
 const SLOTS = generateTimeSlots();
 const START_OPTIONS = SLOTS.map((s) => s.start); // '07:00' to '19:30'
@@ -179,19 +185,73 @@ function AjukanReservasiContent() {
   const availableFacilities = facilities.filter((f) => f.status !== 'repair');
 
   const preselect = searchParams.get('facility');
+  const tipeParam = searchParams.get('tipe');
+
+  // Deteksi jenis tab awal (ruangan vs alat) dari URL param atau fasilitas preselect
+  const preselectFacility = preselect ? facilities.find((f) => f.id === preselect) : null;
+  const [activeTab, setActiveTab] = useState<'ruangan' | 'alat'>(() => {
+    if (tipeParam === 'alat') return 'alat';
+    if (tipeParam === 'ruangan') return 'ruangan';
+    if (preselectFacility) return isAlatFacility(preselectFacility) ? 'alat' : 'ruangan';
+    return 'ruangan';
+  });
+
+  const [selectedCategory, setSelectedCategory] = useState<string>('semua');
+
+  // Pool fasilitas yang sesuai tab aktif
+  const activePool = useMemo(() => {
+    return availableFacilities.filter((f) =>
+      activeTab === 'alat' ? isAlatFacility(f) : isRuanganFacility(f)
+    );
+  }, [availableFacilities, activeTab]);
+
+  // Kategori hanya menampilkan kategori yang relevan:
+  // - Tab Ruangan: hanya kategori ruangan
+  // - Tab Alat: hanya kategori alat
+  const categoryOptions = useMemo(() => {
+    if (activeTab === 'ruangan') {
+      const fromData = Array.from(
+        new Set(availableFacilities.filter(isRuanganFacility).map((f) => f.type))
+      ).filter(Boolean);
+      const combined = Array.from(new Set([...DEFAULT_ROOM_CATEGORIES, ...fromData]));
+      return [
+        { value: 'semua', label: 'Semua Kategori Ruangan' },
+        ...combined.map((c) => ({ value: c, label: c })),
+      ];
+    } else {
+      const fromData = Array.from(
+        new Set(availableFacilities.filter(isAlatFacility).map((f) => f.type))
+      ).filter(Boolean);
+      const combined = Array.from(new Set([...DEFAULT_ALAT_CATEGORIES, ...fromData]));
+      return [
+        { value: 'semua', label: 'Semua Kategori Alat' },
+        ...combined.map((c) => ({ value: c, label: c })),
+      ];
+    }
+  }, [availableFacilities, activeTab]);
+
+  // Fasilitas terfilter berdasarkan kategori pilihan
+  const displayedFacilities = useMemo(() => {
+    if (selectedCategory === 'semua') return activePool;
+    return activePool.filter((f) => f.type === selectedCategory);
+  }, [activePool, selectedCategory]);
+
   const [facilityId, setFacilityId] = useState(
-    (preselect && availableFacilities.some((f) => f.id === preselect) && preselect) ||
-      availableFacilities[0]?.id ||
+    (preselect && activePool.some((f) => f.id === preselect) && preselect) ||
+      displayedFacilities[0]?.id ||
+      activePool[0]?.id ||
       ''
   );
 
-  // Sinkronkan facilityId ketika daftar fasilitas selesai dimuat dari backend
+  // Sinkronkan facilityId ketika daftar fasilitas selesai dimuat atau kategori berubah
   useEffect(() => {
-    if (availableFacilities.length > 0 && (!facilityId || !availableFacilities.some((f) => f.id === facilityId))) {
-      const target = (preselect && availableFacilities.some((f) => f.id === preselect) && preselect) || availableFacilities[0].id;
+    if (displayedFacilities.length > 0 && (!facilityId || !displayedFacilities.some((f) => f.id === facilityId))) {
+      const target = (preselect && displayedFacilities.some((f) => f.id === preselect) && preselect) || displayedFacilities[0].id;
       setFacilityId(target);
+    } else if (displayedFacilities.length === 0 && activePool.length > 0 && !activePool.some((f) => f.id === facilityId)) {
+      setFacilityId(activePool[0].id);
     }
-  }, [availableFacilities, facilityId, preselect]);
+  }, [displayedFacilities, activePool, facilityId, preselect]);
 
   const earliestDate = useMemo(() => getEarliestReservableDate(), []);
   const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
@@ -217,7 +277,12 @@ function AjukanReservasiContent() {
   const [startTime, setStartTime] = useState<string>('');
   const [endTime, setEndTime] = useState<string>('');
 
-  const facility = facilities.find((f) => f.id === facilityId) || availableFacilities[0];
+  const facility =
+    displayedFacilities.find((f) => f.id === facilityId) ||
+    activePool.find((f) => f.id === facilityId) ||
+    activePool[0] ||
+    facilities[0];
+  const isAlat = activeTab === 'alat' || isAlatFacility(facility);
   const currentUserIdent = currentUser?.nama || currentUser?.email || '';
 
   // Muat ketersediaan slot backend secara real-time setiap kali tanggal berubah
@@ -264,6 +329,22 @@ function AjukanReservasiContent() {
   }, [facility, pickedSlots, isSlotOccupied]);
 
   const hasConflict = conflictSlots.length > 0;
+
+  function handleTabSwitch(newTab: 'ruangan' | 'alat') {
+    if (newTab === activeTab) return;
+    setActiveTab(newTab);
+    setSelectedCategory('semua');
+    const newPool = availableFacilities.filter((f) =>
+      newTab === 'alat' ? isAlatFacility(f) : isRuanganFacility(f)
+    );
+    if (newPool.length > 0) {
+      setFacilityId(newPool[0].id);
+    } else {
+      setFacilityId('');
+    }
+    setStartTime('');
+    setEndTime('');
+  }
 
   function handleFacilityChange(id: string) {
     setFacilityId(id);
@@ -510,13 +591,12 @@ function AjukanReservasiContent() {
       return;
     }
     if (overCapacity) {
-      const isAlat = facility.type?.toLowerCase() === 'alat';
       setModalConfig({
         isOpen: true,
         title: isAlat ? 'Jumlah Melebihi Stok Tersedia' : 'Kapasitas Melebihi Standar',
         subtitle: isAlat
           ? `Permintaan (${pesertaNum} unit) melebihi jumlah unit yang tersedia (${facility.cap} unit). Apakah Anda ingin tetap melanjutkan pengajuan?`
-          : `Estimasi peserta (${pesertaNum} orang) melebihi kapasitas standar fasilitas (${facility.cap} orang). Apakah Anda ingin tetap melanjutkan pengajuan?`,
+          : `Estimasi peserta (${pesertaNum} orang) melebihi kapasitas standar ruangan (${facility.cap} orang). Apakah Anda ingin tetap melanjutkan pengajuan?`,
         confirmText: 'Tetap Ajukan',
         cancelText: 'Sesuaikan Data',
         confirmVariant: 'warning',
@@ -536,7 +616,9 @@ function AjukanReservasiContent() {
       <div className="ochoco-page-header">
         <div className="ochoco-page-eyebrow">FORMULIR PERMOHONAN • UNIVERSITAS DIPONEGORO</div>
         <h2>AJUKAN RESERVASI FASILITAS</h2>
-        <p>Isi formulir untuk permohonan peminjaman fasilitas Universitas Diponegoro. Verifikasi dilakukan oleh petugas sarpras.</p>
+        <p>
+          Isi formulir untuk permohonan peminjaman fasilitas Universitas Diponegoro. Verifikasi dilakukan oleh petugas sarpras.
+        </p>
       </div>
 
       <div className="alert info">
@@ -563,17 +645,132 @@ function AjukanReservasiContent() {
         </div>
       )}
 
+      {/* Sub-tab: Pembagian Reservasi Ruangan vs Reservasi Alat */}
+      <div
+        role="tablist"
+        aria-label="Pilihan Jenis Reservasi"
+        style={{
+          display: 'flex',
+          gap: 8,
+          marginBottom: 16,
+          borderBottom: '2px solid #E5E0D8',
+          paddingBottom: 2,
+        }}
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'ruangan'}
+          onClick={() => handleTabSwitch('ruangan')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '10px 20px',
+            borderRadius: '6px 6px 0 0',
+            fontSize: 14.5,
+            fontWeight: 700,
+            cursor: 'pointer',
+            border: activeTab === 'ruangan' ? '1px solid #b59876' : '1px solid transparent',
+            borderBottom: activeTab === 'ruangan' ? '3px solid #b59876' : '3px solid transparent',
+            background: activeTab === 'ruangan' ? '#15171a' : '#FFFFFF',
+            color: activeTab === 'ruangan' ? '#b59876' : '#6B7280',
+            marginBottom: -2,
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M3 9h18M9 21V9" />
+          </svg>
+          <span>Reservasi Ruangan</span>
+          <span
+            style={{
+              fontSize: 12,
+              padding: '2px 8px',
+              borderRadius: 10,
+              background: activeTab === 'ruangan' ? '#2A2E35' : '#F3F0EB',
+              color: activeTab === 'ruangan' ? '#D5C4A1' : '#6B7280',
+            }}
+          >
+            {availableFacilities.filter(isRuanganFacility).length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'alat'}
+          onClick={() => handleTabSwitch('alat')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '10px 20px',
+            borderRadius: '6px 6px 0 0',
+            fontSize: 14.5,
+            fontWeight: 700,
+            cursor: 'pointer',
+            border: activeTab === 'alat' ? '1px solid #b59876' : '1px solid transparent',
+            borderBottom: activeTab === 'alat' ? '3px solid #b59876' : '3px solid transparent',
+            background: activeTab === 'alat' ? '#15171a' : '#FFFFFF',
+            color: activeTab === 'alat' ? '#b59876' : '#6B7280',
+            marginBottom: -2,
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+          </svg>
+          <span>Reservasi Alat</span>
+          <span
+            style={{
+              fontSize: 12,
+              padding: '2px 8px',
+              borderRadius: 10,
+              background: activeTab === 'alat' ? '#2A2E35' : '#F3F0EB',
+              color: activeTab === 'alat' ? '#D5C4A1' : '#6B7280',
+            }}
+          >
+            {availableFacilities.filter(isAlatFacility).length}
+          </span>
+        </button>
+      </div>
+
       <div className="panel">
         <div className="form-grid">
-          {/* Facility Selection */}
+          {/* Category Filter */}
           <div className="fgroup">
-            <label>Fasilitas</label>
-            <select value={facilityId || facility?.id || ''} onChange={(e) => handleFacilityChange(e.target.value)}>
-              {availableFacilities.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name} ({f.loc}) ({f.type?.toLowerCase() === 'alat' ? `tersedia ${f.cap} unit` : `maks. ${f.cap} orang`})
+            <label>{activeTab === 'ruangan' ? 'Kategori Fasilitas Ruangan' : 'Kategori Peralatan / Alat'}</label>
+            <select
+              value={selectedCategory}
+              onChange={(e) => {
+                setSelectedCategory(e.target.value);
+                setStartTime('');
+                setEndTime('');
+              }}
+            >
+              {categoryOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
                 </option>
               ))}
+            </select>
+          </div>
+
+          {/* Facility Selection */}
+          <div className="fgroup">
+            <label>{activeTab === 'ruangan' ? 'Pilihan Ruangan Kampus' : 'Pilihan Peralatan / Alat'}</label>
+            <select value={facilityId || facility?.id || ''} onChange={(e) => handleFacilityChange(e.target.value)}>
+              {displayedFacilities.length === 0 ? (
+                <option value="">Tidak ada fasilitas untuk kategori ini</option>
+              ) : (
+                displayedFacilities.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name} ({f.loc}) ({isAlatFacility(f) ? `tersedia ${f.cap} unit` : `maks. ${f.cap} orang`})
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
@@ -820,7 +1017,7 @@ function AjukanReservasiContent() {
           {/* Number of participants / units */}
           <div className="fgroup">
             <label>
-              {facility?.type?.toLowerCase() === 'alat' ? 'Jumlah Unit' : 'Estimasi Jumlah Peserta'}{' '}
+              {isAlat ? 'Jumlah Unit Alat Dipinjam' : 'Estimasi Jumlah Peserta'}{' '}
               <span className="opt">(opsional)</span>
             </label>
             <input
@@ -829,16 +1026,16 @@ function AjukanReservasiContent() {
               value={peserta}
               onChange={(e) => setPeserta(e.target.value)}
               placeholder={
-                facility?.type?.toLowerCase() === 'alat'
-                  ? 'Jumlah unit yang dipinjam'
-                  : 'Perkiraan jumlah orang yang hadir'
+                isAlat
+                  ? 'Jumlah unit yang dipinjam (contoh: 2)'
+                  : 'Perkiraan jumlah orang yang hadir (contoh: 30)'
               }
             />
             {overCapacity && (
               <span className="field-hint" style={{ color: '#DC2626', fontWeight: 600 }}>
-                {facility?.type?.toLowerCase() === 'alat'
+                {isAlat
                   ? `Jumlah unit (${pesertaNum} unit) melebihi stok yang tersedia (${facility?.cap} unit).`
-                  : `Jumlah peserta (${pesertaNum} org) melebihi kapasitas fasilitas (${facility?.cap} org).`}
+                  : `Jumlah peserta (${pesertaNum} org) melebihi kapasitas standar ruangan (${facility?.cap} org).`}
               </span>
             )}
           </div>

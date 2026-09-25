@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
@@ -11,13 +11,20 @@ import FacilityCard from '@/components/FacilityCard';
 import FacilityDetailModal from '@/components/FacilityDetailModal';
 import { useAppData } from '@/context/AppDataContext';
 import { DEFAULT_FILTERS, FacilityFilters, filterFacilities } from '@/lib/filter-facilities';
-import { FacilityCategory } from '@/models/facilities-data';
+import { FacilityCategory, isAlatFacility, isRuanganFacility } from '@/models/facilities-data';
 
 const PAGE_SIZE = 9;
 
 function FasilitasContent() {
   const searchParams = useSearchParams();
+  const tipeParam = searchParams.get('tipe');
   const { facilities } = useAppData();
+
+  const [tabType, setTabType] = useState<'semua' | 'ruangan' | 'alat'>(() => {
+    if (tipeParam === 'alat') return 'alat';
+    if (tipeParam === 'ruangan') return 'ruangan';
+    return 'semua';
+  });
 
   const [filters, setFilters] = useState<FacilityFilters>({
     category: (searchParams.get('category') as FacilityCategory) || DEFAULT_FILTERS.category,
@@ -29,13 +36,22 @@ function FasilitasContent() {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [columns, setColumns] = useState<2 | 3 | 4>(3);
 
-  const list = filterFacilities(facilities, filters);
+  const countRuangan = useMemo(() => facilities.filter(isRuanganFacility).length, [facilities]);
+  const countAlat = useMemo(() => facilities.filter(isAlatFacility).length, [facilities]);
+
+  const baseList = useMemo(() => {
+    if (tabType === 'ruangan') return facilities.filter(isRuanganFacility);
+    if (tabType === 'alat') return facilities.filter(isAlatFacility);
+    return facilities;
+  }, [facilities, tabType]);
+
+  const list = filterFacilities(baseList, filters);
   const visibleList = list.slice(0, visibleCount);
   const detailFacility = facilities.find((f) => f.id === detailId) || null;
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [filters.category, filters.lokasi, filters.kapasitas, filters.status]);
+  }, [filters.category, filters.lokasi, filters.kapasitas, filters.status, tabType]);
 
   return (
     <div className="ochoco-page-wrapper">
@@ -74,11 +90,90 @@ function FasilitasContent() {
             </p>
           </div>
 
-          <FacilityFilterBar filters={filters} onChange={setFilters} />
+          {/* Sub-tab Switcher: Semua, Ruangan, Alat */}
+          <div
+            style={{
+              display: 'flex',
+              gap: 8,
+              marginBottom: 20,
+              borderBottom: '1px solid #E5E0D8',
+              paddingBottom: 10,
+              flexWrap: 'wrap',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setTabType('semua');
+                setFilters((prev) => ({ ...prev, category: 'Semua Jenis' }));
+              }}
+              style={{
+                padding: '8px 18px',
+                borderRadius: 6,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: 'pointer',
+                border: tabType === 'semua' ? '1px solid #181D24' : '1px solid #D5D0C7',
+                background: tabType === 'semua' ? '#181D24' : '#FFFFFF',
+                color: tabType === 'semua' ? '#FFFFFF' : '#4B5563',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Semua Fasilitas ({facilities.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setTabType('ruangan');
+                setFilters((prev) => ({ ...prev, category: 'Semua Jenis' }));
+              }}
+              style={{
+                padding: '8px 18px',
+                borderRadius: 6,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: 'pointer',
+                border: tabType === 'ruangan' ? '1px solid #181D24' : '1px solid #D5D0C7',
+                background: tabType === 'ruangan' ? '#181D24' : '#FFFFFF',
+                color: tabType === 'ruangan' ? '#FFFFFF' : '#4B5563',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Fasilitas Ruangan ({countRuangan})
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setTabType('alat');
+                setFilters((prev) => ({ ...prev, category: 'Semua Jenis' }));
+              }}
+              style={{
+                padding: '8px 18px',
+                borderRadius: 6,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: 'pointer',
+                border: tabType === 'alat' ? '1px solid #181D24' : '1px solid #D5D0C7',
+                background: tabType === 'alat' ? '#181D24' : '#FFFFFF',
+                color: tabType === 'alat' ? '#FFFFFF' : '#4B5563',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Fasilitas Alat ({countAlat})
+            </button>
+          </div>
+
+          <FacilityFilterBar filters={filters} onChange={setFilters} tabType={tabType} />
 
           <div className="facility-count-bar">
             <div className="facility-count">
-              Menampilkan <b>{visibleList.length}</b> dari {list.length} fasilitas
+              Menampilkan <b>{visibleList.length}</b> dari {list.length} fasilitas {tabType === 'ruangan' ? 'ruangan' : tabType === 'alat' ? 'alat' : ''}
               {list.length !== facilities.length && ` (total ${facilities.length} fasilitas Universitas Diponegoro)`}
             </div>
 
@@ -115,6 +210,7 @@ function FasilitasContent() {
             <CategorySidebar
               selected={filters.category}
               onSelect={(category) => setFilters((prev) => ({ ...prev, category }))}
+              tabType={tabType}
             />
 
             <div>

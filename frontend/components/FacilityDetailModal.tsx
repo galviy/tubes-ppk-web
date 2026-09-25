@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Facility } from '@/models/facility';
+import { isAlatFacility } from '@/models/facilities-data';
 import { useAppData } from '@/context/AppDataContext';
 
 const statusBadge: Record<Facility['status'], { cls: string; label: string }> = {
@@ -21,6 +22,7 @@ export default function FacilityDetailModal({ facility, onClose }: FacilityDetai
   const router = useRouter();
   const { currentUser } = useAppData();
   const badge = statusBadge[facility.status];
+  const isAlat = isAlatFacility(facility);
 
   function goOrLogin(path: string) {
     onClose();
@@ -49,8 +51,8 @@ export default function FacilityDetailModal({ facility, onClose }: FacilityDetai
 
         <div className="modal-info-grid">
           <div>
-            <span className="lbl-sm">{facility.type?.toLowerCase() === 'alat' ? 'Jumlah Tersedia' : 'Kapasitas'}</span>
-            <div>{facility.cap} {facility.type?.toLowerCase() === 'alat' ? 'unit' : 'orang'}</div>
+            <span className="lbl-sm">{isAlat ? 'Jumlah Tersedia' : 'Kapasitas'}</span>
+            <div>{facility.cap} {isAlat ? 'unit' : 'orang'}</div>
           </div>
           <div><span className="lbl-sm">Kelengkapan</span><div>{facility.amenities.join(', ') || '-'}</div></div>
         </div>
@@ -63,16 +65,17 @@ export default function FacilityDetailModal({ facility, onClose }: FacilityDetai
         )}
 
         <div className="modal-actions">
-          <Link href={`/jadwal?facility=${facility.id}`} className="btn" onClick={onClose}>
+          <Link href={`/jadwal?facility=${facility.id}&tipe=${isAlat ? 'alat' : 'ruangan'}`} className="btn" onClick={onClose}>
             Lihat jadwal
           </Link>
           <button
             className="btn primary"
             disabled={facility.status === 'repair' || facility.status === 'nonaktif'}
-            onClick={() => goOrLogin(`/pengguna/reservasi?facility=${facility.id}`)}
+            onClick={() => goOrLogin(`/pengguna/reservasi?facility=${facility.id}&tipe=${isAlat ? 'alat' : 'ruangan'}`)}
           >
             Ajukan reservasi
           </button>
+
           <button className="btn ghost-danger" onClick={() => goOrLogin(`/pengguna/lapor?facility=${facility.id}`)}>
             Laporkan kerusakan
           </button>

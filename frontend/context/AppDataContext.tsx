@@ -46,16 +46,23 @@ import {
   type BackendFasilitas,
 } from '@/lib/api';
 
+import { isAlatFacility } from '@/models/facilities-data';
+
 function mapBackendFasilitas(b: BackendFasilitas): Facility {
   const status = (['avail', 'busy', 'repair', 'nonaktif'] as const).includes(
     b.status as Facility['status'],
   )
     ? (b.status as Facility['status'])
     : 'avail';
+  const isAlat =
+    b.tipe === 'alat' ||
+    (typeof b.id === 'string' && b.id.startsWith('alat-')) ||
+    b.type?.toLowerCase() === 'alat' ||
+    isAlatFacility({ tipe: b.tipe, id: b.id, type: b.type, name: b.name });
   return {
     id: b.id,
     refId: typeof b.ref_id === 'number' ? b.ref_id : undefined,
-    tipe: b.tipe === 'alat' ? 'alat' : b.tipe === 'ruangan' ? 'ruangan' : undefined,
+    tipe: isAlat ? 'alat' : 'ruangan',
     name: b.name,
     type: b.type,
     loc: b.loc,
@@ -913,13 +920,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       },
       updateFacility: async (id, input) => {
         const fac = facilities.find((f) => f.id === id);
-        if (!fac || fac.refId === undefined || !fac.tipe) {
+        if (!fac || fac.refId === undefined) {
           return { ok: false, message: 'Hanya fasilitas backend yang bisa diubah.' };
         }
+        const effectiveTipe = fac.tipe || (isAlatFacility(fac) ? 'alat' : 'ruangan');
         // Pertahankan ketersediaan saat ini (avail/busy -> 1).
         const statusInt = fac.status === 'repair' || fac.status === 'nonaktif' ? 0 : 1;
         const res =
-          fac.tipe === 'alat'
+          effectiveTipe === 'alat'
             ? await backendAdminPostForm('/admin/update_fasilitas/alat', {
                 id: fac.refId,
                 nama_alat: input.name.trim(),
@@ -942,11 +950,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       },
       deleteFacility: async (id) => {
         const fac = facilities.find((f) => f.id === id);
-        if (!fac || fac.refId === undefined || !fac.tipe) {
+        if (!fac || fac.refId === undefined) {
           return { ok: false, message: 'Hanya fasilitas backend yang bisa dinonaktifkan.' };
         }
+        const effectiveTipe = fac.tipe || (isAlatFacility(fac) ? 'alat' : 'ruangan');
         // Soft delete: nonaktif via status (FK reservasi/laporan aman).
-        const res = await backendAdminPostForm(`/admin/delete_fasilitas/${fac.tipe}`, {
+        const res = await backendAdminPostForm(`/admin/delete_fasilitas/${effectiveTipe}`, {
           id: fac.refId,
         });
         if (!res.ok) return { ok: false, message: res.message };

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAppData } from '@/context/AppDataContext';
+import { isAlatReservation } from '@/models/facilities-data';
 
 const ICONS = {
   reservasi: (
@@ -35,6 +36,7 @@ export default function PetugasRingkasanPage() {
     reservations,
     reports,
     facilities,
+    facilityById,
     currentUser,
     refreshReservations,
     refreshPetugasReports,
@@ -46,6 +48,8 @@ export default function PetugasRingkasanPage() {
   }, [refreshReservations, refreshPetugasReports]);
 
   const resMenunggu = reservations.filter((r) => r.status === 'menunggu').length;
+  const resMenungguRuangan = reservations.filter((r) => r.status === 'menunggu' && !isAlatReservation(r, facilityById(r.facilityId))).length;
+  const resMenungguAlat = reservations.filter((r) => r.status === 'menunggu' && isAlatReservation(r, facilityById(r.facilityId))).length;
   const lapAktif = reports.filter((r) => r.status === 'baru' || r.status === 'diproses').length;
   const perbaikan = facilities.filter((f) => f.status === 'repair').length;
   const totalFasilitas = facilities.length;
@@ -125,7 +129,7 @@ export default function PetugasRingkasanPage() {
               Antrian Reservasi
             </div>
             <div style={{ fontSize: 14, color: '#374151', lineHeight: 1.5 }}>
-              Ada <strong>{resMenunggu} reservasi</strong> yang masih menunggu persetujuan.{' '}
+              Ada <strong>{resMenunggu} reservasi</strong> ({resMenungguRuangan} ruangan, {resMenungguAlat} alat) yang masih menunggu persetujuan.{' '}
               <Link href="/petugas/reservasi" style={{ color: '#b59876', fontWeight: 600, textDecoration: 'underline' }}>
                 Tinjau sekarang
               </Link>
@@ -185,7 +189,7 @@ export default function PetugasRingkasanPage() {
             PORTAL PETUGAS OPERASIONAL • UNIVERSITAS DIPONEGORO
           </div>
           <h2>Halo, {displayName}</h2>
-          <p>Ringkasan antrian yang perlu kamu tindak lanjuti hari ini.</p>
+          <p>Ringkasan antrian reservasi ruangan, reservasi alat, dan laporan sarpras hari ini.</p>
         </div>
         <span className="role-chip">Akun Petugas</span>
       </div>
@@ -197,6 +201,9 @@ export default function PetugasRingkasanPage() {
           <div>
             <div className="num">{resMenunggu}</div>
             <div className="lbl">Reservasi menunggu</div>
+            <div style={{ fontSize: 12, color: '#b59876', fontWeight: 600, marginTop: 2 }}>
+              {resMenungguRuangan} Ruangan · {resMenungguAlat} Alat
+            </div>
           </div>
         </div>
         <div className="summary-card">
@@ -228,10 +235,44 @@ export default function PetugasRingkasanPage() {
       </div>
 
       <div className="menu-card-grid">
-        <Link href="/petugas/reservasi" className="menu-card">
-          <h3>Antrian Reservasi</h3>
-          <p>Setujui, tolak, atau batalkan reservasi.</p>
-        </Link>
+        <div className="menu-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <h3>Antrian Reservasi</h3>
+            <p>Setujui, tolak, atau batalkan reservasi ruangan dan alat.</p>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+            <Link
+              href="/petugas/reservasi?tipe=ruangan"
+              style={{
+                fontSize: 12.5,
+                fontWeight: 700,
+                padding: '5px 10px',
+                borderRadius: 4,
+                background: '#FAF8F5',
+                border: '1px solid #D5D0C7',
+                color: '#181D24',
+                textDecoration: 'none',
+              }}
+            >
+              Antrian Ruangan
+            </Link>
+            <Link
+              href="/petugas/reservasi?tipe=alat"
+              style={{
+                fontSize: 12.5,
+                fontWeight: 700,
+                padding: '5px 10px',
+                borderRadius: 4,
+                background: '#FAF8F5',
+                border: '1px solid #D5D0C7',
+                color: '#181D24',
+                textDecoration: 'none',
+              }}
+            >
+              Antrian Alat
+            </Link>
+          </div>
+        </div>
         <Link href="/petugas/laporan" className="menu-card">
           <h3>Antrian Laporan</h3>
           <p>Proses dan tindak lanjuti laporan kendala sarpras.</p>

@@ -2,6 +2,11 @@
 
 import Link from 'next/link';
 import { useAppData } from '@/context/AppDataContext';
+import {
+  isRuanganFacility,
+  isAlatFacility,
+  isAlatReservation,
+} from '@/models/facilities-data';
 
 const ICONS = {
   fasilitas: (
@@ -44,11 +49,21 @@ const ICONS = {
 };
 
 export default function AdminHomePage() {
-  const { facilities, reservations, reports, pendingAccounts, registeredAccounts, currentUser } = useAppData();
+  const { facilities, reservations, reports, pendingAccounts, registeredAccounts, currentUser, facilityById } = useAppData();
 
   const akunMenunggu = pendingAccounts.filter((a) => a.status === 'menunggu').length;
   const totalPengguna = registeredAccounts.filter((a) => a.role === 'pengguna').length;
   const petugasAktif = registeredAccounts.filter((a) => a.role === 'petugas').length;
+
+  const totalRuangan = facilities.filter(isRuanganFacility).length;
+  const totalAlat = facilities.filter(isAlatFacility).length;
+
+  const totalResRuangan = reservations.filter(
+    (r) => !isAlatReservation(r, facilityById(r.facilityId))
+  ).length;
+  const totalResAlat = reservations.filter(
+    (r) => isAlatReservation(r, facilityById(r.facilityId))
+  ).length;
 
   return (
     <div>
@@ -63,7 +78,7 @@ export default function AdminHomePage() {
         <span className="role-chip">AKUN ADMIN</span>
       </div>
 
-      {/* 6 Metric Summary Cards matching Reference Image 1 */}
+      {/* 6 Metric Summary Cards */}
       <div
         style={{
           display: 'grid',
@@ -96,6 +111,9 @@ export default function AdminHomePage() {
           <div>
             <div className="num">{facilities.length}</div>
             <div className="lbl">Total Fasilitas</div>
+            <div style={{ fontSize: 12.5, color: '#b59876', marginTop: 2, fontWeight: 600 }}>
+              {totalRuangan} Ruangan · {totalAlat} Alat
+            </div>
           </div>
         </div>
 
@@ -114,6 +132,9 @@ export default function AdminHomePage() {
           <div>
             <div className="num">{reservations.length}</div>
             <div className="lbl">Total Reservasi</div>
+            <div style={{ fontSize: 12.5, color: '#b59876', marginTop: 2, fontWeight: 600 }}>
+              {totalResRuangan} Ruangan · {totalResAlat} Alat
+            </div>
           </div>
         </div>
 
@@ -142,14 +163,88 @@ export default function AdminHomePage() {
       </div>
 
       <div className="menu-card-grid">
-        <Link href="/admin/fasilitas" className="menu-card">
-          <h3>Kelola Fasilitas</h3>
-          <p>Tambah, ubah, atau nonaktifkan fasilitas kampus.</p>
-        </Link>
-        <Link href="/admin/reservasi" className="menu-card">
-          <h3>Semua Reservasi</h3>
-          <p>Log audit seluruh pengajuan reservasi fasilitas dan status persetujuan.</p>
-        </Link>
+        <div className="menu-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <Link href="/admin/fasilitas" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <h3 style={{ margin: 0 }}>Kelola Fasilitas</h3>
+              <p style={{ marginTop: 4 }}>Tambah, ubah, atau nonaktifkan fasilitas kampus.</p>
+            </Link>
+          </div>
+          <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+            <Link
+              href="/admin/fasilitas?tipe=ruangan"
+              style={{
+                fontSize: 12.5,
+                fontWeight: 600,
+                color: '#b59876',
+                background: '#FAF8F5',
+                padding: '3px 8px',
+                borderRadius: 4,
+                border: '1px solid #E5E0D8',
+                textDecoration: 'none',
+              }}
+            >
+              Ruangan ({totalRuangan})
+            </Link>
+            <Link
+              href="/admin/fasilitas?tipe=alat"
+              style={{
+                fontSize: 12.5,
+                fontWeight: 600,
+                color: '#b59876',
+                background: '#FAF8F5',
+                padding: '3px 8px',
+                borderRadius: 4,
+                border: '1px solid #E5E0D8',
+                textDecoration: 'none',
+              }}
+            >
+              Alat ({totalAlat})
+            </Link>
+          </div>
+        </div>
+
+        <div className="menu-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <Link href="/admin/reservasi" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <h3 style={{ margin: 0 }}>Semua Reservasi</h3>
+              <p style={{ marginTop: 4 }}>Log audit seluruh pengajuan reservasi fasilitas dan status persetujuan.</p>
+            </Link>
+          </div>
+          <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+            <Link
+              href="/admin/reservasi?tipe=ruangan"
+              style={{
+                fontSize: 12.5,
+                fontWeight: 600,
+                color: '#b59876',
+                background: '#FAF8F5',
+                padding: '3px 8px',
+                borderRadius: 4,
+                border: '1px solid #E5E0D8',
+                textDecoration: 'none',
+              }}
+            >
+              Ruangan ({totalResRuangan})
+            </Link>
+            <Link
+              href="/admin/reservasi?tipe=alat"
+              style={{
+                fontSize: 12.5,
+                fontWeight: 600,
+                color: '#b59876',
+                background: '#FAF8F5',
+                padding: '3px 8px',
+                borderRadius: 4,
+                border: '1px solid #E5E0D8',
+                textDecoration: 'none',
+              }}
+            >
+              Alat ({totalResAlat})
+            </Link>
+          </div>
+        </div>
+
         <Link href="/admin/laporan" className="menu-card">
           <h3>Semua Laporan</h3>
           <p>Log audit seluruh laporan kerusakan dan progres penanganan sarpras.</p>

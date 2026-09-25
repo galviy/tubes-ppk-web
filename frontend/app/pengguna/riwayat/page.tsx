@@ -5,6 +5,7 @@ import { useAppData } from '@/context/AppDataContext';
 import { Reservation, ReservationStatus } from '@/models/reservation';
 import ReservationDetailModal from '@/components/ReservationDetailModal';
 import { formatDateIndo } from '@/lib/slots';
+import { isAlatReservation } from '@/models/facilities-data';
 
 const STATUS_PILL: Record<ReservationStatus, [string, string]> = {
   menunggu: ['busy', 'Menunggu'],
@@ -30,34 +31,81 @@ export default function RiwayatReservasiPage() {
       (currentIdent && r.pemohon.toLowerCase() === currentIdent.toLowerCase()),
   );
   const [detailFor, setDetailFor] = useState<Reservation | null>(null);
+  const [filterType, setFilterType] = useState<'semua' | 'ruangan' | 'alat'>('semua');
+
+  const countRuangan = mine.filter((r) => !isAlatReservation(r, facilityById(r.facilityId))).length;
+  const countAlat = mine.filter((r) => isAlatReservation(r, facilityById(r.facilityId))).length;
+
+  const filteredMine = mine.filter((r) => {
+    const fac = facilityById(r.facilityId);
+    const isAlat = isAlatReservation(r, fac);
+    if (filterType === 'ruangan' && isAlat) return false;
+    if (filterType === 'alat' && !isAlat) return false;
+    return true;
+  });
 
   return (
     <div>
       <div className="content-head">
         <h2>Reservasi saya</h2>
-        <p>Riwayat pengajuan reservasi fasilitas kampus.</p>
+        <p>Riwayat pengajuan reservasi fasilitas kampus (ruangan dan alat).</p>
       </div>
 
       <div className="alert info">
         Batas waktu pembatalan: minimal <b>2 jam</b> sebelum waktu mulai reservasi.
       </div>
 
+      {/* Sub-tab: Filter Semua, Ruangan, Alat */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+        {[
+          { key: 'semua', label: `Semua Reservasi (${mine.length})` },
+          { key: 'ruangan', label: `Reservasi Ruangan (${countRuangan})` },
+          { key: 'alat', label: `Reservasi Alat (${countAlat})` },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setFilterType(tab.key as 'semua' | 'ruangan' | 'alat')}
+            style={{
+              padding: '7px 16px',
+              borderRadius: 6,
+              fontSize: 13.5,
+              fontWeight: 700,
+              cursor: 'pointer',
+              border: filterType === tab.key ? '1px solid #b59876' : '1px solid #E5E0D8',
+              background: filterType === tab.key ? '#15171a' : '#FFFFFF',
+              color: filterType === tab.key ? '#b59876' : '#6B7280',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className="card-list">
-        {mine.length === 0 && (
+        {filteredMine.length === 0 && (
           <div className="panel" style={{ textAlign: 'center', color: 'var(--ink-soft)' }}>
-            Belum ada reservasi.
+            Belum ada data reservasi {filterType === 'ruangan' ? 'ruangan' : filterType === 'alat' ? 'alat' : ''}.
           </div>
         )}
-        {mine.map((r) => {
+        {filteredMine.map((r) => {
           const facility = facilityById(r.facilityId);
+          const isAlat = isAlatReservation(r, facility);
           const [cls, label] = STATUS_PILL[r.status] || ['neutral', r.status];
           return (
             <div key={r.id} className="item-card">
               <div className="item-card-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <h3 style={{ fontSize: 17, margin: 0 }}>
                     {facility?.name || r.ruanganNama || `Fasilitas #${r.facilityId}`}
                   </h3>
+                  <span
+                    className="pill neutral"
+                    style={{ fontSize: 12, padding: '2px 8px', fontWeight: 600 }}
+                  >
+                    {isAlat ? 'Alat' : 'Ruangan'}
+                  </span>
                   <span className={`pill ${cls}`}>{label}</span>
                 </div>
                 <button className="btn ghost" onClick={() => setDetailFor(r)}>
@@ -77,7 +125,7 @@ export default function RiwayatReservasiPage() {
                   {r.peserta && (
                     <span className="meta-item">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                      {r.peserta} {facility?.type?.toLowerCase() === 'alat' ? 'unit' : 'orang'}
+                      {r.peserta} {isAlat ? 'unit' : 'orang'}
                     </span>
                   )}
                   <span className="meta-item">

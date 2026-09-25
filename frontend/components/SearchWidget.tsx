@@ -1,6 +1,11 @@
 'use client';
 
-import { FACILITY_CATEGORIES, FacilityCategory } from '@/models/facilities-data';
+import {
+  DEFAULT_ROOM_CATEGORIES,
+  DEFAULT_ALAT_CATEGORIES,
+  FacilityCategory,
+  isAlatCategory,
+} from '@/models/facilities-data';
 import { FacilityFilters } from '@/lib/filter-facilities';
 
 interface SearchWidgetProps {
@@ -10,6 +15,8 @@ interface SearchWidgetProps {
 }
 
 export default function SearchWidget({ filters, onChange, onSearch }: SearchWidgetProps) {
+  const isSelectedAlat = isAlatCategory(filters.category);
+
   return (
     <div className="search-float">
       <div className="search-fields-grid">
@@ -20,17 +27,25 @@ export default function SearchWidget({ filters, onChange, onSearch }: SearchWidg
             onChange={(e) => {
               const nextCat = e.target.value as FacilityCategory;
               let nextKap = filters.kapasitas;
-              if (nextCat.toLowerCase() === 'alat' && (nextKap.includes('orang') || nextKap === 'Semua Kapasitas')) {
+              if (isAlatCategory(nextCat) && (nextKap.includes('orang') || nextKap === 'Semua Kapasitas')) {
                 nextKap = 'Semua Jumlah';
-              } else if (nextCat.toLowerCase() !== 'alat' && (nextKap.includes('unit') || nextKap === 'Semua Jumlah')) {
+              } else if (!isAlatCategory(nextCat) && (nextKap.includes('unit') || nextKap === 'Semua Jumlah')) {
                 nextKap = 'Semua Kapasitas';
               }
               onChange({ ...filters, category: nextCat, kapasitas: nextKap });
             }}
           >
-            {FACILITY_CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
+            <option value="Semua Jenis">Semua Jenis</option>
+            <optgroup label="Kategori Ruangan">
+              {DEFAULT_ROOM_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Kategori Alat">
+              {DEFAULT_ALAT_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </optgroup>
           </select>
         </div>
         <div className="field">
@@ -46,7 +61,7 @@ export default function SearchWidget({ filters, onChange, onSearch }: SearchWidg
         </div>
         <div className="field">
           <span>
-            {filters.category?.toLowerCase() === 'alat'
+            {isSelectedAlat
               ? 'Jumlah Unit'
               : filters.category === 'Semua Jenis'
               ? 'Kapasitas / Jumlah'
@@ -56,13 +71,14 @@ export default function SearchWidget({ filters, onChange, onSearch }: SearchWidg
             value={filters.kapasitas}
             onChange={(e) => onChange({ ...filters, kapasitas: e.target.value })}
           >
-            {filters.category?.toLowerCase() === 'alat' ? (
+            {isSelectedAlat ? (
               <>
                 <option>Semua Jumlah</option>
                 <option>&lt; 5 unit</option>
                 <option>5 - 10 unit</option>
                 <option>&gt; 10 unit</option>
               </>
+
             ) : filters.category === 'Semua Jenis' ? (
               <>
                 <option>Semua Kapasitas / Jumlah</option>

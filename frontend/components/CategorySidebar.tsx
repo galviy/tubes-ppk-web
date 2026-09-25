@@ -1,25 +1,49 @@
 'use client';
 
-import { FACILITY_CATEGORIES, FacilityCategory } from '@/models/facilities-data';
+import { useMemo } from 'react';
+import {
+  DEFAULT_ROOM_CATEGORIES,
+  DEFAULT_ALAT_CATEGORIES,
+  FacilityCategory,
+  isRuanganFacility,
+  isAlatFacility,
+} from '@/models/facilities-data';
 import { useAppData } from '@/context/AppDataContext';
 
 interface CategorySidebarProps {
   active?: FacilityCategory;
   selected?: FacilityCategory;
   onSelect: (cat: FacilityCategory) => void;
+  tabType?: 'semua' | 'ruangan' | 'alat';
 }
 
-export default function CategorySidebar({ active, selected, onSelect }: CategorySidebarProps) {
+export default function CategorySidebar({ active, selected, onSelect, tabType = 'semua' }: CategorySidebarProps) {
   const { facilities } = useAppData();
   const currentActive = active || selected || 'Semua Jenis';
 
-  const dynamicTypes = Array.from(new Set(facilities.map((f) => f.type))).filter(Boolean);
-  const categories = ['Semua Jenis', ...dynamicTypes];
+  const relevantFacilities = useMemo(() => {
+    if (tabType === 'ruangan') return facilities.filter(isRuanganFacility);
+    if (tabType === 'alat') return facilities.filter(isAlatFacility);
+    return facilities;
+  }, [facilities, tabType]);
+
+  const categories = useMemo(() => {
+    if (tabType === 'ruangan') {
+      const dynamicTypes = Array.from(new Set(facilities.filter(isRuanganFacility).map((f) => f.type))).filter(Boolean);
+      return ['Semua Jenis', ...Array.from(new Set([...DEFAULT_ROOM_CATEGORIES, ...dynamicTypes]))];
+    }
+    if (tabType === 'alat') {
+      const dynamicTypes = Array.from(new Set(facilities.filter(isAlatFacility).map((f) => f.type))).filter(Boolean);
+      return ['Semua Jenis', ...Array.from(new Set([...DEFAULT_ALAT_CATEGORIES, ...dynamicTypes]))];
+    }
+    const dynamicTypes = Array.from(new Set(facilities.map((f) => f.type))).filter(Boolean);
+    return ['Semua Jenis', ...dynamicTypes];
+  }, [facilities, tabType]);
 
   return (
     <div className="cat-sidebar">
       {categories.map((cat) => {
-        const count = cat === 'Semua Jenis' ? facilities.length : facilities.filter((f) => f.type === cat).length;
+        const count = cat === 'Semua Jenis' ? relevantFacilities.length : relevantFacilities.filter((f) => f.type === cat).length;
         const isActive = currentActive === cat;
         return (
           <a key={cat} className={isActive ? 'active' : ''} onClick={() => onSelect(cat)}>
