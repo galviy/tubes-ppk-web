@@ -11,8 +11,8 @@ export interface Report {
   status: ReportStatus;
   catatan: string;
   createdAt: string;
-  // Sumber baris: 'mock' (seed/cermin lokal) atau 'backend' (sinkron DB).
-  sumber?: 'mock' | 'backend';
+  // Sumber baris: 'backend' (sinkron DB).
+  sumber?: 'backend';
   backendId?: number;
 }
 
@@ -31,6 +31,6 @@ export interface PendingAccount {
   fakultas?: string;
   status: 'menunggu' | 'diverifikasi' | 'ditolak';
   // Baris backend (show_*_pending): id asli DB + tipe pending.
-  sumber?: 'mock' | 'backend';
+  sumber?: 'backend';
   backendId?: number;
 }
