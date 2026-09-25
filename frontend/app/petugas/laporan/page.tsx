@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { ReportStatus } from '@/models/report';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
+import ReportFoto from '@/components/ReportFoto';
 
 const STATUS_CONFIG: Record<ReportStatus, { pillClass: string; label: string }> = {
   baru: { pillClass: 'busy', label: 'Baru' },
@@ -189,8 +190,8 @@ export default function PetugasLaporanPage() {
                             onClick={() => setPreviewPhoto(r.foto || null)}
                             title="Klik untuk memperbesar foto bukti"
                           >
-                            <img
-                              src={r.foto}
+                            <ReportFoto
+                              foto={r.foto}
                               alt="Thumbnail Bukti"
                               className="ochoco-photo-thumb-img"
                             />
@@ -277,7 +278,7 @@ export default function PetugasLaporanPage() {
                 </svg>
               </button>
             </div>
-            <img src={previewPhoto} alt="Bukti Foto Lengkap" className="ochoco-lightbox-img" />
+            <ReportFoto foto={previewPhoto} alt="Bukti Foto Lengkap" className="ochoco-lightbox-img" />
           </div>
         </div>
       )}

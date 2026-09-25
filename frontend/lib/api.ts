@@ -483,6 +483,7 @@ export interface MappedReport {
   kategori: string;
   deskripsi: string;
   foto?: string;
+  pelaporNama?: string;
   status: FrontendReportStatus;
   catatan: string;
   createdAt: string;
@@ -500,6 +501,7 @@ export function mapBackendReport(row: Record<string, unknown>): MappedReport | n
   else return null;
   const dibuat = str(row['waktu_dibuat'] ?? row['Waktu_dibuat']);
   const foto = row['foto'];
+  const pelaporNama = row['username_report'];
   return {
     id,
     backendId: id,
@@ -507,10 +509,23 @@ export function mapBackendReport(row: Record<string, unknown>): MappedReport | n
     kategori: str(row['kategori_laporan']),
     deskripsi: str(row['alasan']),
     foto: typeof foto === 'string' && foto ? foto : undefined,
+    pelaporNama:
+      typeof pelaporNama === 'string' && pelaporNama ? pelaporNama : undefined,
     status: mapReportStatus(row['status_laporan']),
     catatan: str(row['catatan_resolusi']),
     createdAt: dibuat ? new Date(dibuat).toISOString() : new Date().toISOString(),
   };
+}
+
+// URL tampil foto bukti: dinormalisasi ke slash + dilewatkan proxy /api
+// agar origin + cookie konsisten. Kembalikan undefined bila bukan path
+// uploads (mis. data-URL cermin lokal — komponen yang menampilkannya
+// langsung tanpa helper ini).
+export function reportFotoUrl(foto?: string): string | undefined {
+  if (!foto || foto.startsWith('data:') || foto.startsWith('http')) return foto || undefined;
+  const path = foto.replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!path.startsWith('uploads/')) return undefined;
+  return `${API_BASE}/${path}`;
 }
 
 export type PendingKind = 'mhs' | 'dosen' | 'staff';

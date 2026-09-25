@@ -44,4 +44,5 @@ type ReportDetail struct {
 	ReportAlat      *int       `json:"report_alat"`
 	NamaRuangan     *string    `json:"nama_ruangan"`
 	NamaAlat        *string    `json:"nama_alat"`
+	UsernameReport  *string    `json:"username_report,omitempty"`
 }
