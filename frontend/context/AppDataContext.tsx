@@ -15,6 +15,7 @@ import {
   backendCreateLaporan,
   backendCreateReservasiAlat,
   backendCreateReservasiRuangan,
+  backendKetersediaanFasilitas,
   backendListFasilitas,
   backendListLaporanSaya,
   backendListPetugasReservasi,
@@ -113,6 +114,7 @@ interface AppDataValue {
     tanggal?: string,
     currentUserIdentifier?: string
   ) => boolean;
+  fetchSlotAvailability: (tanggal: string) => Promise<Record<string, Set<string>>>;
 
   // Auth
   login: (email: string, password: string) => Promise<AuthResult>;
@@ -208,6 +210,43 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<LoggedInUser | null>(null);
   const [backendOnline, setBackendOnline] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
+  const [availabilityMap, setAvailabilityMap] = useState<Record<string, Record<string, Set<string>>>>({});
+
+  const fetchSlotAvailability = useCallback(
+    async (tanggal: string): Promise<Record<string, Set<string>>> => {
+      if (!tanggal) return {};
+      try {
+        const res = await backendKetersediaanFasilitas({ tanggal, hari: 1 });
+        if (res.ok && Array.isArray(res.data)) {
+          const map: Record<string, Set<string>> = {};
+          for (const item of res.data as Array<{
+            id: string;
+            ref_id?: number;
+            tipe?: string;
+            hari?: Array<{ slot?: Array<{ mulai: string; tersedia: boolean }> }>;
+          }>) {
+            const slots = new Set<string>();
+            for (const h of item.hari || []) {
+              for (const s of h.slot || []) {
+                if (!s.tersedia) slots.add(s.mulai);
+              }
+            }
+            if (item.id) map[item.id] = slots;
+            if (item.ref_id && item.tipe) {
+              map[`${item.tipe}-${item.ref_id}`] = slots;
+              map[String(item.ref_id)] = slots;
+            }
+          }
+          setAvailabilityMap((prev) => ({ ...prev, [tanggal]: map }));
+          return map;
+        }
+        return {};
+      } catch {
+        return {};
+      }
+    },
+    [],
+  );
 
   // Backend-first untuk katalog publik (tanpa auth): jika Go hidup,
   // ganti seed lokal dengan data MySQL. Jika mati, tetap pakai seed
@@ -282,6 +321,33 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         }
       }
       rows.sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
+
+      // Jika ada permohonan 'menunggu' yang bertabrakan dengan permohonan 'disetujui' di fasilitas & tanggal sama,
+      // otomatis batalkan pada backend karena jadwal sudah terpakai
+      if (isOfficer) {
+        const approved = rows.filter((r) => r.status === 'disetujui');
+        const conflictsToCancel = rows.filter((r) => {
+          if (r.status !== 'menunggu') return false;
+          return approved.some(
+            (a) =>
+              a.id !== r.id &&
+              a.facilityId === r.facilityId &&
+              a.tanggal === r.tanggal &&
+              r.start < a.end &&
+              r.end > a.start
+          );
+        });
+
+        if (conflictsToCancel.length > 0) {
+          for (const c of conflictsToCancel) {
+            const cId = c.backendId ?? c.id;
+            void backendPetugasCancelReservasi(cId, 'Jadwal sudah terpakai (disetujui untuk peminjam lain).').catch(console.error);
+            c.status = 'dibatalkan';
+            c.catatanBatal = 'Jadwal sudah terpakai (disetujui untuk peminjam lain).';
+          }
+        }
+      }
+
       setReservations(rows);
       return true;
     }
@@ -467,15 +533,23 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       syncStatus,
 
       facilityById: (id) => facilities.find((f) => f.id === id),
-      isSlotTaken: (facilityId, slotStart, excludeId, tanggal, currentUserIdentifier) =>
-        isSlotBooked(
+      isSlotTaken: (facilityId, slotStart, excludeId, tanggal, currentUserIdentifier) => {
+        if (tanggal && availabilityMap[tanggal]) {
+          const dateMap = availabilityMap[tanggal];
+          if (dateMap[facilityId]?.has(slotStart)) return true;
+          const fac = facilities.find((f) => f.id === facilityId);
+          if (fac?.refId && fac?.tipe && dateMap[`${fac.tipe}-${fac.refId}`]?.has(slotStart)) return true;
+        }
+        return isSlotBooked(
           reservations,
           facilityId,
           slotStart,
           excludeId,
           tanggal,
           currentUserIdentifier || currentUser?.nama || currentUser?.email
-        ),
+        );
+      },
+      fetchSlotAvailability,
 
       login: async (email, password) => {
         // Hanya akun backend terverifikasi (akun demo mock dihapus).
@@ -620,6 +694,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           return { ok: false, message: res.message };
         }
         // Sinkronkan data dari server agar id backend, status, dan riwayat presisi
+        setAvailabilityMap({});
         await refreshReservations();
         return { ok: true };
       },
@@ -634,6 +709,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (!res.ok) {
           return { ok: false, message: res.message };
         }
+        setAvailabilityMap({});
         await refreshReservations();
         return { ok: true };
       },
@@ -652,6 +728,30 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (!res.ok) {
           return { ok: false, message: res.message };
         }
+
+        // Jika disetujui, batalkan otomatis semua permohonan lain yang statusnya masih 'menunggu'
+        // pada fasilitas dan tanggal yang sama dengan rentang waktu yang bertabrakan (jadwal terpakai).
+        if (status === 'disetujui' && target) {
+          const conflicting = reservations.filter(
+            (r) =>
+              r.id !== target.id &&
+              r.status === 'menunggu' &&
+              r.facilityId === target.facilityId &&
+              r.tanggal === target.tanggal &&
+              r.start < target.end &&
+              r.end > target.start
+          );
+          for (const c of conflicting) {
+            const cId = c.backendId ?? c.id;
+            try {
+              await backendPetugasCancelReservasi(cId, 'Jadwal sudah terpakai (disetujui untuk peminjam lain).');
+            } catch (err) {
+              console.error('Gagal auto-cancel permohonan bentrok:', err);
+            }
+          }
+        }
+
+        setAvailabilityMap({});
         await refreshReservations();
         return { ok: true };
       },
@@ -666,6 +766,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (!res.ok) {
           return { ok: false, message: res.message };
         }
+        setAvailabilityMap({});
         await refreshReservations();
         return { ok: true };
       },
@@ -719,20 +820,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (!res.ok) {
           return { ok: false, message: res.message };
         }
-        // Cerminkan ke state lokal agar Status Laporan langsung menampilkannya
-        // (sisi petugas/admin tetap mock sampai ada sinkronisasi list).
-        setReports((prev) => [
-          ...prev,
-          {
-            ...input,
-            foto: input.foto ?? (foto ? foto.name : undefined),
-            id: genId(),
-            pelapor: user.nama,
-            status: 'baru',
-            catatan: '',
-            createdAt: new Date().toISOString(),
-          },
-        ]);
+        await refreshReportsMine();
+        if (sessionUser?.role === 'petugas' || sessionUser?.role === 'admin') {
+          await refreshPetugasReports();
+        }
         return { ok: true };
       },
 
@@ -747,9 +838,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           }
           const res = await backendUpdateLaporan(row.backendId, status, catatan ?? '');
           if (!res.ok) return { ok: false, message: res.message };
-          setReports((prev) =>
-            prev.map((r) => (r.id === id ? { ...r, status, catatan: catatan ?? r.catatan } : r)),
-          );
+          await refreshPetugasReports();
+          await refreshReportsMine();
           return { ok: true };
         }
         setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status, catatan: catatan ?? r.catatan } : r)));
@@ -984,6 +1074,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       currentUser,
       backendOnline,
       syncStatus,
+      availabilityMap,
+      fetchSlotAvailability,
       refreshReservations,
       refreshReportsMine,
       refreshPetugasReports,

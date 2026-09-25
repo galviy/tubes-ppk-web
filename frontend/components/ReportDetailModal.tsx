@@ -69,7 +69,7 @@ export default function ReportDetailModal({ report, facility, onClose }: ReportD
 
         {report.foto && (
           <div style={{ marginTop: 16 }}>
-            <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#6B7280', marginBottom: 6 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#6B7280', marginBottom: 6 }}>
               BUKTI FOTO KERUSAKAN
             </div>
             <div style={{ width: '100%', maxHeight: 200, borderRadius: 6, overflow: 'hidden', border: '1px solid #D5D0C7', background: '#15171a' }}>

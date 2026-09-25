@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { Report, ReportStatus } from '@/models/report';
 import ReportDetailModal from '@/components/ReportDetailModal';
@@ -15,7 +15,12 @@ const STATUS_PILL: Record<ReportStatus, [string, string]> = {
 };
 
 export default function StatusLaporanPage() {
-  const { reports, facilityById, currentUser } = useAppData();
+  const { reports, facilityById, currentUser, refreshReportsMine } = useAppData();
+
+  useEffect(() => {
+    refreshReportsMine();
+  }, [refreshReportsMine]);
+
   const mine = reports.filter((r) => r.pelapor === currentUser?.nama);
   const [detailFor, setDetailFor] = useState<Report | null>(null);
 

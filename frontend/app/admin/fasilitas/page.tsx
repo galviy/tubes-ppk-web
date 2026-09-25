@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { Facility } from '@/models/facility';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
@@ -20,7 +20,18 @@ const BLANK_FORM = {
 };
 
 export default function KelolaFasilitasPage() {
-  const { facilities, addFacility, updateFacility, deleteFacility, setFacilityStatus } = useAppData();
+  const {
+    facilities,
+    addFacility,
+    updateFacility,
+    deleteFacility,
+    setFacilityStatus,
+    refreshFacilities,
+  } = useAppData();
+
+  useEffect(() => {
+    refreshFacilities();
+  }, [refreshFacilities]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(BLANK_FORM);
@@ -256,7 +267,7 @@ export default function KelolaFasilitasPage() {
             {editingId ? 'Ubah data fasilitas' : 'Tambah fasilitas baru'}
           </h3>
           {editingId && (
-            <span style={{ fontSize: 12, color: '#b59876', fontWeight: 600 }}>
+            <span style={{ fontSize: 14, color: '#b59876', fontWeight: 600 }}>
               Mode Pengeditan Aktif
             </span>
           )}
@@ -357,7 +368,7 @@ export default function KelolaFasilitasPage() {
             />
             {/* Quick Suggestion Chips */}
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, alignItems: 'center' }}>
-              <span style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 600 }}>Pilihan cepat:</span>
+              <span style={{ fontSize: 13.5, color: '#9CA3AF', fontWeight: 600 }}>Pilihan cepat:</span>
               {[
                 'AC Sentral',
                 'Proyektor HD',
@@ -385,7 +396,7 @@ export default function KelolaFasilitasPage() {
                   }}
                   style={{
                     padding: '3px 8px',
-                    fontSize: 11,
+                    fontSize: 13.5,
                     borderRadius: 4,
                     border: '1px solid #E5E0D8',
                     background: '#F9FAFB',
@@ -435,7 +446,7 @@ export default function KelolaFasilitasPage() {
                       <circle cx="8.5" cy="8.5" r="1.5" />
                       <polyline points="21 15 16 10 5 21" />
                     </svg>
-                    <div style={{ fontSize: 10, marginTop: 4 }}>Belum ada foto</div>
+                    <div style={{ fontSize: 12.5, marginTop: 4 }}>Belum ada foto</div>
                   </div>
                 )}
               </div>
@@ -449,7 +460,7 @@ export default function KelolaFasilitasPage() {
                       alignItems: 'center',
                       gap: 6,
                       padding: '7px 14px',
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: 600,
                       borderRadius: 6,
                       border: '1px solid #b59876',
@@ -478,7 +489,7 @@ export default function KelolaFasilitasPage() {
                       onClick={() => setForm((prev) => ({ ...prev, image: '' }))}
                       style={{
                         padding: '7px 12px',
-                        fontSize: 12,
+                        fontSize: 14,
                         borderRadius: 6,
                         border: '1px solid #FECACA',
                         background: '#FEF2F2',
@@ -497,9 +508,9 @@ export default function KelolaFasilitasPage() {
                   placeholder="Atau tempel URL foto langsung (contoh: https://images.unsplash.com/...)"
                   value={form.image.startsWith('data:') ? '(Foto file diunggah)' : form.image}
                   onChange={(e) => setForm((prev) => ({ ...prev, image: e.target.value }))}
-                  style={{ fontSize: 12, padding: '7px 12px' }}
+                  style={{ fontSize: 14, padding: '7px 12px' }}
                 />
-                <span style={{ fontSize: 11, color: '#6B7280' }}>
+                <span style={{ fontSize: 13.5, color: '#6B7280' }}>
                   Foto atau denah ruangan akan langsung ditampilkan di Katalog Fasilitas, kartu detail, dan visual Floor Plans di Beranda.
                 </span>
               </div>
@@ -578,7 +589,7 @@ export default function KelolaFasilitasPage() {
                             alignItems: 'center',
                             justifyContent: 'center',
                             color: '#b59876',
-                            fontSize: 10,
+                            fontSize: 12.5,
                             fontWeight: 700,
                           }}
                         >
@@ -588,7 +599,7 @@ export default function KelolaFasilitasPage() {
                     </div>
                     <div>
                       <div style={{ fontWeight: 600, color: '#181D24' }}>{f.name}</div>
-                      <div style={{ fontSize: 11, color: '#6B7280', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: 13.5, color: '#6B7280', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {f.desc}
                       </div>
                       {f.amenities && f.amenities.length > 0 && (
@@ -597,7 +608,7 @@ export default function KelolaFasilitasPage() {
                             <span
                               key={idx}
                               style={{
-                                fontSize: 10,
+                                fontSize: 12.5,
                                 padding: '1px 5px',
                                 borderRadius: 3,
                                 background: '#F5EFEB',
@@ -609,7 +620,7 @@ export default function KelolaFasilitasPage() {
                             </span>
                           ))}
                           {f.amenities.length > 3 && (
-                            <span style={{ fontSize: 10, color: '#9CA3AF' }}>+{f.amenities.length - 3}</span>
+                            <span style={{ fontSize: 12.5, color: '#9CA3AF' }}>+{f.amenities.length - 3}</span>
                           )}
                         </div>
                       )}
@@ -686,7 +697,7 @@ export default function KelolaFasilitasPage() {
                       onClick={() => startEdit(f)}
                       style={{
                         padding: '5px 10px',
-                        fontSize: 11,
+                        fontSize: 13.5,
                         fontWeight: 600,
                         border: '1px solid #D5D0C7',
                         background: '#FFFFFF',
@@ -704,7 +715,7 @@ export default function KelolaFasilitasPage() {
                       onClick={() => handleDelete(f)}
                       style={{
                         padding: '5px 10px',
-                        fontSize: 11,
+                        fontSize: 13.5,
                         fontWeight: 600,
                         border: '1px solid #FECACA',
                         background: '#FEF2F2',

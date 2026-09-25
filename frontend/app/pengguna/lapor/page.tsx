@@ -229,7 +229,7 @@ function LaporKerusakanContent() {
               <label style={{ margin: 0 }}>
                 Foto Bukti <span className="opt">(opsional)</span>
               </label>
-              <span style={{ fontSize: 11, color: '#6B7280' }}>Format JPG, PNG (Maks. 2MB)</span>
+              <span style={{ fontSize: 13.5, color: '#6B7280' }}>Format JPG, PNG (Maks. 2MB)</span>
             </div>
 
             <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
@@ -262,7 +262,7 @@ function LaporKerusakanContent() {
                       <circle cx="8.5" cy="8.5" r="1.5" />
                       <polyline points="21 15 16 10 5 21" />
                     </svg>
-                    <div style={{ fontSize: 10, marginTop: 4 }}>Belum ada foto</div>
+                    <div style={{ fontSize: 12.5, marginTop: 4 }}>Belum ada foto</div>
                   </div>
                 )}
               </div>
@@ -276,7 +276,7 @@ function LaporKerusakanContent() {
                       alignItems: 'center',
                       gap: 6,
                       padding: '7px 14px',
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: 600,
                       borderRadius: 6,
                       border: '1px solid #b59876',
@@ -311,7 +311,7 @@ function LaporKerusakanContent() {
                       }}
                       style={{
                         padding: '7px 12px',
-                        fontSize: 12,
+                        fontSize: 14,
                         borderRadius: 6,
                         border: '1px solid #FECACA',
                         background: '#FEF2F2',
@@ -327,7 +327,7 @@ function LaporKerusakanContent() {
                   {fileName && (
                     <span
                       style={{
-                        fontSize: 11.5,
+                        fontSize: 13.5,
                         color: '#4B5563',
                         background: '#F3F4F6',
                         padding: '4px 10px',
@@ -340,7 +340,10 @@ function LaporKerusakanContent() {
                       }}
                       title={fileName}
                     >
-                      📎 {fileName}
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', marginRight: 4, verticalAlign: '-1px' }}>
+                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                      </svg>
+                      {fileName}
                     </span>
                   )}
                 </div>
@@ -358,10 +361,10 @@ function LaporKerusakanContent() {
                     setFotoFile(null);
                     if (fileInputRef.current) fileInputRef.current.value = '';
                   }}
-                  style={{ fontSize: 12, padding: '7px 12px' }}
+                  style={{ fontSize: 14, padding: '7px 12px' }}
                 />
 
-                <span style={{ fontSize: 11, color: '#6B7280' }}>
+                <span style={{ fontSize: 13.5, color: '#6B7280' }}>
                   Lampiran bukti visual akan otomatis dikirim ke petugas sarpras untuk mempercepat verifikasi dan perbaikan fasilitas.
                 </span>
               </div>

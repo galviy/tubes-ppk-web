@@ -1,7 +1,7 @@
 // models/facility.ts
 // Definisi tipe data (model) untuk seluruh entitas fasilitas.
 // Dipisah dari komponen tampilan supaya struktur data konsisten
-// di seluruh aplikasi dan mudah diganti sumbernya (mock -> API/DB).
+// di seluruh aplikasi dan bersumber langsung dari backend API/DB.
 
 export type FacilityType = string;
 

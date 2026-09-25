@@ -147,7 +147,14 @@ export default function KelolaAkunPage() {
     toggleAccountStatus,
     verifyPendingAccount,
     deleteAccount,
+    refreshAccounts,
+    refreshPendingAccounts,
   } = useAppData();
+
+  useEffect(() => {
+    refreshAccounts();
+    refreshPendingAccounts();
+  }, [refreshAccounts, refreshPendingAccounts]);
 
   const [tab, setTab] = useState<'daftar' | 'verifikasi'>('daftar');
   const [targetTipe, setTargetTipe] = useState<'petugas' | 'pengguna'>('petugas');
@@ -499,29 +506,29 @@ export default function KelolaAkunPage() {
                 }}
               >
                 <div>
-                  <div style={{ color: '#6B7280', fontSize: 11, fontWeight: 600 }}>NAMA LENGKAP</div>
+                  <div style={{ color: '#6B7280', fontSize: 13.5, fontWeight: 600 }}>NAMA LENGKAP</div>
                   <div style={{ fontWeight: 600, color: '#181D24' }}>{createdCredential.nama}</div>
                 </div>
                 <div>
-                  <div style={{ color: '#6B7280', fontSize: 11, fontWeight: 600 }}>USERNAME</div>
+                  <div style={{ color: '#6B7280', fontSize: 13.5, fontWeight: 600 }}>USERNAME</div>
                   <div style={{ fontWeight: 600, color: '#b59876' }}>@{createdCredential.username}</div>
                 </div>
                 <div>
-                  <div style={{ color: '#6B7280', fontSize: 11, fontWeight: 600 }}>IDENTITAS (NIM/NIDN/NIP)</div>
+                  <div style={{ color: '#6B7280', fontSize: 13.5, fontWeight: 600 }}>IDENTITAS (NIM/NIDN/NIP)</div>
                   <div style={{ fontWeight: 600, color: '#181D24' }}>{createdCredential.nip}</div>
                 </div>
                 <div>
-                  <div style={{ color: '#6B7280', fontSize: 11, fontWeight: 600 }}>EMAIL LOGIN</div>
+                  <div style={{ color: '#6B7280', fontSize: 13.5, fontWeight: 600 }}>EMAIL LOGIN</div>
                   <div style={{ fontWeight: 600, color: '#181D24' }}>{createdCredential.email}</div>
                 </div>
                 <div>
-                  <div style={{ color: '#6B7280', fontSize: 11, fontWeight: 600 }}>PERAN &amp; UNIT/PRODI</div>
+                  <div style={{ color: '#6B7280', fontSize: 13.5, fontWeight: 600 }}>PERAN &amp; UNIT/PRODI</div>
                   <div style={{ fontWeight: 600, color: '#b59876' }}>
                     {createdCredential.peran} • {createdCredential.unit}
                   </div>
                 </div>
                 <div>
-                  <div style={{ color: '#6B7280', fontSize: 11, fontWeight: 600 }}>KATA SANDI SEMENTARA</div>
+                  <div style={{ color: '#6B7280', fontSize: 13.5, fontWeight: 600 }}>KATA SANDI SEMENTARA</div>
                   <div style={{ fontFamily: 'monospace', fontWeight: 700, color: '#181D24', fontSize: 14 }}>
                     {createdCredential.password}
                   </div>
@@ -534,7 +541,7 @@ export default function KelolaAkunPage() {
                   onClick={handleCopyCredentials}
                   style={{
                     padding: '7px 14px',
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: 600,
                     borderRadius: 4,
                     border: '1px solid #b59876',
@@ -552,7 +559,7 @@ export default function KelolaAkunPage() {
                   </svg>
                   <span>{copied ? 'Kredensial Tersalin!' : 'Salin Kredensial Akun'}</span>
                 </button>
-                <span style={{ fontSize: 12, color: '#6B7280' }}>
+                <span style={{ fontSize: 14, color: '#6B7280' }}>
                   Bagikan informasi ini kepada staf/petugas terkait agar dapat segera login ke portal.
                 </span>
               </div>
@@ -661,7 +668,7 @@ export default function KelolaAkunPage() {
                     required
                     minLength={5}
                   />
-                  <span style={{ fontSize: 11, color: '#6B7280', marginTop: 3 }}>
+                  <span style={{ fontSize: 13.5, color: '#6B7280', marginTop: 3 }}>
                     Minimal 5 karakter (sinkron dengan kontrak otentikasi backend).
                   </span>
                 </div>
@@ -801,7 +808,7 @@ export default function KelolaAkunPage() {
                         maxLength={10}
                         required
                       />
-                      <span style={{ fontSize: 11, color: '#6B7280', marginTop: 3 }}>
+                      <span style={{ fontSize: 13.5, color: '#6B7280', marginTop: 3 }}>
                         Tepat 10 digit karakter angka sesuai validasi backend dosen.
                       </span>
                     </div>
@@ -878,7 +885,7 @@ export default function KelolaAkunPage() {
                           background: 'none',
                           border: 'none',
                           cursor: 'pointer',
-                          fontSize: 12,
+                          fontSize: 14,
                           color: '#6B7280',
                         }}
                       >
@@ -891,7 +898,7 @@ export default function KelolaAkunPage() {
                       onClick={handleGeneratePassword}
                       style={{
                         padding: '9px 14px',
-                        fontSize: 12,
+                        fontSize: 14,
                         fontWeight: 600,
                         border: '1px solid #D5D0C7',
                         background: '#FAF8F5',
@@ -903,7 +910,7 @@ export default function KelolaAkunPage() {
                       Acak Sandi Otomatis
                     </button>
                   </div>
-                  <div style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>
+                  <div style={{ fontSize: 13.5, color: '#6B7280', marginTop: 4 }}>
                     Kata sandi default: <code>Sipinjam2026!</code> (minimal 5 karakter, 1 huruf besar, dan 1 simbol).
                   </div>
                 </div>
@@ -929,7 +936,7 @@ export default function KelolaAkunPage() {
                   <h3 style={{ fontSize: 15, fontWeight: 700, color: '#181D24', margin: 0 }}>
                     Daftar Pengguna &amp; Petugas Terdaftar
                   </h3>
-                  <p style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
+                  <p style={{ fontSize: 14, color: '#6B7280', marginTop: 2 }}>
                     Seluruh akun aktif yang memiliki kredensial resmi pada platform SiPinjam Undip.
                   </p>
                 </div>
@@ -959,7 +966,7 @@ export default function KelolaAkunPage() {
                     onClick={() => setFilterRole(chip.key as any)}
                     style={{
                       padding: '4px 12px',
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: 600,
                       borderRadius: 4,
                       border: filterRole === chip.key ? '1px solid #b59876' : '1px solid #E5E0D8',
@@ -1001,12 +1008,12 @@ export default function KelolaAkunPage() {
                       <td style={{ fontWeight: 600, color: '#181D24' }}>@{acc.username}</td>
                       <td style={{ fontSize: 13 }}>{acc.email}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>
-                        <span className="pill avail" style={{ fontSize: 11 }}>
+                        <span className="pill avail" style={{ fontSize: 13.5 }}>
                           {acc.role === 'admin' ? 'Admin' : acc.role === 'petugas' ? 'Petugas' : 'Pengguna'}
                         </span>
                       </td>
                       <td style={{ whiteSpace: 'nowrap' }}>
-                        <span className={`pill ${aktif ? 'avail' : 'danger'}`} style={{ fontSize: 11 }}>
+                        <span className={`pill ${aktif ? 'avail' : 'danger'}`} style={{ fontSize: 13.5 }}>
                           {aktif ? 'Aktif' : 'Nonaktif'}
                         </span>
                       </td>
@@ -1017,7 +1024,7 @@ export default function KelolaAkunPage() {
                             onClick={() => handleToggleStatus(acc.id, acc.username, aktif ? 'aktif' : 'nonaktif')}
                             style={{
                               padding: '5px 10px',
-                              fontSize: 11,
+                              fontSize: 13.5,
                               fontWeight: 600,
                               borderRadius: 4,
                               cursor: 'pointer',
@@ -1033,7 +1040,7 @@ export default function KelolaAkunPage() {
                             onClick={() => handleDeleteAccount(acc.id, acc.username, acc.role)}
                             style={{
                               padding: '5px 10px',
-                              fontSize: 11,
+                              fontSize: 13.5,
                               fontWeight: 600,
                               borderRadius: 4,
                               cursor: 'pointer',
@@ -1082,39 +1089,39 @@ export default function KelolaAkunPage() {
                   <td>
                     <div style={{ fontWeight: 600, color: '#181D24' }}>{a.nama}</div>
                     {a.username && (
-                      <div style={{ fontSize: 11, color: '#b59876', fontFamily: 'monospace' }}>
+                      <div style={{ fontSize: 13.5, color: '#b59876', fontFamily: 'monospace' }}>
                         @{a.username}
                       </div>
                     )}
                   </td>
                   <td style={{ fontSize: 13 }}>
                     <div>{a.email}</div>
-                    <div style={{ fontSize: 11, color: '#6B7280' }}>{a.phone || '-'}</div>
+                    <div style={{ fontSize: 13.5, color: '#6B7280' }}>{a.phone || '-'}</div>
                   </td>
                   <td>
                     {a.peran === 'Mahasiswa' ? (
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: 12, fontFamily: 'monospace' }}>
+                        <div style={{ fontWeight: 600, fontSize: 14, fontFamily: 'monospace' }}>
                           NIM: {a.nim || '-'}
                         </div>
                         {a.angkatan && (
-                          <div style={{ fontSize: 11, color: '#6B7280' }}>
+                          <div style={{ fontSize: 13.5, color: '#6B7280' }}>
                             Angkatan {a.angkatan}
                           </div>
                         )}
                       </div>
                     ) : a.peran === 'Dosen' ? (
-                      <div style={{ fontWeight: 600, fontSize: 12, fontFamily: 'monospace' }}>
+                      <div style={{ fontWeight: 600, fontSize: 14, fontFamily: 'monospace' }}>
                         NIDN: {a.nidn || a.nim || '-'}
                       </div>
                     ) : (
-                      <div style={{ fontWeight: 600, fontSize: 12, fontFamily: 'monospace' }}>
+                      <div style={{ fontWeight: 600, fontSize: 14, fontFamily: 'monospace' }}>
                         NIP: {a.nip || a.nim || '-'}
                       </div>
                     )}
                   </td>
                   <td>
-                    <span style={{ fontWeight: 600, color: '#b59876', fontSize: 12.5 }}>{a.peran}</span>
+                    <span style={{ fontWeight: 600, color: '#b59876', fontSize: 14 }}>{a.peran}</span>
                   </td>
                   <td style={{ color: '#4B5563', fontSize: 13 }}>
                     {a.prodi
@@ -1162,7 +1169,7 @@ export default function KelolaAkunPage() {
                         <option value="tolak">Tolak</option>
                       </select>
                     ) : (
-                      <span style={{ color: '#9CA3AF', fontSize: 12 }}>-</span>
+                      <span style={{ color: '#9CA3AF', fontSize: 14 }}>-</span>
                     )}
                   </td>
                 </tr>

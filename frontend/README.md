@@ -4,21 +4,21 @@ Sistem informasi berbasis web modern untuk pengelolaan izin reservasi ruangan/al
 
 ---
 
-## ⚡ Ringkasan Status Kesiapan Aplikasi
+## Ringkasan Status Kesiapan Aplikasi
 
 | Kategori | Status | Keterangan |
 | :--- | :---: | :--- |
-| **TypeScript Typecheck** | ✅ Lulus | `npx tsc --noEmit` bersih tanpa ada kesalahan tipe data (0 errors). |
-| **Integrasi Backend** | ✅ Terhubung | Terintegrasi penuh ke Backend Go (`:8080`) dan Database MariaDB/MySQL Railway. |
-| **Production Build** | ✅ Lulus | `npm run build` berhasil dikompilasi (mode dinamis dengan reverse proxy `rewrites()`). |
-| **Autentikasi & Sesi** | ✅ Aman | Manajemen sesi dengan cookie HttpOnly `session_id` langsung dari backend Go (bebas CORS). |
-| **Interaktivitas UI** | ✅ Aman | Menggunakan Webpack (`--webpack`) dan `AppDataContext` client-side state management terpadu. |
-| **Akses Jaringan LAN** | ✅ Siap | Didukung konfigurasi `allowedDevOrigins` pada `next.config.js` untuk pengetesan lintas perangkat. |
-| **User Stories** | ✅ Lengkap | Mencakup hak akses Publik, Pengguna (Mhs/Dosen/Staf), Petugas Sarpras, dan Admin. |
+| **TypeScript Typecheck** | Lulus | `npx tsc --noEmit` bersih tanpa ada kesalahan tipe data (0 errors). |
+| **Integrasi Backend** | Terhubung | Terintegrasi penuh ke Backend Go (`:8080`) dan Database MariaDB/MySQL Railway. |
+| **Production Build** | Lulus | `npm run build` berhasil dikompilasi (mode dinamis dengan reverse proxy `rewrites()`). |
+| **Autentikasi & Sesi** | Aman | Manajemen sesi dengan cookie HttpOnly `session_id` langsung dari backend Go (bebas CORS). |
+| **Interaktivitas UI** | Aman | Menggunakan Webpack (`--webpack`) dan `AppDataContext` client-side state management terpadu. |
+| **Akses Jaringan LAN** | Siap | Didukung konfigurasi `allowedDevOrigins` pada `next.config.js` untuk pengetesan lintas perangkat. |
+| **User Stories** | Lengkap | Mencakup hak akses Publik, Pengguna (Mhs/Dosen/Staf), Petugas Sarpras, dan Admin. |
 
 ---
 
-## 🚀 Panduan Menjalankan Aplikasi (Fullstack)
+## Panduan Menjalankan Aplikasi (Fullstack)
 
 ### 1. Prasyarat Sistem
 - **Node.js**: v18.18.0 atau versi yang lebih baru (disarankan LTS v20+)
@@ -75,7 +75,7 @@ npm run start
 
 ---
 
-## 👥 Akun Pengujian (Backend MySQL / Railway)
+## Akun Pengujian (Backend MySQL / Railway)
 
 Login hanya menerima akun backend terverifikasi (`POST /auth/login` + `GET /user/me` via `lib/api.ts`). Berikut akun pengujian yang siap digunakan:
 
@@ -84,12 +84,14 @@ Login hanya menerima akun backend terverifikasi (`POST /auth/login` + `GET /user
 | **Admin** | `galvindoser@gmail.com` | `Test@123` | `/admin/*`: Master fasilitas, audit reservasi & laporan, verifikasi akun, rekap data & ekspor. |
 | **Petugas** | `petugas@sipinjam.ac.id` | `Petugas@123` | `/petugas/*`: Manajemen ketersediaan fasilitas, tindak lanjut & update status penanganan laporan kerusakan. |
 | **Pengguna (Mahasiswa)** | `galvin@gmail.com` | `Lol@123` | `/pengguna/*`: Pengajuan pinjam ruang/alat, pembatalan mandiri, lapor sarpras rusak + bukti foto. |
+| **Pengguna (Dosen)** | `dosen@sipinjam.ac.id` | `Dosen@123` | `/pengguna/*`: Pengajuan pinjam fasilitas ruang/alat akademik, pelaporan kendala sarpras. |
+| **Pengguna (Staf)** | `staf@sipinjam.ac.id` | `Staf@123` | `/pengguna/*`: Pengajuan pinjam ruang aula/rapat, pelaporan inventaris sarana kampus. |
 
 > Untuk menambah akun baru: daftar mandiri via `/register` (masuk antrean pending backend) lalu diverifikasi langsung di DB, atau dibuat langsung via menu admin (`POST /admin/create_user/*`).
 
 ---
 
-## 🏛️ Fitur Unggulan & Implementasi Sistem
+## Fitur Unggulan & Implementasi Sistem
 
 ### 1. Header & Navigasi Publik Adaptif (*Collision-Proof*)
 - **Layout Flex 3-Kolom Seimbang**: Menu navigasi dan tombol aksi berada di sayap kiri dan kanan, mengunci brand *"SIPINJAM UNIVERSITAS DIPONEGORO"* tepat di titik 50% tengah.
@@ -131,7 +133,7 @@ Login hanya menerima akun backend terverifikasi (`POST /auth/login` + `GET /user
 
 ---
 
-## 📁 Struktur Berkas & Direktori Proyek
+## Struktur Berkas & Direktori Proyek
 
 ```text
 frontend/
@@ -226,7 +228,7 @@ frontend/
 
 ---
 
-## 🎨 Desain Sistem & Estetika Visual (*The Reserve at Ochoco*)
+## Desain Sistem & Estetika Visual (*The Reserve at Ochoco*)
 
 - **Palet Warna Harmonis & Arsitektural**:
   - *Deep Charcoal / Obsidian*: `#0E1217`, `#14171A`, `#1A1F24`
@@ -239,7 +241,7 @@ frontend/
 
 ---
 
-## 🔌 Integrasi ke Backend Go & Database MariaDB
+## Integrasi ke Backend Go & Database MariaDB
 
 Frontend terhubung langsung ke backend Go tanpa data tiruan (*zero mock data*):
 

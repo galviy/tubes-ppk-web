@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAppData } from '@/context/AppDataContext';
 
@@ -30,7 +31,19 @@ const ICONS = {
 };
 
 export default function PetugasRingkasanPage() {
-  const { reservations, reports, facilities, currentUser } = useAppData();
+  const {
+    reservations,
+    reports,
+    facilities,
+    currentUser,
+    refreshReservations,
+    refreshPetugasReports,
+  } = useAppData();
+
+  useEffect(() => {
+    refreshReservations();
+    refreshPetugasReports();
+  }, [refreshReservations, refreshPetugasReports]);
 
   const resMenunggu = reservations.filter((r) => r.status === 'menunggu').length;
   const lapAktif = reports.filter((r) => r.status === 'baru' || r.status === 'diproses').length;
@@ -39,8 +52,132 @@ export default function PetugasRingkasanPage() {
 
   const displayName = currentUser?.nama?.split(' ')[0] || 'Budi';
 
+  const [showResPopup, setShowResPopup] = useState(false);
+  const [showLapPopup, setShowLapPopup] = useState(false);
+
+  useEffect(() => {
+    if (resMenunggu > 0) setShowResPopup(true);
+    if (lapAktif > 0) setShowLapPopup(true);
+  }, [resMenunggu, lapAktif]);
+
+  useEffect(() => {
+    if (!showResPopup) return;
+    const t = setTimeout(() => setShowResPopup(false), 8000);
+    return () => clearTimeout(t);
+  }, [showResPopup]);
+
+  useEffect(() => {
+    if (!showLapPopup) return;
+    const t = setTimeout(() => setShowLapPopup(false), 8000);
+    return () => clearTimeout(t);
+  }, [showLapPopup]);
+
+  const popupBase: React.CSSProperties = {
+    position: 'fixed',
+    right: 24,
+    zIndex: 99999,
+    maxWidth: 420,
+    width: 'calc(100vw - 48px)',
+    background: '#FFFFFF',
+    borderRadius: 6,
+    boxShadow: '0 12px 32px rgba(0, 0, 0, 0.2)',
+    padding: '14px 16px',
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 12,
+    animation: 'fadeIn 0.25s ease-out',
+  };
+
+  const closeBtn: React.CSSProperties = {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    color: '#9CA3AF',
+    padding: 4,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 4,
+  };
+
   return (
     <div>
+      {/* Popup: Reservasi menunggu */}
+      {showResPopup && resMenunggu > 0 && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            ...popupBase,
+            top: 24,
+            border: '1px solid #FDE68A',
+            borderLeft: '5px solid #D97706',
+          }}
+        >
+          <div style={{ flexShrink: 0, marginTop: 2 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 2" />
+            </svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: 'var(--font)', fontWeight: 700, fontSize: 14, color: '#92400E', marginBottom: 2 }}>
+              Antrian Reservasi
+            </div>
+            <div style={{ fontSize: 14, color: '#374151', lineHeight: 1.5 }}>
+              Ada <strong>{resMenunggu} reservasi</strong> yang masih menunggu persetujuan.{' '}
+              <Link href="/petugas/reservasi" style={{ color: '#b59876', fontWeight: 600, textDecoration: 'underline' }}>
+                Tinjau sekarang
+              </Link>
+            </div>
+          </div>
+          <button type="button" onClick={() => setShowResPopup(false)} aria-label="Tutup notifikasi" style={closeBtn}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* Popup: Laporan kerusakan aktif */}
+      {showLapPopup && lapAktif > 0 && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            ...popupBase,
+            top: showResPopup && resMenunggu > 0 ? 100 : 24,
+            border: '1px solid #FECACA',
+            borderLeft: '5px solid #DC2626',
+          }}
+        >
+          <div style={{ flexShrink: 0, marginTop: 2 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 3L2 20h20L12 3z" />
+              <path d="M12 10v4M12 17h.01" />
+            </svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: 'var(--font)', fontWeight: 700, fontSize: 14, color: '#991B1B', marginBottom: 2 }}>
+              Antrian Laporan Kerusakan
+            </div>
+            <div style={{ fontSize: 14, color: '#374151', lineHeight: 1.5 }}>
+              Ada <strong>{lapAktif} laporan</strong> kerusakan yang perlu ditindaklanjuti.{' '}
+              <Link href="/petugas/laporan" style={{ color: '#b59876', fontWeight: 600, textDecoration: 'underline' }}>
+                Tinjau sekarang
+              </Link>
+            </div>
+          </div>
+          <button type="button" onClick={() => setShowLapPopup(false)} aria-label="Tutup notifikasi" style={closeBtn}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Top Greeting Banner */}
       <div className="greeting-band">
         <div>
@@ -85,24 +222,9 @@ export default function PetugasRingkasanPage() {
         </div>
       </div>
 
-      {/* Notice Banner */}
-      <div className="dash-notice-banner">
-        <span>
-          Ada <strong>{resMenunggu} reservasi</strong> dan <strong>{lapAktif} laporan</strong> yang masih menunggu diproses. Silakan cek{' '}
-          <Link href="/petugas/reservasi" style={{ color: '#b59876', fontWeight: 600, textDecoration: 'underline' }}>
-            Antrian Reservasi
-          </Link>{' '}
-          dan{' '}
-          <Link href="/petugas/laporan" style={{ color: '#b59876', fontWeight: 600, textDecoration: 'underline' }}>
-            Antrian Laporan
-          </Link>{' '}
-          supaya tidak ada yang terlewat.
-        </span>
-      </div>
-
       {/* Quick Menu Section */}
       <div style={{ marginTop: 12, marginBottom: 18 }}>
-        <h3 style={{ fontSize: 20, fontWeight: 600, color: '#181D24', margin: '0 0 16px 0' }}>Menu cepat</h3>
+        <h3 style={{ fontSize: 22, fontWeight: 600, color: '#181D24', margin: '0 0 16px 0' }}>Menu cepat</h3>
       </div>
 
       <div className="menu-card-grid">

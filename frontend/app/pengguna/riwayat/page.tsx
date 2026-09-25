@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { Reservation, ReservationStatus } from '@/models/reservation';
 import ReservationDetailModal from '@/components/ReservationDetailModal';
@@ -15,7 +15,12 @@ const STATUS_PILL: Record<ReservationStatus, [string, string]> = {
 };
 
 export default function RiwayatReservasiPage() {
-  const { reservations, facilityById, currentUser, cancelReservation } = useAppData();
+  const { reservations, facilityById, currentUser, cancelReservation, refreshReservations } = useAppData();
+
+  useEffect(() => {
+    refreshReservations();
+  }, [refreshReservations]);
+
   const currentIdent = currentUser?.nama || currentUser?.email || '';
   const mine = reservations.filter(
     (r) =>
@@ -80,9 +85,25 @@ export default function RiwayatReservasiPage() {
                     {facility?.loc || '-'}
                   </span>
                 </div>
-                <div style={{ marginTop: 12, color: 'var(--ink-body)' }}>
+                <div style={{ marginTop: 12, color: 'var(--ink-body)', fontSize: 14 }}>
                   Tujuan: {r.tujuan}
                 </div>
+                {r.catatanBatal && (r.status === 'dibatalkan' || r.status === 'ditolak') && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      fontSize: 13,
+                      color: '#B91C1C',
+                      background: '#FEF2F2',
+                      border: '1px solid #FECACA',
+                      padding: '6px 12px',
+                      borderRadius: 4,
+                      display: 'inline-block',
+                    }}
+                  >
+                    Catatan {r.status === 'dibatalkan' ? 'Pembatalan' : 'Penolakan'}: {r.catatanBatal}
+                  </div>
+                )}
               </div>
             </div>
           );

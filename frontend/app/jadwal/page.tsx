@@ -81,7 +81,7 @@ function JadwalContent() {
             </div>
             {!currentUser && (
               <p className="jadwal-cta-note">
-                ⓘ Anda perlu masuk (login) terlebih dahulu untuk memproses formulir reservasi atau laporan kerusakan.
+                Anda perlu masuk (login) terlebih dahulu untuk memproses formulir reservasi atau laporan kerusakan.
               </p>
             )}
           </div>

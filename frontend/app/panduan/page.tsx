@@ -122,7 +122,7 @@ export default function PanduanPage() {
                   <span
                     style={{
                       fontFamily: 'var(--font)',
-                      fontSize: 11,
+                      fontSize: 13.5,
                       fontWeight: 700,
                       letterSpacing: '0.08em',
                       textTransform: 'uppercase',
@@ -146,7 +146,7 @@ export default function PanduanPage() {
                   href={s.link}
                   style={{
                     fontFamily: 'var(--font)',
-                    fontSize: 12.5,
+                    fontSize: 14,
                     fontWeight: 700,
                     color: '#b59876',
                     letterSpacing: '0.04em',
@@ -174,7 +174,10 @@ export default function PanduanPage() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-            <span style={{ color: '#b59876', fontSize: 20 }}>📋</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b59876" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+              <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+            </svg>
             <h2 style={{ fontFamily: 'var(--font)', fontSize: 20, fontWeight: 600, color: '#FFFFFF', margin: 0 }}>
               Ketentuan & Tata Tertib Peminjaman
             </h2>

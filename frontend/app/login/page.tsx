@@ -11,6 +11,39 @@ const ROLE_HOME: Record<string, string> = {
   admin: '/admin',
 };
 
+const DEMO_ACCOUNTS = [
+  {
+    role: 'Mahasiswa',
+    email: 'galvin@gmail.com',
+    password: 'Lol@123',
+    desc: 'Pengajuan pinjam & lapor kerusakan (/pengguna/*)',
+  },
+  {
+    role: 'Dosen',
+    email: 'dosen@sipinjam.ac.id',
+    password: 'Dosen@123',
+    desc: 'Reservasi ruang kelas & lab riset (/pengguna/*)',
+  },
+  {
+    role: 'Staf',
+    email: 'staf@sipinjam.ac.id',
+    password: 'Staf@123',
+    desc: 'Reservasi sarana aula/rapat (/pengguna/*)',
+  },
+  {
+    role: 'Petugas',
+    email: 'petugas@sipinjam.ac.id',
+    password: 'Petugas@123',
+    desc: 'Persetujuan jadwal & penanganan laporan (/petugas/*)',
+  },
+  {
+    role: 'Admin',
+    email: 'galvindoser@gmail.com',
+    password: 'Test@123',
+    desc: 'Master sarpras, verifikasi & audit rekap (/admin/*)',
+  },
+];
+
 export default function LoginPage() {
   const router = useRouter();
   const { login, logout, currentUser } = useAppData();
@@ -20,6 +53,14 @@ export default function LoginPage() {
   const [remember, setRemember] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
+  const [selectedDemoRole, setSelectedDemoRole] = useState<string | null>(null);
+
+  function applyDemoAccount(acc: (typeof DEMO_ACCOUNTS)[number]) {
+    setLoginEmail(acc.email);
+    setLoginPassword(acc.password);
+    setSelectedDemoRole(acc.role);
+    setLoginError('');
+  }
 
   async function handleLoginSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -62,7 +103,7 @@ export default function LoginPage() {
           </svg>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
             <span style={{ fontFamily: 'var(--font)', fontSize: 13, fontWeight: 700, letterSpacing: '0.14em', color: '#FFFFFF' }}>SIPINJAM</span>
-            <span style={{ fontFamily: 'var(--font)', fontSize: 9, letterSpacing: '0.1em', color: '#b59876' }}>UNIVERSITAS DIPONEGORO</span>
+            <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, letterSpacing: '0.1em', color: '#b59876' }}>UNIVERSITAS DIPONEGORO</span>
           </div>
         </Link>
 
@@ -105,7 +146,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 className="ochoco-waiting-btn"
-                style={{ padding: '14px', fontSize: 12.5 }}
+                style={{ padding: '14px', fontSize: 14 }}
                 onClick={() => router.push(ROLE_HOME[currentUser.role] || '/')}
               >
                 BUKA DASHBOARD ({currentUser.role.toUpperCase()})
@@ -127,9 +168,79 @@ export default function LoginPage() {
               <h2 className="ochoco-waiting-title" style={{ fontSize: 24, marginBottom: 8 }}>
                 <span style={{ color: '#b59876' }}>MASUK</span>
               </h2>
-              <p className="ochoco-card-subtitle" style={{ fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>
+              <p className="ochoco-card-subtitle" style={{ fontSize: 15, marginBottom: 20, lineHeight: 1.6 }}>
                 Gunakan akun resmi civitas akademika Universitas Diponegoro untuk mengelola peminjaman dan pelaporan fasilitas.
               </p>
+              {/* Quick Demo Accounts Selector */}
+              <div
+                style={{
+                  background: '#FAF8F5',
+                  border: '1px solid #E5E0D8',
+                  borderRadius: 6,
+                  padding: '14px 16px',
+                  marginBottom: 20,
+                }}
+              >
+                <div
+                  style={{
+                    marginBottom: 10,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: 'var(--font)',
+                      fontSize: 13,
+                      fontWeight: 700,
+                      letterSpacing: '0.08em',
+                      color: '#8C7355',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Akun Demo
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {DEMO_ACCOUNTS.map((acc) => {
+                    const isSelected = selectedDemoRole === acc.role || loginEmail === acc.email;
+                    return (
+                      <button
+                        key={acc.role}
+                        type="button"
+                        onClick={() => applyDemoAccount(acc)}
+                        style={{
+                          padding: '7px 14px',
+                          borderRadius: 4,
+                          fontSize: 14,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: isSelected ? '1px solid #b59876' : '1px solid #D5D0C7',
+                          background: isSelected ? '#15171A' : '#FFFFFF',
+                          color: isSelected ? '#b59876' : '#181D24',
+                          transition: 'all 0.15s ease',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        {acc.role}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {selectedDemoRole && (
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: '#555',
+                      marginTop: 10,
+                      borderTop: '1px dashed #E5E0D8',
+                      paddingTop: 8,
+                    }}
+                  >
+                    {DEMO_ACCOUNTS.find((a) => a.role === selectedDemoRole)?.desc}
+                  </div>
+                )}
+              </div>
 
               <form onSubmit={handleLoginSubmit} className="ochoco-waiting-form">
                 <div className="ochoco-underline-field">
@@ -170,14 +281,14 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   className="ochoco-waiting-btn"
-                  style={{ padding: '14px', fontSize: 12.5 }}
+                  style={{ padding: '14px', fontSize: 14 }}
                   disabled={loginLoading}
                 >
                   {loginLoading ? 'MEMERIKSA AKUN…' : 'MASUK'}
                 </button>
               </form>
 
-              <div className="ochoco-auth-switch" style={{ marginTop: 22, fontSize: 13.5 }}>
+              <div className="ochoco-auth-switch" style={{ marginTop: 22, fontSize: 15 }}>
                 Belum memiliki akun?{' '}
                 <Link
                   href="/register"

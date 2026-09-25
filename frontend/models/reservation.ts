@@ -19,9 +19,8 @@ export interface Reservation {
   status: ReservationStatus;
   createdAt: string; // ISO timestamp - kapan reservasi ini diajukan
   catatanBatal?: string;
-  // Sumber baris: 'mock' (seed/cermin lokal) atau 'backend' (sinkron DB).
-  // Server menang: sync mengganti baris backend + membuang seed.
-  sumber?: 'mock' | 'backend';
+  // Sumber baris: 'backend' (sinkron DB).
+  sumber?: 'backend';
   backendId?: number;
   ruanganId?: number;
   ruanganNama?: string;
