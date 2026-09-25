@@ -96,15 +96,26 @@ export function currentHHMM(): string {
   return `${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
+/** Helper pembanding ID fasilitas yang tahan terhadap variasi prefix (misal: "ruangan-2" vs "2") */
+export function matchesFacility(resFacilityId?: string, targetFacilityId?: string): boolean {
+  if (!resFacilityId || !targetFacilityId) return false;
+  if (resFacilityId === targetFacilityId) return true;
+  const strip = (id: string) => id.replace(/^(ruangan|alat)-/, '');
+  if (strip(resFacilityId) === strip(targetFacilityId)) {
+    const isAlat1 = resFacilityId.startsWith('alat-');
+    const isAlat2 = targetFacilityId.startsWith('alat-');
+    if (isAlat1 === isAlat2) return true;
+  }
+  return false;
+}
+
 export type SlotBooking = 'avail' | 'pending' | 'booked';
 
 /**
  * Klasifikasi klaim satu slot:
- * 1. Sudah disetujui admin -> 'booked', terkunci untuk SEMUA ORANG.
- * 2. Masih menunggu milik orang yang sama -> 'pending', mengunci dirinya
- *    sendiri agar tidak double-booking.
- * 3. Masih menunggu milik orang lain -> 'avail', tetap bisa diperebutkan
- *    (siapa cepat dia dapat saat petugas menyetujui).
+ * 1. Sudah disetujui -> 'booked' (terpakai).
+ * 2. Masih menunggu persetujuan (sudah diajukan/dipesan) -> 'pending' (menunggu persetujuan).
+ * 3. Belum ada pemesanan -> 'avail' (tersedia).
  */
 export function getSlotBooking(
   reservations: Reservation[],
@@ -112,11 +123,12 @@ export function getSlotBooking(
   slotStart: string,
   excludeId?: number,
   tanggal?: string,
-  currentUserIdentifier?: string
+  currentUserIdentifier?: string,
+  userRole?: string
 ): SlotBooking {
   const active = reservations.filter(
     (r) =>
-      r.facilityId === facilityId &&
+      matchesFacility(r.facilityId, facilityId) &&
       r.id !== excludeId &&
       r.status !== 'ditolak' &&
       r.status !== 'dibatalkan' &&
@@ -127,8 +139,16 @@ export function getSlotBooking(
 
   if (active.length === 0) return 'avail';
 
+  // 1. Sudah disetujui -> 'booked' (terkunci bagi semua orang)
   if (active.some((r) => r.status === 'disetujui')) return 'booked';
 
+  // 2. Role dashboard: Petugas & Admin berhak melihat status 'pending' (menunggu persetujuan)
+  const isOfficerOrAdmin = userRole === 'petugas' || userRole === 'admin';
+  if (isOfficerOrAdmin && active.some((r) => r.status === 'menunggu')) {
+    return 'pending';
+  }
+
+  // 3. Akun pemesan: jika slot ini diajukan oleh pengguna saat ini, tampilkan 'pending'
   if (currentUserIdentifier) {
     const normUser = currentUserIdentifier.trim().toLowerCase();
     const milikSendiri = active.some((r) => {
@@ -138,6 +158,8 @@ export function getSlotBooking(
     if (milikSendiri) return 'pending';
   }
 
+  // 4. Jadwal publik (tanpa login) atau akun pengguna lain:
+  // Selama belum di-ACC, status tetap 'avail' ("Tersedia")
   return 'avail';
 }
 
@@ -147,10 +169,11 @@ export function isSlotBooked(
   slotStart: string,
   excludeId?: number,
   tanggal?: string,
-  currentUserIdentifier?: string
+  currentUserIdentifier?: string,
+  userRole?: string
 ): boolean {
   return (
-    getSlotBooking(reservations, facilityId, slotStart, excludeId, tanggal, currentUserIdentifier) !==
+    getSlotBooking(reservations, facilityId, slotStart, excludeId, tanggal, currentUserIdentifier, userRole) !==
     'avail'
   );
 }
@@ -171,7 +194,7 @@ export function hasRangeConflict(
 ): Reservation | undefined {
   const overlaps = reservations.filter(
     (r) =>
-      r.facilityId === facilityId &&
+      matchesFacility(r.facilityId, facilityId) &&
       r.tanggal === tanggal &&
       r.id !== excludeId &&
       r.status !== 'ditolak' &&
@@ -182,11 +205,11 @@ export function hasRangeConflict(
 
   if (overlaps.length === 0) return undefined;
 
-  // 1. Yang sudah disetujui oleh admin mutlak bentrok
+  // 1. Yang sudah disetujui mutlak bentrok untuk semua orang
   const approved = overlaps.find((r) => r.status === 'disetujui');
   if (approved) return approved;
 
-  // 2. Jika dipesan oleh orang yang sama sebelumnya, bentrok
+  // 2. Jika dipesan oleh orang yang sama sebelumnya, bentrok (mencegah double booking oleh pemesan sendiri)
   if (currentUserIdentifier) {
     const normUser = currentUserIdentifier.trim().toLowerCase();
     const myRes = overlaps.find((r) => {
@@ -196,7 +219,7 @@ export function hasRangeConflict(
     if (myRes) return myRes;
   }
 
-  // 3. Untuk orang lain yang sama-sama pending: tidak bentrok di form
+  // 3. Untuk orang lain yang sama-sama mengajukan: tidak bentrok di form
   return undefined;
 }
 
@@ -215,8 +238,8 @@ export function backendStatusToSlotState(status: string, tersedia: boolean): Slo
 }
 
 /**
- * Tentukan status visual satu slot. Status dari backend (jadwal publik)
- * diprioritaskan; tanpa data backend, hitung dari reservasi lokal.
+ * Tentukan status visual satu slot.
+ * Memeriksa status dari backend (jadwal publik) dan data reservasi lokal.
  */
 export function getSlotState(
   facility: Facility,
@@ -224,23 +247,55 @@ export function getSlotState(
   reservations: Reservation[],
   tanggal?: string,
   currentUserIdentifier?: string,
-  backend?: { status: string; tersedia: boolean }
+  backend?: { status: string; tersedia: boolean },
+  userRole?: string
 ): SlotState {
   if (facility.status === 'repair' || facility.status === 'nonaktif') return 'maint';
 
-  let state: SlotState;
+  let state: SlotState = 'avail';
+
+  // 1. Jika backend mengembalikan status terpakai atau nonaktif:
   if (backend) {
-    state = backendStatusToSlotState(backend.status, backend.tersedia);
+    if (backend.status === 'terpakai' || (!backend.tersedia && backend.status !== 'menunggu')) {
+      return 'booked';
+    }
+    if (backend.status === 'nonaktif') {
+      return 'maint';
+    }
+    // Jika backend bilang 'menunggu':
+    // Hanya tampil 'pending' jika role petugas/admin atau pemesan adalah pengguna saat ini
+    if (backend.status === 'menunggu') {
+      const isOfficerOrAdmin = userRole === 'petugas' || userRole === 'admin';
+      if (isOfficerOrAdmin) {
+        state = 'pending';
+      } else {
+        // Cek apakah reservasi ini milik pemesan saat ini
+        const booking = getSlotBooking(
+          reservations,
+          facility.id,
+          slotStart,
+          undefined,
+          tanggal,
+          currentUserIdentifier,
+          userRole
+        );
+        state = booking;
+      }
+    } else {
+      state = backendStatusToSlotState(backend.status, backend.tersedia);
+    }
   } else {
+    // 2. Tanpa data backend, hitung dari data reservasi lokal
     const booking = getSlotBooking(
       reservations,
       facility.id,
       slotStart,
       undefined,
       tanggal,
-      currentUserIdentifier
+      currentUserIdentifier,
+      userRole
     );
-    state = booking === 'avail' ? 'avail' : booking;
+    state = booking;
   }
 
   if (state !== 'avail' && state !== 'pending') return state;

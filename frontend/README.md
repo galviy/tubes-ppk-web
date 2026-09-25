@@ -108,27 +108,40 @@ Login hanya menerima akun backend terverifikasi (`POST /auth/login` + `GET /user
 - **Ilustrasi Peta Kampus Vektor**: Komponen SVG artistik kustom (`CampusMapArt.tsx`) yang mempercantik estetika lingkungan akademik Undip.
 
 ### 3. Matriks Jadwal Slot Waktu 30 Menit (07.00 – 20.00 WIB)
-- **26 Slot Modular per Hari**: Terbagi rapi ke dalam 4 sesi harian (Pagi, Siang, Sore, Malam).
-- **Deteksi Bentrok Otomatis (Real-time Collision Check)**: Perhitungan irisan interval `[start, end)` secara instan mencegah peminjaman ganda pada ruangan/alat dan tanggal yang sama.
-- **Pratinjau Ketersediaan Terbuka**: Publik dapat memantau jadwal yang sudah terisi (*booked*) atau kosong tanpa harus login terlebih dahulu.
+- **26 Slot Modular per Hari**: Terbagi rapi ke dalam 4 sesi harian (Pagi, Siang, Sore, Malam) untuk **Ruangan** maupun **Alat**.
+- **Sinkronisasi Real-Time Backend (`GET /jadwal`)**: Slot waktu terhubung langsung dengan ketersediaan aktual di server Go.
+- **Logika Visibilitas Slot & Siapa Cepat Dia Dapat**:
+  - *Jadwal Publik & Pengguna Lain*: Slot yang masih berstatus `menunggu` persetujuan tetap bertuliskan **Tersedia** (hijau) agar pengguna lain tetap dapat mengajukan permohonan hingga ada yang disetujui (*ACC*) oleh petugas.
+  - *Akun Pemesan Sendiri*: Slot yang diajukan tampil **Menunggu Persetujuan** (kuning) dan dinonaktifkan khusus untuk akun pemohon tersebut guna mencegah *double-booking*.
+  - *Dashboard Petugas & Admin*: Menampilkan slot pending secara visual dan antrean verifikasi untuk segera disetujui atau ditolak.
+  - *Slot Disetujui (ACC)*: Terkunci otomatis menjadi **Terpakai** (merah) untuk seluruh pengguna dan publik.
 
-### 4. Kebijakan Pembatalan Terstruktur (`lib/cancellation.ts`)
+### 4. Batas Waktu Pengajuan Reservasi Paling Cepat H+2
+- Sesuai kebijakan operasional sarpras kampus Undip, permohonan reservasi wajib diajukan minimal 2 hari kalender sebelum tanggal kegiatan (contoh: jika hari ini tanggal 25, pemesanan paling awal yang diizinkan adalah untuk tanggal 27).
+- Sistem memvalidasi tanggal secara otomatis baik melalui pemilih tanggal (*date picker*), banner panduan, maupun dialog modal peringatan.
+
+### 5. Kebijakan Pembatalan Terstruktur (`lib/cancellation.ts`)
 - **Pembatalan Mandiri Pengguna**: Peminjam dapat membatalkan reservasi berstatus *Menunggu* atau *Disetujui* maksimal H-2 jam sebelum waktu kegiatan dimulai.
 - **Pembatalan Darurat oleh Petugas/Admin**: Staf pengelola dapat membatalkan reservasi sewaktu-waktu jika terdapat kendala operasional mendadak, disertai alasan pembatalan resmi yang tercatat di audit log.
 
-### 5. Sistem Pelaporan Kendala Sarpras & Bukti Foto
-- **Formulir Laporan Kerusakan**: Formulir pelaporan kendala fisik fasilitas yang mendukung unggah URL / file bukti visual.
+### 6. Sistem Pelaporan Kendala Sarpras & Bukti Foto
+- **Formulir Laporan Kerusakan**: Formulir pelaporan kendala fisik fasilitas yang mendukung unggah file foto bukti visual (JPG/PNG maks. 2MB).
 - **Tampilan Anti-Overflow**: Link lampiran foto pada tabel admin/petugas diringkas dengan tombol pratinjau thumbnail modal terpadu (`ReportDetailModal.tsx`), mencegah URL panjang merusak tata letak tabel.
 - **Siklus Status Transparan**: Alur penanganan terukur dari status *Baru* ➔ *Diproses* ➔ *Selesai* (lengkap dengan catatan perbaikan teknisi) atau *Ditolak*.
 
-### 6. Dialog Interaktif Kustom (`ActionPromptModal`)
+### 7. Notifikasi Toast Mengambang (Floating Auto-Dismiss Pop-up)
+- Menggantikan banner statis yang menempel di halaman dengan komponen *floating toast* di sudut layar (`.status-banner`).
+- Dilengkapi animasi *slide-in*, tombol tutup instan, serta fitur *auto-dismiss* otomatis setelah 5 detik agar tidak mengganggu tata letak konten.
+
+### 8. Dialog Interaktif Kustom (`ActionPromptModal`)
 - Mengeliminasi penggunaan popup bawaan browser (`window.alert`, `window.confirm`, `window.prompt`).
 - Seluruh konfirmasi kritis (penolakan izin, pembatalan darurat, catatan perbaikan sarpras) disajikan lewat modal terpadu dengan validasi input teks dan shortcut keyboard (`Esc` untuk membatalkan, `Ctrl+Enter` untuk submit).
 
-### 7. Dashboard Multi-Peran & Presisi Tata Letak
-- **Perataan Horizontal Sejajar**: Chip peran (`.ochoco-dash-role-chip`) beserta tab navigasi di setiap halaman role (`/admin`, `/petugas`, `/pengguna`) sejajar lurus dengan tombol `KEMBALI KE HOME` di atasnya dan kartu banner (`.greeting-band`) di bawahnya (`padding: 0 28px`).
+### 9. Dashboard Multi-Peran & Presisi Tata Letak
+- **Manajemen Akun Terdaftar & Proteksi Admin**: Admin dapat menonaktifkan akun civitas (`POST /admin/users/status`) atau menghapus akun. Sistem secara otomatis mendeteksi akun admin yang sedang aktif login dan melindunginya dari penonaktifan/penghapusan akun sendiri (*self-action protection*).
 - **Manajemen Master Sarpras**: Tambah, ubah spesifikasi, dan kelola status operasional fasilitas (*Aktif* / *Perbaikan*).
 - **Verifikasi Akun Baru**: Antrean pendaftaran mandiri civitas akademika diverifikasi oleh admin sebelum dapat mengajukan reservasi.
+- **Filter Antrean Petugas**: Filter antrean berdasarkan tanggal kegiatan dan opsi pengurutan (*Antrean paling awal* vs *Terbaru*).
 - **Rekapitulasi & Ekspor Multiformat**: Halaman `/admin/rekap` menyediakan rekapitulasi okupansi peminjaman dan riwayat kerusakan dengan opsi ekspor ke **CSV**, **Format Excel**, dan **Cetak PDF**.
 
 ---

@@ -149,6 +149,7 @@ export default function KelolaAkunPage() {
     deleteAccount,
     refreshAccounts,
     refreshPendingAccounts,
+    currentUser,
   } = useAppData();
 
   useEffect(() => {
@@ -163,6 +164,15 @@ export default function KelolaAkunPage() {
     title: string;
     message: string;
   } | null>(null);
+
+  // Auto-dismiss floating popup banner setelah 5 detik
+  useEffect(() => {
+    if (!bannerNotice) return;
+    const timer = setTimeout(() => {
+      setBannerNotice(null);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [bannerNotice]);
 
   // Form Fields
   const [username, setUsername] = useState('');
@@ -190,6 +200,20 @@ export default function KelolaAkunPage() {
   });
 
   function handleDeleteAccount(id: number, username: string, role: string) {
+    const isSelf = Boolean(
+      currentUser &&
+      ((currentUser.id && (String(currentUser.id) === String(id) || currentUser.id === `backend-${id}` || currentUser.id.replace(/^backend-/, '') === String(id))) ||
+       (currentUser.nama && currentUser.nama.toLowerCase().startsWith(username.toLowerCase())))
+    );
+    if (isSelf) {
+      setBannerNotice({
+        type: 'error',
+        title: 'Aksi Ditolak',
+        message: 'Anda tidak dapat menghapus akun Anda sendiri yang sedang aktif digunakan.',
+      });
+      return;
+    }
+
     setModalConfig({
       isOpen: true,
       title: 'Hapus Akun Pengguna',
@@ -217,6 +241,20 @@ export default function KelolaAkunPage() {
   }
 
   function handleToggleStatus(id: number, username: string, currentStatus?: 'aktif' | 'nonaktif') {
+    const isSelf = Boolean(
+      currentUser &&
+      ((currentUser.id && (String(currentUser.id) === String(id) || currentUser.id === `backend-${id}` || currentUser.id.replace(/^backend-/, '') === String(id))) ||
+       (currentUser.nama && currentUser.nama.toLowerCase().startsWith(username.toLowerCase())))
+    );
+    if (isSelf) {
+      setBannerNotice({
+        type: 'error',
+        title: 'Aksi Ditolak',
+        message: 'Anda tidak dapat menonaktifkan akun Anda sendiri yang sedang aktif digunakan.',
+      });
+      return;
+    }
+
     const isCurrentlyActive = currentStatus !== 'nonaktif';
     setModalConfig({
       isOpen: true,
@@ -1002,6 +1040,13 @@ export default function KelolaAkunPage() {
                 ) : (
                   filteredAccounts.map((acc) => {
                     const aktif = acc.isVerified !== false;
+                    const isSelf = Boolean(
+                      currentUser &&
+                      ((acc.email && currentUser.email && acc.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim()) ||
+                       (acc.id && currentUser.id && (String(currentUser.id) === String(acc.id) || currentUser.id === `backend-${acc.id}` || currentUser.id.replace(/^backend-/, '') === String(acc.id))) ||
+                       (acc.username && currentUser.nama && (currentUser.nama.toLowerCase() === acc.username.toLowerCase() || currentUser.nama.toLowerCase().startsWith(acc.username.toLowerCase()))))
+                    );
+
                     return (
                     <tr key={acc.id}>
                       <td style={{ fontFamily: 'monospace', fontSize: 13 }}>{acc.id}</td>
@@ -1018,40 +1063,64 @@ export default function KelolaAkunPage() {
                         </span>
                       </td>
                       <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
-                        <div style={{ display: 'inline-flex', gap: 6 }}>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleStatus(acc.id, acc.username, aktif ? 'aktif' : 'nonaktif')}
+                        {isSelf ? (
+                          <span
                             style={{
-                              padding: '5px 10px',
-                              fontSize: 13.5,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 5,
+                              padding: '5px 12px',
+                              fontSize: 12.5,
                               fontWeight: 600,
                               borderRadius: 4,
-                              cursor: 'pointer',
-                              border: aktif ? '1px solid #FECACA' : '1px solid #86EFAC',
-                              background: aktif ? '#FEF2F2' : '#F0FDF4',
-                              color: aktif ? '#DC2626' : '#166534',
+                              color: '#6B7280',
+                              background: '#F3F4F6',
+                              border: '1px solid #E5E7EB',
                             }}
+                            title="Akun Anda sendiri yang sedang aktif digunakan, tidak dapat dinonaktifkan atau dihapus."
                           >
-                            {aktif ? 'Nonaktifkan' : 'Aktifkan'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteAccount(acc.id, acc.username, acc.role)}
-                            style={{
-                              padding: '5px 10px',
-                              fontSize: 13.5,
-                              fontWeight: 600,
-                              borderRadius: 4,
-                              cursor: 'pointer',
-                              border: '1px solid #DC2626',
-                              background: '#DC2626',
-                              color: '#FFFFFF',
-                            }}
-                          >
-                            Hapus
-                          </button>
-                        </div>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                              <circle cx="12" cy="7" r="4" />
+                            </svg>
+                            Akun Anda
+                          </span>
+                        ) : (
+                          <div style={{ display: 'inline-flex', gap: 6 }}>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleStatus(acc.id, acc.username, aktif ? 'aktif' : 'nonaktif')}
+                              style={{
+                                padding: '5px 10px',
+                                fontSize: 13.5,
+                                fontWeight: 600,
+                                borderRadius: 4,
+                                cursor: 'pointer',
+                                border: aktif ? '1px solid #FECACA' : '1px solid #86EFAC',
+                                background: aktif ? '#FEF2F2' : '#F0FDF4',
+                                color: aktif ? '#DC2626' : '#166534',
+                              }}
+                            >
+                              {aktif ? 'Nonaktifkan' : 'Aktifkan'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteAccount(acc.id, acc.username, acc.role)}
+                              style={{
+                                padding: '5px 10px',
+                                fontSize: 13.5,
+                                fontWeight: 600,
+                                borderRadius: 4,
+                                cursor: 'pointer',
+                                border: '1px solid #DC2626',
+                                background: '#DC2626',
+                                color: '#FFFFFF',
+                              }}
+                            >
+                              Hapus
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                     );

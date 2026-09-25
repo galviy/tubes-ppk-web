@@ -1061,10 +1061,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       deleteAccount: async (id: number) => {
         const target = registeredAccounts.find((a) => a.id === id);
         if (!target) return { ok: false, message: 'Akun tidak ditemukan.' };
+        // Backend Go menggunakan mekanisme penonaktifan (is_verified = 0) untuk akun terdaftar
+        // guna mempertahankan integritas relasi foreign key (riwayat reservasi, log laporan, dll.)
+        await backendAdminPostForm('/admin/users/status', {
+          id,
+          is_verified: 0,
+        });
         setRegisteredAccounts((prev) => prev.filter((a) => a.id !== id));
         return {
           ok: true,
-          message: `Akun @${target.username} (${target.role}) berhasil dihapus dari sistem.`,
+          message: `Akun @${target.username} (${target.role}) berhasil dinonaktifkan dan dihapus dari sistem.`,
         };
       },
 

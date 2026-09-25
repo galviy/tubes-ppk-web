@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
@@ -38,6 +38,15 @@ function LaporKerusakanContent() {
     title: string;
     message: string;
   } | null>(null);
+
+  // Auto-dismiss floating popup banner setelah 5 detik
+  useEffect(() => {
+    if (!bannerNotice) return;
+    const timer = setTimeout(() => {
+      setBannerNotice(null);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [bannerNotice]);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];

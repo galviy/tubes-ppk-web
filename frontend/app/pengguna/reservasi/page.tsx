@@ -265,6 +265,16 @@ function AjukanReservasiContent() {
     title: string;
     message: string;
   } | null>(null);
+
+  // Auto-dismiss floating popup banner setelah 5 detik
+  useEffect(() => {
+    if (!bannerNotice) return;
+    const timer = setTimeout(() => {
+      setBannerNotice(null);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [bannerNotice]);
+
   const [tanggal, setTanggal] = useState(earliestDate);
   const [tujuan, setTujuan] = useState('');
   const [peserta, setPeserta] = useState('');
@@ -312,6 +322,7 @@ function AjukanReservasiContent() {
       if (isSlotTaken(fId, sStart, undefined, tanggal, currentUserIdent)) return true;
       if (publicUnavailable[fId]?.has(sStart)) return true;
       if (facility?.refId && facility?.tipe && publicUnavailable[`${facility.tipe}-${facility.refId}`]?.has(sStart)) return true;
+      if (facility?.refId && publicUnavailable[String(facility.refId)]?.has(sStart)) return true;
       return false;
     },
     [isSlotTaken, tanggal, currentUserIdent, publicUnavailable, facility]
@@ -890,22 +901,22 @@ function AjukanReservasiContent() {
                     <div className="sched-period-head">{period.label}</div>
                     <div className="slot-grid-lg">
                       {periodSlots.map((slot) => {
-                        const isTaken = isSlotOccupied(facility.id, slot.start);
-                        const isOwnPending =
-                          getSlotBooking(
-                            reservations,
-                            facility.id,
-                            slot.start,
-                            undefined,
-                            tanggal,
-                            currentUserIdent
-                          ) === 'pending';
+                        const booking = getSlotBooking(
+                          reservations,
+                          facility.id,
+                          slot.start,
+                          undefined,
+                          tanggal,
+                          currentUserIdent
+                        );
+                        const isTaken = isSlotOccupied(facility.id, slot.start) || booking === 'booked';
+                        const isPending = booking === 'pending';
                         const isPicked = pickedSlots.includes(slot.start);
 
                         let stateClass = 'avail';
                         let statusText = 'Tersedia';
 
-                        if (isOwnPending) {
+                        if (isPending) {
                           stateClass = 'pending';
                           statusText = 'Menunggu Persetujuan';
                         } else if (isTaken) {
@@ -921,10 +932,10 @@ function AjukanReservasiContent() {
                             key={slot.start}
                             type="button"
                             className={`slot-lg ${stateClass}`}
-                            disabled={isTaken}
+                            disabled={isTaken || isPending}
                             onClick={() => handleSlotClick(slot)}
                             title={
-                              isOwnPending
+                              isPending
                                 ? 'Anda masih menunggu persetujuan pada slot ini'
                                 : isTaken
                                   ? 'Slot sudah dikunci (sudah terpakai atau disetujui untuk peminjaman lain)'

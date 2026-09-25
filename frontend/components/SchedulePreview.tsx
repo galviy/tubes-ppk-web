@@ -61,7 +61,7 @@ interface SchedulePreviewProps {
 }
 
 export default function SchedulePreview({ activeFacilityId, onSelectFacility }: SchedulePreviewProps) {
-  const { facilities, reservations } = useAppData();
+  const { facilities, reservations, currentUser } = useAppData();
   const [now, setNow] = useState<Date | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(() => getTodayDateString());
   const [tabType, setTabType] = useState<'ruangan' | 'alat'>(() => {
@@ -95,14 +95,18 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
             perSlot[s.mulai] = { status: mapJadwalStatus(s.status), tersedia: Boolean(s.tersedia) };
           }
         }
-        next[item.id] = perSlot;
+        if (item.id) next[item.id] = perSlot;
+        if (item.ref_id && item.tipe) {
+          next[`${item.tipe}-${item.ref_id}`] = perSlot;
+          next[String(item.ref_id)] = perSlot;
+        }
       }
       setBackendSlots(next);
     })();
     return () => {
       cancelled = true;
     };
-  }, [selectedDate]);
+  }, [selectedDate, reservations]);
 
   // Auto-scroll active chip into view horizontally when active facility changes
   useEffect(() => {
@@ -158,11 +162,22 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
 
   const slotStates = useMemo(() => {
     if (!now || !facility) return SLOTS.map(() => 'passed' as SlotState);
-    const perSlot = backendSlots[facility.id];
+    const perSlot =
+      backendSlots[facility.id] ||
+      (facility.refId && facility.tipe ? backendSlots[`${facility.tipe}-${facility.refId}`] : undefined) ||
+      (facility.refId ? backendSlots[String(facility.refId)] : undefined);
     return SLOTS.map((slot) =>
-      getSlotState(facility, slot.start, reservations, selectedDate, undefined, perSlot?.[slot.start])
+      getSlotState(
+        facility,
+        slot.start,
+        reservations,
+        selectedDate,
+        currentUser?.nama || currentUser?.email,
+        perSlot?.[slot.start],
+        currentUser?.role
+      )
     );
-  }, [facility, reservations, now, backendSlots, selectedDate]);
+  }, [facility, reservations, now, backendSlots, selectedDate, currentUser]);
 
   const availableCount = slotStates.filter((s) => s === 'avail').length;
   const availablePct = Math.round((availableCount / SLOTS.length) * 100);
