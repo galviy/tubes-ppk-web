@@ -62,9 +62,10 @@ CREATE TABLE `alat_reservasi` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `id_alat` int(11) NOT NULL,
   `id_reservasi` int(11) NOT NULL,
+  `jumlah` int(11) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `alat_reservasi_unique` (`id_reservasi`),
   KEY `alat_reservasi_alat_FK` (`id_alat`),
+  KEY `alat_reservasi_reservasi_idx` (`id_reservasi`),
   CONSTRAINT `alat_reservasi_alat_FK` FOREIGN KEY (`id_alat`) REFERENCES `alat` (`id`),
   CONSTRAINT `alat_reservasi_reservasi_FK` FOREIGN KEY (`id_reservasi`) REFERENCES `reservasi` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -414,6 +415,12 @@ CREATE TABLE `reservasi` (
   `waktu_peminjaman` datetime NOT NULL,
   `waktu_peminjaman_selesai` datetime NOT NULL,
   `status_reservasi` varchar(10) NOT NULL,
+  `alasan_peminjaman` varchar(255) DEFAULT NULL,
+  `alasan_pembatalan` varchar(255) DEFAULT NULL,
+  `dibatalkan_oleh` int(11) DEFAULT NULL,
+  `disetujui_oleh` int(11) DEFAULT NULL,
+  `waktu_diproses` datetime DEFAULT NULL,
+  `jumlah_peserta` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `reservasi_user_FK` (`user_reservasi`),
   KEY `reservasi_ruangan_FK` (`ruangan_reservasi`),
@@ -433,6 +440,26 @@ LOCK TABLES `reservasi` WRITE;
 UNLOCK TABLES;
 COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `reservasi_riwayat`
+--
+
+DROP TABLE IF EXISTS `reservasi_riwayat`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `reservasi_riwayat` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_reservasi` int(11) NOT NULL,
+  `status_reservasi` varchar(10) NOT NULL,
+  `diubah_oleh` int(11) DEFAULT NULL,
+  `keterangan` varchar(255) DEFAULT NULL,
+  `waktu` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `reservasi_riwayat_reservasi_FK` (`id_reservasi`),
+  CONSTRAINT `reservasi_riwayat_reservasi_FK` FOREIGN KEY (`id_reservasi`) REFERENCES `reservasi` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
 -- Table structure for table `role`
