@@ -186,6 +186,7 @@ function AjukanReservasiContent() {
   const [tanggal, setTanggal] = useState('2026-09-18');
   const [tujuan, setTujuan] = useState('');
   const [peserta, setPeserta] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Jam Mulai dan Jam Selesai yang independen dan presisi
   const [startTime, setStartTime] = useState<string>('');
@@ -299,16 +300,35 @@ function AjukanReservasiContent() {
   const pesertaNum = parseInt(peserta, 10) || 0;
   const overCapacity = !!facility && pesertaNum > facility.cap;
 
-  function doSubmit() {
-    if (!facility) return;
-    submitReservation({
-      facilityId: facility.id,
-      tanggal,
-      start: startTime,
-      end: endTime,
-      tujuan: tujuan.trim(),
-      peserta: pesertaNum || undefined,
-    });
+  async function doSubmit() {
+    if (!facility || isSubmitting) return;
+    setIsSubmitting(true);
+    let result: { ok: boolean; message?: string };
+    try {
+      result = await submitReservation({
+        facilityId: facility.id,
+        tanggal,
+        start: startTime,
+        end: endTime,
+        tujuan: tujuan.trim(),
+        peserta: pesertaNum || undefined,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+
+    if (!result.ok) {
+      setModalConfig({
+        isOpen: true,
+        title: 'Pengajuan Gagal',
+        subtitle: result.message || 'Reservasi tidak dapat diproses. Silakan coba lagi.',
+        confirmText: 'Mengerti',
+        confirmVariant: 'danger',
+        showInput: false,
+        onConfirm: () => {},
+      });
+      return;
+    }
 
     const bookedFacilityName = facility.name;
     const bookedTime = `${tanggal}, ${startTime} - ${endTime} WIB`;
@@ -380,13 +400,13 @@ function AjukanReservasiContent() {
         confirmVariant: 'warning',
         showInput: false,
         onConfirm: () => {
-          doSubmit();
+          void doSubmit();
         },
       });
       return;
     }
 
-    doSubmit();
+    void doSubmit();
   }
 
   return (
@@ -630,9 +650,9 @@ function AjukanReservasiContent() {
             type="button"
             className="btn primary"
             onClick={handleSubmit}
-            disabled={hasConflict || !startTime || !endTime}
+            disabled={hasConflict || !startTime || !endTime || isSubmitting}
           >
-            Ajukan Reservasi
+            {isSubmitting ? 'Mengirim…' : 'Ajukan Reservasi'}
           </button>
         </div>
       </div>

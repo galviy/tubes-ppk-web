@@ -35,12 +35,14 @@ npm run dev
 # 3. Validasi typecheck TypeScript
 npx tsc --noEmit
 
-# 4. Bangun bundel produksi (Static Site Export ke folder /out)
+# 4. Bangun bundel produksi (mode dinamis, butuh `next start`)
 npm run build
-
-# 5. (Opsional) Pratinjau hasil build statis secara lokal
-npx serve out
+npm run start
+# Buka peramban di: http://localhost:3000
 ```
+
+> **Catatan arsitektur (integrasi backend Go):**
+> Frontend memanggil backend via proxy `rewrites()` `/api/*` -> `http://127.0.0.1:8080/*` (lihat `next.config.js` + `lib/api.ts`), sehingga browser hanya kenal 1 origin dan cookie `session_id` HttpOnly tetap terkirim. Backend Go TIDAK diubah. Pastikan backend (`go run .` di `backend/`) dan MySQL (`tubes_ppk_web`) jalan sebelum login.
 
 > **Catatan Bundler Webpack:**  
 > Skrip `npm run dev` dan `npm run build` secara eksplisit menambahkan flag `--webpack`. Konfigurasi ini menjamin keandalan *hydration* event handler form interaktif, date picker, dan modal dialog kustom pada Next.js 16 tanpa interupsi cache Turbopack.
@@ -50,17 +52,9 @@ npx serve out
 
 ---
 
-## 👥 Akun Demo & Kredensial Pengujian Multi-Peran
+## 👥 Akun Pengujian (Backend MySQL)
 
-Untuk memudahkan verifikasi fitur tanpa perlu registrasi manual terlebih dahulu, halaman `/login` dan kartu autentikasi di beranda menyediakan tombol **Akun Demo (1-Klik)**:
-
-| Peran | Nama Pengguna | Email | Kata Sandi | Lingkup Hak Akses |
-| :--- | :--- | :--- | :--- | :--- |
-| **Admin** | Admin Utama | `admin@sipinjam.ac.id` | `admin123` | `/admin/*`: Master fasilitas, audit reservasi & laporan, verifikasi akun, rekap data & ekspor (CSV/Excel/PDF). |
-| **Petugas** | Budi (Petugas Sarpras) | `petugas@sipinjam.ac.id` | `petugas123` | `/petugas/*`: Validasi persetujuan/penolakan reservasi, pembatalan darurat, tindak lanjut perbaikan sarpras. |
-| **Mahasiswa** | Sinta (Mahasiswa FSM) | `mahasiswa@sipinjam.ac.id` | `mhs12345` | `/pengguna/*`: Pengajuan pinjam ruang/alat, pembatalan mandiri (H-2 jam), lapor sarpras rusak + bukti foto. |
-| **Dosen** | Pak Herman (Dosen IF) | `dosen@sipinjam.ac.id` | `dosen123` | `/pengguna/*`: Hak akses civitas akademika untuk perkuliahan/riset. |
-| **Staf** | Bu Rina (Staf Akademik) | `staf@sipinjam.ac.id` | `staf123` | `/pengguna/*`: Hak akses civitas akademika untuk operasional unit kerja. |
+Login hanya menerima akun backend terverifikasi (`POST /auth/login` + `GET /user/me` via `lib/api.ts`; akun demo mock dihapus). Contoh akun di database dev: `dosen01@example.com`. Untuk menambah akun: daftar via `/register` (masuk antrean pending backend) lalu verifikasi langsung di DB, atau buat via endpoint `POST /admin/create_user/*` dengan session admin.
 
 ---
 
@@ -172,20 +166,18 @@ frontend/
 │   └── AppDataContext.tsx            # Client state management terpusat (Reservasi, Fasilitas, Laporan, Akun)
 │
 ├── lib/
+│   ├── api.ts                        # Klien HTTP backend Go + mapper backend->model frontend
 │   ├── slots.ts                      # Logika kalkulasi, pembagian, dan validasi bentrok slot waktu
-│   ├── cancellation.ts               # Logika perhitungan batas waktu pembatalan mandiri (H-2 jam)
+│   ├── cancellation.ts               # Aturan info batas waktu pembatalan mandiri (H-2 jam)
 │   ├── dashboard-nav.ts              # Konfigurasi menu navigasi dashboard per peran
 │   └── filter-facilities.ts          # Utilitas pencarian & filter sarana prasarana
 │
-├── mock/
-│   ├── fake-users-db.ts              # Dataset akun civitas akademika untuk pengujian
-│   └── auth-api.ts                   # Lapisan simulasi autentikasi asinkron (login, logout, session)
-│
 ├── models/
 │   ├── facility.ts                   # Interface tipe data fasilitas kampus & slot waktu
-│   ├── facilities-data.ts            # Data awal fasilitas sarana prasarana kampus
+│   ├── facilities-data.ts            # Metadata kategori filter katalog (bukan data)
 │   ├── reservation.ts                # Interface tipe data reservasi peminjaman
-│   └── report.ts                     # Interface tipe data laporan kerusakan & antrean akun
+│   ├── report.ts                     # Interface tipe data laporan kerusakan & antrean akun
+│   └── user.ts                       # Tipe peran + akun backend (GET /user/me, /admin/show_user)
 │
 ├── public/
 │   ├── features/                     # Aset gambar visual fitur sarana prasarana (1400x680)
@@ -195,7 +187,8 @@ frontend/
 │   ├── undip-hero.jpg                # Foto latar kampus Universitas Diponegoro
 │   └── favicon.svg                   # Ikon web SVG
 │
-├── next.config.js                    # Konfigurasi static export & allowedDevOrigins
+├── next.config.js                    # Mode dinamis + rewrites proxy /api -> backend Go
+├── .env.local                        # NEXT_PUBLIC_API_URL + BACKEND_URL (gitignored)
 ├── package.json                      # Dependensi Next.js 16, React 19, TypeScript
 └── tsconfig.json                     # Konfigurasi compiler TypeScript
 ```
@@ -215,12 +208,13 @@ frontend/
 
 ---
 
-## 🔌 Kesiapan Integrasi ke Backend REST / GraphQL
+## 🔌 Integrasi ke Backend Go
 
-Aplikasi frontend ini dirancang secara modular dan *decoupled*:
-1. **Central Data Layer**: Seluruh pemanggilan dan modifikasi data dikelola melalui `context/AppDataContext.tsx`. Saat menghubungkan ke API backend nyata, fungsi-fungsi mock di context dapat diganti langsung dengan `fetch` atau `axios` ke endpoint REST API tanpa merombak komponen tampilan.
-2. **Lapisan Autentikasi**: `mock/auth-api.ts` menyimulasikan siklus async token/cookie yang siap disambungkan ke mekanisme SSO Universitas Diponegoro, JWT, atau OAuth2.
-3. **Konfigurasi Lingkungan**: Pengaturan base URL API dan variabel lingkungan dapat dipusatkan di file `.env.local` dan `config/site.ts`.
+Frontend terhubung ke backend Go tanpa mock data:
+
+1. **Central Data Layer**: `context/AppDataContext.tsx` memanggil backend via `lib/api.ts` (proxy `rewrites()` `/api/*` -> `http://127.0.0.1:8080/*`, cookie `session_id` HttpOnly). Modul tanpa endpoint backend (persetujuan/penolakan/pembatalan reservasi, ubah/hapus fasilitas, suspend akun, logout server, matriks slot publik) dinonaktifkan jujur di UI.
+2. **Lapisan Autentikasi**: `POST /auth/login` + `GET /user/me` (role `1/2/3` -> admin/petugas/pengguna). Hanya akun backend terverifikasi.
+3. **Konfigurasi Lingkungan**: `NEXT_PUBLIC_API_URL` (`/api`) dan `BACKEND_URL` di `.env.local` dan `config/site.ts`.
 
 ---
 

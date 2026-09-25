@@ -41,7 +41,7 @@ const ITEM_ICONS: Record<string, JSX.Element> = {
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { currentUser, reservations, reports } = useAppData();
+  const { currentUser, reservations, reports, syncStatus } = useAppData();
   const section = sectionFromPath(pathname);
 
   const allowed = section ? canAccessSection(currentUser?.role, section) : false;
@@ -133,7 +133,20 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
       {/* Main Dashboard Content */}
       <div className="dash-page">
-        <div className="wrap ochoco-catalog-wrap">{children}</div>
+        <div className="wrap ochoco-catalog-wrap">
+          {syncStatus === 'loading' && (
+            <div className="alert info" style={{ marginBottom: 16 }}>
+              Memuat data terbaru dari server…
+            </div>
+          )}
+          {syncStatus === 'error' && (
+            <div className="alert danger" style={{ marginBottom: 16 }}>
+              Gagal memuat data terbaru dari server. Daftar kosong di bawah ini berarti
+              <b> belum termuat, bukan tidak ada data</b>. Periksa koneksi backend lalu muat ulang halaman.
+            </div>
+          )}
+          {children}
+        </div>
       </div>
 
       <Footer />

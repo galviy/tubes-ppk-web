@@ -144,7 +144,6 @@ export default function KelolaAkunPage() {
     pendingAccounts,
     registeredAccounts,
     registerAccountDirectly,
-    toggleAccountStatus,
     verifyPendingAccount,
   } = useAppData();
 
@@ -204,6 +203,13 @@ export default function KelolaAkunPage() {
 
   function handleDaftar(e: React.FormEvent) {
     e.preventDefault();
+    void doDaftar();
+  }
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function doDaftar() {
+    if (isSubmitting) return;
     if (!nama.trim() || !email.trim()) {
       setModalConfig({
         isOpen: true,
@@ -273,20 +279,26 @@ export default function KelolaAkunPage() {
       }
     }
 
-    const res = registerAccountDirectly({
-      nama: nama.trim(),
-      username: username.trim(),
-      email: email.trim(),
-      peran,
-      nip: peran === 'Staf' || targetTipe === 'petugas' ? nip.trim() : undefined,
-      nim: peran === 'Mahasiswa' ? nip.trim() : undefined,
-      nidn: peran === 'Dosen' ? nip.trim() : undefined,
-      angkatan: peran === 'Mahasiswa' ? Number(angkatan) || 2024 : undefined,
-      prodi: (peran === 'Mahasiswa' || peran === 'Dosen') ? prodi : undefined,
-      phone: phone.trim(),
-      unit: targetTipe === 'petugas' ? unit : (peran === 'Staf' ? fakultas : prodi),
-      password: password.trim() || 'Sipinjam2026!',
-    });
+    setIsSubmitting(true);
+    let res: { ok: boolean; message?: string };
+    try {
+      res = await registerAccountDirectly({
+        nama: nama.trim(),
+        username: username.trim(),
+        email: email.trim(),
+        peran,
+        nip: peran === 'Staf' || targetTipe === 'petugas' ? nip.trim() : undefined,
+        nim: peran === 'Mahasiswa' ? nip.trim() : undefined,
+        nidn: peran === 'Dosen' ? nip.trim() : undefined,
+        angkatan: peran === 'Mahasiswa' ? Number(angkatan) || 2024 : undefined,
+        prodi: (peran === 'Mahasiswa' || peran === 'Dosen') ? prodi : undefined,
+        phone: phone.trim(),
+        unit: targetTipe === 'petugas' ? unit : (peran === 'Staf' ? fakultas : prodi),
+        password: password.trim() || 'Sipinjam2026!',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
 
     if (!res.ok) {
       setModalConfig({
@@ -330,23 +342,20 @@ export default function KelolaAkunPage() {
     setTimeout(() => setCopied(false), 2500);
   }
 
-  // Filter registered accounts
+  // Filter registered accounts (ikut GET /admin/show_user: id/username/email/role).
   const filteredAccounts = registeredAccounts.filter((acc) => {
-    if (filterRole === 'pengguna' && acc.role !== 'pengguna') return false;
-    if (filterRole === 'mahasiswa' && (acc.role !== 'pengguna' || (acc.jabatan && acc.jabatan !== 'Mahasiswa'))) return false;
-    if (filterRole === 'dosen' && (acc.role !== 'pengguna' || acc.jabatan !== 'Dosen')) return false;
-    if (filterRole === 'staf' && (acc.role !== 'pengguna' || acc.jabatan !== 'Staf')) return false;
-    if (filterRole === 'petugas' && acc.role !== 'petugas') return false;
-    if (filterRole === 'admin' && acc.role !== 'admin') return false;
+    if (filterRole !== 'semua' && filterRole !== 'mahasiswa' && filterRole !== 'dosen' && filterRole !== 'staf') {
+      if (acc.role !== filterRole) return false;
+    } else if (filterRole !== 'semua') {
+      // show_user tak membedakan sub-peran pengguna -> tampilkan semua pengguna.
+      if (acc.role !== 'pengguna') return false;
+    }
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      const matchName = acc.nama.toLowerCase().includes(q);
+      const matchName = acc.username.toLowerCase().includes(q);
       const matchEmail = acc.email.toLowerCase().includes(q);
-      const matchNip = acc.nip?.toLowerCase().includes(q);
-      const matchUnit = acc.unit?.toLowerCase().includes(q);
-      const matchJabatan = acc.jabatan?.toLowerCase().includes(q);
-      return matchName || matchEmail || matchNip || matchUnit || matchJabatan;
+      return matchName || matchEmail;
     }
     return true;
   });
@@ -825,8 +834,12 @@ export default function KelolaAkunPage() {
               </div>
 
               <div className="btn-row" style={{ marginTop: 20 }}>
-                <button type="submit" className="btn primary">
-                  {targetTipe === 'petugas' ? 'Daftarkan Akun Petugas / Admin' : 'Daftarkan Akun Pengguna'}
+                <button type="submit" className="btn primary" disabled={isSubmitting}>
+                  {isSubmitting
+                    ? 'Mendaftarkan…'
+                    : targetTipe === 'petugas'
+                      ? 'Daftarkan Akun Petugas / Admin'
+                      : 'Daftarkan Akun Pengguna'}
                 </button>
               </div>
             </form>
@@ -856,14 +869,11 @@ export default function KelolaAkunPage() {
                 </div>
               </div>
 
-              {/* Role Filter Chips */}
+              {/* Role Filter Chips (ikut show_user: hanya role backend) */}
               <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                 {[
                   { key: 'semua', label: `Semua (${registeredAccounts.length})` },
-                  { key: 'pengguna', label: `Semua Pengguna (${registeredAccounts.filter((a) => a.role === 'pengguna').length})` },
-                  { key: 'mahasiswa', label: `Mahasiswa (${registeredAccounts.filter((a) => a.role === 'pengguna' && (!a.jabatan || a.jabatan === 'Mahasiswa')).length})` },
-                  { key: 'dosen', label: `Dosen (${registeredAccounts.filter((a) => a.role === 'pengguna' && a.jabatan === 'Dosen').length})` },
-                  { key: 'staf', label: `Staf (${registeredAccounts.filter((a) => a.role === 'pengguna' && a.jabatan === 'Staf').length})` },
+                  { key: 'pengguna', label: `Pengguna (${registeredAccounts.filter((a) => a.role === 'pengguna').length})` },
                   { key: 'petugas', label: `Petugas (${registeredAccounts.filter((a) => a.role === 'petugas').length})` },
                   { key: 'admin', label: `Admin (${registeredAccounts.filter((a) => a.role === 'admin').length})` },
                 ].map((chip) => (
@@ -891,10 +901,10 @@ export default function KelolaAkunPage() {
             <table>
               <thead>
                 <tr>
-                  <th>Nama &amp; NIP/NIM</th>
-                  <th>Kontak</th>
-                  <th>Peran &amp; Unit Kerja</th>
-                  <th>Status</th>
+                  <th>ID</th>
+                  <th>Username</th>
+                  <th>Email</th>
+                  <th>Peran</th>
                   <th style={{ textAlign: 'center', width: 120 }}>Tindakan</th>
                 </tr>
               </thead>
@@ -908,66 +918,33 @@ export default function KelolaAkunPage() {
                 ) : (
                   filteredAccounts.map((acc) => (
                     <tr key={acc.id}>
-                      {/* Nama, Username & NIP */}
+                      <td style={{ fontFamily: 'monospace', fontSize: 13 }}>{acc.id}</td>
+                      <td style={{ fontWeight: 600, color: '#181D24' }}>@{acc.username}</td>
+                      <td style={{ fontSize: 13 }}>{acc.email}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>
-                        <div style={{ fontWeight: 600, color: '#181D24' }}>{acc.nama}</div>
-                        {acc.username && (
-                          <div style={{ fontSize: 11, color: '#b59876', fontFamily: 'monospace' }}>
-                            @{acc.username}
-                          </div>
-                        )}
-                        <div style={{ fontSize: 11, color: '#6B7280', fontFamily: 'monospace' }}>
-                          {acc.jabatan === 'Mahasiswa'
-                            ? `NIM: ${acc.nim || acc.nip || '-'}${acc.angkatan ? ` (${acc.angkatan})` : ''}`
-                            : acc.jabatan === 'Dosen'
-                            ? `NIDN: ${acc.nidn || acc.nip || '-'}`
-                            : `NIP: ${acc.nip || '-'}`}
-                        </div>
-                      </td>
-
-                      {/* Kontak */}
-                      <td style={{ whiteSpace: 'nowrap', fontSize: 13 }}>
-                        <div>{acc.email}</div>
-                        <div style={{ fontSize: 11, color: '#6B7280' }}>{acc.phone || '-'}</div>
-                      </td>
-
-                      {/* Peran & Unit */}
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <div style={{ fontWeight: 600, color: '#b59876', fontSize: 13 }}>
-                          {acc.jabatan || (acc.role === 'admin' ? 'Admin' : acc.role === 'petugas' ? 'Petugas' : 'Pengguna')}
-                        </div>
-                        <div style={{ fontSize: 12, color: '#6B7280' }}>{acc.unit || 'Universitas Diponegoro'}</div>
-                      </td>
-
-                      {/* Status */}
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <span className={`pill ${acc.status === 'nonaktif' ? 'danger' : 'avail'}`}>
-                          {acc.status === 'nonaktif' ? 'Nonaktif' : 'Aktif'}
+                        <span className="pill avail" style={{ fontSize: 11 }}>
+                          {acc.role === 'admin' ? 'Admin' : acc.role === 'petugas' ? 'Petugas' : 'Pengguna'}
                         </span>
                       </td>
-
-                      {/* Tindakan (Role Admin tidak ada tindakan) */}
+                      {/* No-op: backend belum menyediakan endpoint suspend */}
                       <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
-                        {acc.role === 'admin' ? (
-                          <span style={{ color: '#9CA3AF', fontSize: 15, fontWeight: 500, display: 'inline-block' }}>-</span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => toggleAccountStatus(acc.id)}
-                            style={{
-                              padding: '4px 10px',
-                              fontSize: 11,
-                              fontWeight: 600,
-                              borderRadius: 4,
-                              cursor: 'pointer',
-                              border: acc.status === 'nonaktif' ? '1px solid #86EFAC' : '1px solid #FECACA',
-                              background: acc.status === 'nonaktif' ? '#F0FDF4' : '#FEF2F2',
-                              color: acc.status === 'nonaktif' ? '#166534' : '#DC2626',
-                            }}
-                          >
-                            {acc.status === 'nonaktif' ? 'Aktifkan' : 'Nonaktifkan'}
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          title="Menunggu endpoint backend — tombol tidak melakukan apa-apa"
+                          onClick={() => {}}
+                          style={{
+                            padding: '4px 10px',
+                            fontSize: 11,
+                            fontWeight: 600,
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            border: '1px solid #FECACA',
+                            background: '#FEF2F2',
+                            color: '#DC2626',
+                          }}
+                        >
+                          Nonaktifkan
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -1053,13 +1030,29 @@ export default function KelolaAkunPage() {
                   </td>
                   <td style={{ whiteSpace: 'nowrap', textAlign: 'left' }}>
                     {a.status === 'menunggu' ? (
+                      // Setujui wired ke backend; Tolak no-op (tak ada endpoint).
                       <select
                         className="table-select-action"
                         value="menunggu"
                         onChange={(e) => {
                           const val = e.target.value;
-                          if (val === 'setuju') verifyPendingAccount(a.id, true);
-                          if (val === 'tolak') verifyPendingAccount(a.id, false);
+                          e.target.value = 'menunggu';
+                          if (val === 'setuju') {
+                            void verifyPendingAccount(a.id, true).then((res) => {
+                              if (!res.ok) {
+                                setModalConfig({
+                                  isOpen: true,
+                                  title: 'Verifikasi Gagal',
+                                  subtitle:
+                                    res.message || 'Status verifikasi tidak dapat diproses.',
+                                  confirmText: 'Mengerti',
+                                  confirmVariant: 'danger',
+                                  showInput: false,
+                                  onConfirm: () => {},
+                                });
+                              }
+                            });
+                          }
                         }}
                       >
                         <option value="menunggu">Menunggu</option>

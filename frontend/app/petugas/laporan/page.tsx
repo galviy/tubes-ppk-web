@@ -22,8 +22,22 @@ export default function PetugasLaporanPage() {
     onConfirm: () => {},
   });
 
+  function reportFailure(message?: string) {
+    setModalConfig({
+      isOpen: true,
+      title: 'Pembaruan Status Gagal',
+      subtitle: message || 'Status laporan tidak dapat diproses.',
+      confirmText: 'Mengerti',
+      confirmVariant: 'danger',
+      showInput: false,
+      onConfirm: () => {},
+    });
+  }
+
   function handleProses(id: number) {
-    updateReportStatus(id, 'diproses');
+    void updateReportStatus(id, 'diproses').then((res) => {
+      if (!res.ok) reportFailure(res.message);
+    });
   }
 
   function handleSelesai(id: number) {
@@ -39,7 +53,9 @@ export default function PetugasLaporanPage() {
       showInput: true,
       requireInput: true,
       onConfirm: (catatan) => {
-        updateReportStatus(id, 'selesai', catatan);
+        void updateReportStatus(id, 'selesai', catatan).then((res) => {
+          if (!res.ok) reportFailure(res.message);
+        });
       },
     });
   }
@@ -56,7 +72,9 @@ export default function PetugasLaporanPage() {
       showInput: true,
       requireInput: true,
       onConfirm: (catatan) => {
-        updateReportStatus(id, 'ditolak', catatan);
+        void updateReportStatus(id, 'ditolak', catatan).then((res) => {
+          if (!res.ok) reportFailure(res.message);
+        });
       },
     });
   }

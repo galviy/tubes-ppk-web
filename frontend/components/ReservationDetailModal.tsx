@@ -20,9 +20,11 @@ interface ReservationDetailModalProps {
   facility: Facility | undefined;
   onClose: () => void;
   onCancel?: (id: number) => void;
+  /** Jika true, tombol Batal tampil tapi diklik tidak terjadi apa-apa. */
+  cancelNoop?: boolean;
 }
 
-export default function ReservationDetailModal({ reservation, facility, onClose, onCancel }: ReservationDetailModalProps) {
+export default function ReservationDetailModal({ reservation, facility, onClose, onCancel, cancelNoop }: ReservationDetailModalProps) {
   const [cls, label] = STATUS_PILL[reservation.status];
   const cancellable = canSelfCancel(reservation);
   const deadline = getCancellationDeadline(reservation);
@@ -67,15 +69,27 @@ export default function ReservationDetailModal({ reservation, facility, onClose,
           </div>
         )}
 
-        {cancellable && onCancel && (
+        {cancellable && (onCancel || cancelNoop) && (
           <div className="btn-row" style={{ marginTop: 18 }}>
             <button
               className="btn ghost-danger"
               style={{ width: '100%', justifyContent: 'center' }}
-              onClick={() => { onCancel(reservation.id); onClose(); }}
+              title={cancelNoop ? 'Menunggu endpoint backend — tombol tidak melakukan apa-apa' : undefined}
+              onClick={() => {
+                if (cancelNoop) return;
+                onCancel!(reservation.id);
+                onClose();
+              }}
             >
               Batalkan reservasi
             </button>
+          </div>
+        )}
+        {cancellable && !onCancel && (
+          <div className="deadline-box passed" style={{ marginTop: 18 }}>
+            <div className="deadline-note">
+              Pembatalan mandiri via sistem belum tersedia (menunggu endpoint backend). Hubungi petugas sarpras.
+            </div>
           </div>
         )}
       </div>

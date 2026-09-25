@@ -17,6 +17,10 @@ export interface Facility {
   amenities: string[];
   status: FacilityStatus;
   image?: string;
+  // Koordinat backend (diteruskan dari GET /fasilitas: `ref_id` + `tipe`).
+  // Fasilitas seed lokal tidak punya keduanya -> tidak terkirim ke backend.
+  refId?: number;
+  tipe?: 'ruangan' | 'alat';
 }
 
 export type SlotState = 'passed' | 'avail' | 'booked' | 'maint';

@@ -598,6 +598,12 @@ tr:hover td { background: #FAF8F5; }
   border: 1px solid #EBE4D8;
   border-left: 4px solid #b59876;
 }
+.alert.danger {
+  background: #FEF2F2;
+  color: #7F1D1D;
+  border: 1px solid #FECACA;
+  border-left: 4px solid #DC2626;
+}
 
 .slot-mini { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-top: 10px; }
 .slot-mini button {
