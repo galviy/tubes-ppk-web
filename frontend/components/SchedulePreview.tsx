@@ -1,28 +1,32 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
-import { generateTimeSlots, getSlotState, getTodayDateString } from '@/lib/slots';
+import {
+  generateTimeSlots,
+  getSlotState,
+  getTodayDateString,
+  formatDateIndo,
+} from '@/lib/slots';
 import { SlotState } from '@/models/facility';
-import { backendKetersediaanFasilitas } from '@/lib/api';
+import { backendJadwalFasilitas, mapJadwalStatus, SlotStatusBackend } from '@/lib/api';
 
 const SLOTS = generateTimeSlots();
 
-const MONTH_NAMES = [
-  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
-];
-
-function formatToday(d: Date) {
-  return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
-}
 function pad(n: number) {
   return n.toString().padStart(2, '0');
+}
+
+function addDays(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d + days);
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 const STATUS_LABEL: Record<SlotState, string> = {
   passed: 'Waktu Lewat',
   avail: 'Tersedia',
+  pending: 'Menunggu Persetujuan',
   booked: 'Terpakai',
   maint: 'Tidak Aktif',
 };
@@ -43,73 +47,59 @@ interface SchedulePreviewProps {
 export default function SchedulePreview({ activeFacilityId, onSelectFacility }: SchedulePreviewProps) {
   const { facilities, reservations } = useAppData();
   const [now, setNow] = useState<Date | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
-  const [publicUnavailable, setPublicUnavailable] = useState<Record<string, Set<string>>>({});
-  const tabsRef = useRef<HTMLDivElement>(null);
+  const [today, setToday] = useState('');
+  const [selectedDate, setSelectedDate] = useState('');
+  const [backendSlots, setBackendSlots] = useState<
+    Record<string, Record<string, { status: SlotStatusBackend; tersedia: boolean }>>
+  >({});
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleError, setScheduleError] = useState('');
 
   useEffect(() => {
-    setNow(new Date());
+    const nowDate = new Date();
+    setNow(nowDate);
+    const todayStr = getTodayDateString();
+    setToday(todayStr);
+    setSelectedDate(todayStr);
     const id = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(id);
   }, []);
 
-  // Ambil ketersediaan slot dari endpoint publik backend GET /fasilitas/ketersediaan
+  // Ambil status tiap slot dari endpoint publik GET /jadwal (menunggu vs terpakai).
   useEffect(() => {
+    if (!selectedDate) return;
     let cancelled = false;
     (async () => {
-      const today = getTodayDateString();
-      const res = await backendKetersediaanFasilitas({ tanggal: today, hari: 1 });
-      if (cancelled || !res.ok || !Array.isArray(res.data)) return;
-      const unavailMap: Record<string, Set<string>> = {};
-      for (const item of res.data as Array<{
-        id: string;
-        hari?: Array<{ slot?: Array<{ mulai: string; tersedia: boolean }> }>;
-      }>) {
-        const facId = item.id;
-        const slotsSet = new Set<string>();
-        for (const h of item.hari || []) {
-          for (const s of h.slot || []) {
-            if (!s.tersedia) {
-              slotsSet.add(s.mulai);
+      setScheduleLoading(true);
+      setScheduleError('');
+      const res = await backendJadwalFasilitas({ tanggal: selectedDate, hari: 1 });
+      if (cancelled) return;
+      if (res.ok && Array.isArray(res.data)) {
+        const next: Record<string, Record<string, { status: SlotStatusBackend; tersedia: boolean }>> = {};
+        for (const item of res.data) {
+          const perSlot: Record<string, { status: SlotStatusBackend; tersedia: boolean }> = {};
+          for (const hari of item.hari ?? []) {
+            if (hari.tanggal && hari.tanggal !== selectedDate) continue;
+            for (const slot of hari.slot ?? []) {
+              perSlot[slot.mulai] = {
+                status: mapJadwalStatus(slot.status),
+                tersedia: Boolean(slot.tersedia),
+              };
             }
           }
+          next[item.id] = perSlot;
         }
-        unavailMap[facId] = slotsSet;
+        setBackendSlots(next);
+      } else {
+        setBackendSlots({});
+        setScheduleError(res.message || 'Jadwal publik gagal dimuat.');
       }
-      setPublicUnavailable(unavailMap);
+      setScheduleLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  // Auto-scroll active chip into view horizontally when active facility changes
-  useEffect(() => {
-    if (tabsRef.current) {
-      const activeEl = tabsRef.current.querySelector('.sched-fac-tab.active') as HTMLElement | null;
-      if (activeEl) {
-        activeEl.scrollIntoView({ inline: 'nearest', behavior: 'smooth', block: 'nearest' });
-      }
-    }
-  }, [activeFacilityId]);
-
-  const scrollTabs = (direction: 'left' | 'right') => {
-    if (tabsRef.current) {
-      tabsRef.current.scrollBy({
-        left: direction === 'left' ? -220 : 220,
-        behavior: 'smooth',
-      });
-    }
-  };
-
-  const categories = useMemo(() => {
-    return ['Semua', ...Array.from(new Set(facilities.map((f) => f.type))).filter(Boolean)];
-  }, [facilities]);
-
-  const filteredFacilities = useMemo(() => {
-    if (selectedCategory === 'Semua') return facilities;
-    return facilities.filter((f) => f.type === selectedCategory);
-  }, [facilities, selectedCategory]);
+  }, [selectedDate]);
 
   const facility = facilities.find((f) => f.id === activeFacilityId) ?? facilities[0];
 
@@ -121,18 +111,21 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
 
   const slotStates = useMemo(() => {
     if (!now || !facility) return SLOTS.map(() => 'passed' as SlotState);
-    const unavail = publicUnavailable[facility.id];
-    return SLOTS.map((slot) => {
-      const baseState = getSlotState(facility, slot.start, reservations);
-      if (baseState === 'avail' && unavail && unavail.has(slot.start)) {
-        return 'booked';
-      }
-      return baseState;
-    });
-  }, [facility, reservations, now, publicUnavailable]);
+    const perSlot = backendSlots[facility.id];
+    return SLOTS.map((slot) =>
+      getSlotState(facility, slot.start, reservations, selectedDate, undefined, perSlot?.[slot.start])
+    );
+  }, [facility, reservations, now, backendSlots, selectedDate]);
 
   const availableCount = slotStates.filter((s) => s === 'avail').length;
   const availablePct = Math.round((availableCount / SLOTS.length) * 100);
+
+  function shiftDate(days: number) {
+    if (!selectedDate) return;
+    const next = addDays(selectedDate, days);
+    if (today && next < today) return;
+    setSelectedDate(next);
+  }
 
   if (!facility) {
     return (
@@ -156,9 +149,9 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           </div>
           <div>
             <div className="sched-title">
-              Pratinjau Ketersediaan Jadwal{now && ` (${formatToday(now)})`}
+              Pratinjau Ketersediaan Jadwal{selectedDate && ` (${formatDateIndo(selectedDate)})`}
             </div>
-            <p className="sched-sub">Pilih fasilitas untuk melihat jam ketersediaan publik secara real-time.</p>
+            <p className="sched-sub">Pilih tanggal dan fasilitas untuk melihat ketersediaan slot secara real-time.</p>
           </div>
         </div>
         <div className="server-clock-badge">
@@ -167,38 +160,49 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
         </div>
       </div>
 
-      {/* Toolbar: Category filter + Quick Select dropdown for large datasets */}
-      <div className="sched-toolbar">
-        <div className="sched-cat-filter">
-          {categories.map((cat) => {
-            const count = cat === 'Semua' ? facilities.length : facilities.filter((f) => f.type === cat).length;
-            const isActive = selectedCategory === cat;
-            return (
-              <button
-                key={cat}
-                type="button"
-                className={`sched-cat-btn ${isActive ? 'active' : ''}`}
-                onClick={() => setSelectedCategory(cat)}
-              >
-                {cat} ({count})
-              </button>
-            );
-          })}
+      {/* Pemilih tanggal: hari ini dan sesudahnya, tanggal lampau ditutup */}
+      <div className="sched-date-bar">
+        <div className="sched-date-nav">
+          <button
+            type="button"
+            className="sched-date-btn"
+            onClick={() => shiftDate(-1)}
+            disabled={!today || selectedDate <= today}
+            aria-label="Hari sebelumnya"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
+          <label className="sched-date-input-wrap">
+            <span className="lbl-sm">Tanggal</span>
+            <input
+              type="date"
+              className="sched-date-input"
+              value={selectedDate}
+              min={today || undefined}
+              onChange={(e) => {
+                if (e.target.value) setSelectedDate(e.target.value);
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            className="sched-date-btn"
+            onClick={() => shiftDate(1)}
+            aria-label="Hari berikutnya"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
         </div>
+      </div>
 
+      {/* Toolbar: pemilih fasilitas */}
+      <div className="sched-toolbar">
         <div className="sched-quick-select-wrap">
           <label className="sched-quick-label">Pilih Fasilitas:</label>
           <select
             className="sched-quick-select"
             value={activeFacilityId}
-            onChange={(e) => {
-              const nextId = e.target.value;
-              onSelectFacility(nextId);
-              const targetFac = facilities.find((f) => f.id === nextId);
-              if (targetFac && selectedCategory !== 'Semua' && targetFac.type !== selectedCategory) {
-                setSelectedCategory('Semua');
-              }
-            }}
+            onChange={(e) => onSelectFacility(e.target.value)}
           >
             {facilities.map((f) => (
               <option key={f.id} value={f.id}>
@@ -209,42 +213,14 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
         </div>
       </div>
 
-      {/* Facility selector chips - horizontally scrollable */}
-      <div className="sched-fac-tabs-wrapper">
-        <button
-          type="button"
-          className="sched-fac-scroll-btn left"
-          onClick={() => scrollTabs('left')}
-          aria-label="Scroll kiri"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </button>
-        <div className="sched-fac-tabs" ref={tabsRef}>
-          {filteredFacilities.map((f) => {
-            const isActive = f.id === activeFacilityId;
-            const isRepair = f.status === 'repair' || f.status === 'nonaktif';
-            return (
-              <button
-                key={f.id}
-                type="button"
-                className={`sched-fac-tab ${isActive ? 'active' : ''}`}
-                onClick={() => onSelectFacility(f.id)}
-              >
-                <span className={`fac-dot ${isRepair ? 'repair' : 'avail'}`} />
-                <span className="sched-fac-name">{f.name}</span>
-              </button>
-            );
-          })}
-        </div>
-        <button
-          type="button"
-          className="sched-fac-scroll-btn right"
-          onClick={() => scrollTabs('right')}
-          aria-label="Scroll kanan"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </button>
-      </div>
+      {scheduleError && (
+        <p className="sched-status-note error" role="status">
+          {scheduleError} Menampilkan perkiraan dari data lokal.
+        </p>
+      )}
+      {scheduleLoading && !scheduleError && (
+        <p className="sched-status-note" role="status">Memuat status slot...</p>
+      )}
 
       <div className="sched-info-row">
         <div className="sched-info-cell">
@@ -252,15 +228,18 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           <b>{facility.name}</b>
         </div>
         <div className="sched-info-cell">
-          <span className="lbl-sm">{facility.type?.toLowerCase() === 'alat' ? 'Jumlah Tersedia' : 'Kapasitas'}</span>
-          <b>{facility.cap} {facility.type?.toLowerCase() === 'alat' ? 'unit' : 'orang'}</b>
+          <span className="lbl-sm">{facility.tipe === 'alat' ? 'Jumlah Tersedia' : 'Kapasitas'}</span>
+          <b>
+            {facility.tipe === 'alat' ? (facility.tersedia ?? facility.cap) : facility.cap}{' '}
+            {facility.tipe === 'alat' ? 'unit' : 'orang'}
+          </b>
         </div>
         <div className="sched-info-cell">
           <span className="lbl-sm">Zona Operasional</span>
           <b>07.00 - 20.00 WIB</b>
         </div>
         <div className="sched-info-cell sched-avail-meter">
-          <span className="lbl-sm">Slot Tersedia Hari Ini</span>
+          <span className="lbl-sm">Slot Tersedia</span>
           <div className="meter-row">
             <div className="meter-track"><div className="meter-fill" style={{ width: `${availablePct}%` }} /></div>
             <b>{availableCount}/{SLOTS.length}</b>
@@ -290,12 +269,6 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           </div>
         );
       })}
-
-      <div className="sched-legend">
-        <div className="leg"><span className="sq avail" />Tersedia untuk Reservasi</div>
-        <div className="leg"><span className="sq booked" />Terpakai / Sedang Dipesan</div>
-        <div className="leg"><span className="sq passed" />Waktu Lewat / Tidak Aktif</div>
-      </div>
 
       <div className="privacy-box">
         <div className="icon">

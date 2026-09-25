@@ -19,11 +19,21 @@ func Ketersediaan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tanggal := time.Now().AddDate(0, 0, 2)
+	// Jam operasional dan waktu reservasi disimpan sebagai waktu-naif di DB
+	// (driver memakai loc UTC), jadi tanggal diminta harus di-parse sebagai UTC
+	// agar slot sejajar dengan baris reservasi. Hari ini dihitung dari tanggal
+	// kalender lokal supaya batas "tidak boleh tanggal lampau" tetap benar.
+	sekarang := time.Now()
+	hariIni := time.Date(sekarang.Year(), sekarang.Month(), sekarang.Day(), 0, 0, 0, 0, time.UTC)
+	tanggal := hariIni
 	if nilai := strings.TrimSpace(r.URL.Query().Get("tanggal")); nilai != "" {
 		parsed, err := time.Parse("2006-01-02", nilai)
 		if err != nil {
 			utils.ResponseJSONMessage(w, "Format tanggal tidak valid! Gunakan YYYY-MM-DD", http.StatusBadRequest, false)
+			return
+		}
+		if parsed.Format("2006-01-02") < hariIni.Format("2006-01-02") {
+			utils.ResponseJSONMessage(w, "Jadwal hanya tersedia untuk hari ini dan tanggal berikutnya", http.StatusBadRequest, false)
 			return
 		}
 		tanggal = parsed

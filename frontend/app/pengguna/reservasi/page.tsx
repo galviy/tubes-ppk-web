@@ -9,9 +9,11 @@ import {
   getTodayDateString,
   isReservationDeadlineValid,
   getEarliestReservableDate,
+  getSlotBooking,
   formatDateIndo,
 } from '@/lib/slots';
 import { TimeSlot } from '@/models/facility';
+import { backendJadwalFasilitas, mapJadwalStatus, SlotStatusBackend } from '@/lib/api';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
 
 const SLOTS = generateTimeSlots();
@@ -175,7 +177,7 @@ const PERIODS = [
 
 function AjukanReservasiContent() {
   const searchParams = useSearchParams();
-  const { facilities, isSlotTaken, submitReservation, currentUser } = useAppData();
+  const { facilities, isSlotTaken, submitReservation, currentUser, reservations } = useAppData();
   const availableFacilities = facilities.filter((f) => f.status !== 'repair');
 
   const preselect = searchParams.get('facility');
@@ -208,6 +210,9 @@ function AjukanReservasiContent() {
   const [tujuan, setTujuan] = useState('');
   const [peserta, setPeserta] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [backendSlotStatus, setBackendSlotStatus] = useState<
+    Record<string, { status: SlotStatusBackend; tersedia: boolean }>
+  >({});
 
   // Jam Mulai dan Jam Selesai yang independen dan presisi
   const [startTime, setStartTime] = useState<string>('');
@@ -215,6 +220,33 @@ function AjukanReservasiContent() {
 
   const facility = facilities.find((f) => f.id === facilityId) || availableFacilities[0];
   const currentUserIdent = currentUser?.nama || currentUser?.email || '';
+
+  // Status slot dari jadwal publik: agar reservasi disetujui orang lain
+  // terlihat terkunci, dan pengajuan menunggu tampil sebagai "menunggu".
+  useEffect(() => {
+    if (!facility || !tanggal) return;
+    let cancelled = false;
+    (async () => {
+      const res = await backendJadwalFasilitas({ tanggal, tipe: facility.tipe, hari: 1 });
+      if (cancelled) return;
+      if (!res.ok || !Array.isArray(res.data)) {
+        setBackendSlotStatus({});
+        return;
+      }
+      const item = res.data.find((d) => d.id === facility.id);
+      const perSlot: Record<string, { status: SlotStatusBackend; tersedia: boolean }> = {};
+      for (const hari of item?.hari ?? []) {
+        if (hari.tanggal && hari.tanggal !== tanggal) continue;
+        for (const s of hari.slot ?? []) {
+          perSlot[s.mulai] = { status: mapJadwalStatus(s.status), tersedia: Boolean(s.tersedia) };
+        }
+      }
+      setBackendSlotStatus(perSlot);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [facility, tanggal]);
 
   // Daftar slot start yang berada dalam rentang [startTime, endTime)
   const pickedSlots = useMemo(() => {
@@ -225,10 +257,12 @@ function AjukanReservasiContent() {
   // Cek bentrok terhadap slot yang dipilih untuk tanggal dan user spesifik
   const conflictSlots = useMemo(() => {
     if (!facility || pickedSlots.length === 0) return [];
-    return pickedSlots.filter((slotStart) =>
-      isSlotTaken(facility.id, slotStart, undefined, tanggal, currentUserIdent)
+    return pickedSlots.filter(
+      (slotStart) =>
+        backendSlotStatus[slotStart]?.status === 'terpakai' ||
+        isSlotTaken(facility.id, slotStart, undefined, tanggal, currentUserIdent)
     );
-  }, [facility, pickedSlots, isSlotTaken, tanggal, currentUserIdent]);
+  }, [facility, pickedSlots, isSlotTaken, tanggal, currentUserIdent, backendSlotStatus]);
 
   const hasConflict = conflictSlots.length > 0;
 
@@ -273,7 +307,9 @@ function AjukanReservasiContent() {
   // Interaksi klik kartu slot yang cerdas & sinkron dengan periode
   function handleSlotClick(slot: TimeSlot) {
     if (!facility) return;
-    const isTaken = isSlotTaken(facility.id, slot.start, undefined, tanggal, currentUserIdent);
+    const isTaken =
+      backendSlotStatus[slot.start]?.status === 'terpakai' ||
+      isSlotTaken(facility.id, slot.start, undefined, tanggal, currentUserIdent);
     if (isTaken) return;
 
     // 1. Jika belum ada yang dipilih: pilih slot ini (30 menit)
@@ -324,7 +360,10 @@ function AjukanReservasiContent() {
   }
 
   const pesertaNum = parseInt(peserta, 10) || 0;
-  const overCapacity = !!facility && pesertaNum > facility.cap;
+  const isAlatFacility = facility?.tipe === 'alat';
+  // Alat: batasnya unit siap pakai (jumlah_tersedia); ruangan: kapasitas orang.
+  const unitTersedia = facility ? (isAlatFacility ? facility.tersedia ?? facility.cap : facility.cap) : 0;
+  const overCapacity = !!facility && pesertaNum > unitTersedia;
 
   async function doSubmit() {
     if (!facility || isSubmitting) return;
@@ -391,13 +430,13 @@ function AjukanReservasiContent() {
     if (!isReservationDeadlineValid(tanggal)) {
       setBannerNotice({
         type: 'error',
-        title: 'Batas Waktu Reservasi Terlewat',
-        message: `Maksimal reservasi diajukan pada H-1 pukul 00.00 WIB (contoh: reservasi tanggal 25 maksimal diajukan tanggal 24 pukul 00.00 WIB). Tanggal ${formatDateIndo(tanggal)} sudah tidak dapat dipesan. Silakan pilih mulai dari tanggal ${formatDateIndo(earliestDate)}.`,
+        title: 'Tanggal Terlalu Dekat',
+        message: `Pengajuan reservasi paling cepat H+2, yaitu minimal dua hari sebelum tanggal kegiatan (contoh: hari ini tanggal 25, reservasi paling awal untuk tanggal 27). Tanggal ${formatDateIndo(tanggal)} belum dapat dipesan. Silakan pilih mulai dari tanggal ${formatDateIndo(earliestDate)}.`,
       });
       setModalConfig({
         isOpen: true,
-        title: 'Batas Waktu Terlewat',
-        subtitle: `Maksimal reservasi diajukan pada H-1 pukul 00.00 WIB (contoh: reservasi tanggal 25 maksimal diajukan tanggal 24 pukul 00.00 WIB). Silakan pilih tanggal mulai dari ${formatDateIndo(earliestDate)}.`,
+        title: 'Tanggal Terlalu Dekat',
+        subtitle: `Pengajuan reservasi paling cepat H+2, yaitu minimal dua hari sebelum tanggal kegiatan. Silakan pilih tanggal mulai dari ${formatDateIndo(earliestDate)}.`,
         confirmText: 'Pilih Tanggal Lain',
         confirmVariant: 'danger',
         showInput: false,
@@ -447,13 +486,12 @@ function AjukanReservasiContent() {
       return;
     }
     if (overCapacity) {
-      const isAlat = facility.type?.toLowerCase() === 'alat';
       setModalConfig({
         isOpen: true,
-        title: isAlat ? 'Jumlah Melebihi Stok Tersedia' : 'Kapasitas Melebihi Standar',
-        subtitle: isAlat
-          ? `Permintaan (${pesertaNum} unit) melebihi jumlah unit yang tersedia (${facility.cap} unit). Apakah Anda ingin tetap melanjutkan pengajuan?`
-          : `Estimasi peserta (${pesertaNum} orang) melebihi kapasitas standar fasilitas (${facility.cap} orang). Apakah Anda ingin tetap melanjutkan pengajuan?`,
+        title: isAlatFacility ? 'Jumlah Melebihi Stok Tersedia' : 'Kapasitas Melebihi Standar',
+        subtitle: isAlatFacility
+          ? `Permintaan (${pesertaNum} unit) melebihi jumlah unit yang tersedia (${unitTersedia} unit). Apakah Anda ingin tetap melanjutkan pengajuan?`
+          : `Estimasi peserta (${pesertaNum} orang) melebihi kapasitas standar fasilitas (${unitTersedia} orang). Apakah Anda ingin tetap melanjutkan pengajuan?`,
         confirmText: 'Tetap Ajukan',
         cancelText: 'Sesuaikan Data',
         confirmVariant: 'warning',
@@ -477,7 +515,7 @@ function AjukanReservasiContent() {
       </div>
 
       <div className="alert info">
-        Jam operasional kampus: <b>07.00 - 20.00 WIB</b> · Durasi kelipatan <b>30 menit</b> · Batas pengajuan: <b>H-1 pukul 00.00 WIB</b> (contoh: reservasi tgl 25 maksimal diajukan tgl 24 pukul 00.00 WIB).
+        Jam operasional kampus: <b>07.00 - 20.00 WIB</b> · Durasi kelipatan <b>30 menit</b> · Batas pengajuan: <b>paling cepat H+2</b> (contoh: hari ini tgl 25, reservasi paling awal untuk tgl 27).
       </div>
 
       {/* Prominent Feedback Banner */}
@@ -508,7 +546,7 @@ function AjukanReservasiContent() {
             <select value={facilityId || facility?.id || ''} onChange={(e) => handleFacilityChange(e.target.value)}>
               {availableFacilities.map((f) => (
                 <option key={f.id} value={f.id}>
-                  {f.name} ({f.loc}) ({f.type?.toLowerCase() === 'alat' ? `tersedia ${f.cap} unit` : `maks. ${f.cap} orang`})
+                  {f.name} ({f.loc}) ({f.tipe === 'alat' ? `tersedia ${f.tersedia ?? f.cap} unit` : `maks. ${f.cap} orang`})
                 </option>
               ))}
             </select>
@@ -526,8 +564,8 @@ function AjukanReservasiContent() {
                 if (val && !isReservationDeadlineValid(val)) {
                   setBannerNotice({
                     type: 'error',
-                    title: 'Batas Waktu Reservasi Terlewat',
-                    message: `Maksimal reservasi diajukan pada H-1 pukul 00.00 WIB. Tanggal ${formatDateIndo(val)} tidak memenuhi syarat. Tanggal paling awal yang tersedia adalah ${formatDateIndo(earliestDate)}.`,
+                    title: 'Tanggal Terlalu Dekat',
+                    message: `Pengajuan reservasi paling cepat H+2. Tanggal ${formatDateIndo(val)} belum memenuhi syarat. Tanggal paling awal yang tersedia adalah ${formatDateIndo(earliestDate)}.`,
                   });
                   setTanggal(earliestDate);
                 } else {
@@ -622,15 +660,32 @@ function AjukanReservasiContent() {
                     <div className="sched-period-head">{period.label}</div>
                     <div className="slot-grid-lg">
                       {periodSlots.map((slot) => {
-                        const isTaken = isSlotTaken(facility.id, slot.start, undefined, tanggal, currentUserIdent);
+                        const booking = getSlotBooking(
+                          reservations,
+                          facility.id,
+                          slot.start,
+                          undefined,
+                          tanggal,
+                          currentUserIdent
+                        );
+                        const backendStatus = backendSlotStatus[slot.start]?.status;
+                        const isApproved = booking === 'booked' || backendStatus === 'terpakai';
+                        const isOwnPending = booking === 'pending';
+                        // Pengajuan orang lain yang belum disetujui tidak mengunci:
+                        // pemohon lain tetap boleh mengajukan (siapa cepat dia dapat).
+                        const isWaiting = !isApproved && isOwnPending;
+                        const isTaken = isApproved || isOwnPending;
                         const isPicked = pickedSlots.includes(slot.start);
 
                         let stateClass = 'avail';
                         let statusText = 'Tersedia';
 
-                        if (isTaken) {
+                        if (isApproved) {
                           stateClass = 'booked';
                           statusText = 'Terpakai';
+                        } else if (isWaiting) {
+                          stateClass = 'pending';
+                          statusText = 'Menunggu Persetujuan';
                         } else if (isPicked) {
                           stateClass = 'picked';
                           statusText = 'Terpilih';
@@ -644,9 +699,11 @@ function AjukanReservasiContent() {
                             disabled={isTaken}
                             onClick={() => handleSlotClick(slot)}
                             title={
-                              isTaken
-                                ? 'Slot sudah dikunci (sudah Anda pesan atau sudah disetujui untuk pemohon lain)'
-                                : `${slot.start} - ${slot.end} WIB (Klik untuk memilih)`
+                              isApproved
+                                ? 'Slot sudah disetujui untuk pemohon lain'
+                                : isOwnPending
+                                  ? 'Anda masih menunggu persetujuan pada slot ini'
+                                  : `${slot.start} - ${slot.end} WIB (Klik untuk memilih)`
                             }
                           >
                             <span className="slot-bar" />
@@ -661,14 +718,6 @@ function AjukanReservasiContent() {
                   </div>
                 );
               })}
-
-            {/* Legend Sesuai Gambar Jadwal Ketersediaan */}
-            <div className="sched-legend" style={{ borderTop: '1px solid #EBE7DF', paddingTop: 14, marginTop: 12 }}>
-              <div className="leg"><span className="sq avail" />Tersedia untuk Reservasi</div>
-              <div className="leg"><span className="sq picked" />Terpilih</div>
-              <div className="leg"><span className="sq booked" />Terpakai / Sedang Dipesan</div>
-              <div className="leg"><span className="sq passed" />Waktu Lewat / Tidak Aktif</div>
-            </div>
 
             {/* Live Feedback Banner */}
             {startTime && endTime && (
@@ -752,7 +801,7 @@ function AjukanReservasiContent() {
           {/* Number of participants / units */}
           <div className="fgroup">
             <label>
-              {facility?.type?.toLowerCase() === 'alat' ? 'Jumlah Unit' : 'Estimasi Jumlah Peserta'}{' '}
+              {isAlatFacility ? 'Jumlah Unit' : 'Estimasi Jumlah Peserta'}{' '}
               <span className="opt">(opsional)</span>
             </label>
             <input
@@ -761,16 +810,16 @@ function AjukanReservasiContent() {
               value={peserta}
               onChange={(e) => setPeserta(e.target.value)}
               placeholder={
-                facility?.type?.toLowerCase() === 'alat'
+                isAlatFacility
                   ? 'Jumlah unit yang dipinjam'
                   : 'Perkiraan jumlah orang yang hadir'
               }
             />
             {overCapacity && (
               <span className="field-hint" style={{ color: '#DC2626', fontWeight: 600 }}>
-                {facility?.type?.toLowerCase() === 'alat'
-                  ? `Jumlah unit (${pesertaNum} unit) melebihi stok yang tersedia (${facility?.cap} unit).`
-                  : `Jumlah peserta (${pesertaNum} org) melebihi kapasitas fasilitas (${facility?.cap} org).`}
+                {isAlatFacility
+                  ? `Jumlah unit (${pesertaNum} unit) melebihi stok yang tersedia (${unitTersedia} unit).`
+                  : `Jumlah peserta (${pesertaNum} org) melebihi kapasitas fasilitas (${unitTersedia} org).`}
               </span>
             )}
           </div>

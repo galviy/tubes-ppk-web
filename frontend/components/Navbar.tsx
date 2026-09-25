@@ -46,6 +46,14 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
         <Link href="/" className={`ochoco-nav-link ${pathname === '/' ? 'active' : ''}`}>
           HOME
         </Link>
+        {currentUser && (
+          <Link
+            href={ROLE_HOME[currentUser.role]}
+            className={`ochoco-nav-link ${pathname.startsWith('/pengguna') || pathname.startsWith('/petugas') || pathname.startsWith('/admin') ? 'active' : ''}`}
+          >
+            DASHBOARD
+          </Link>
+        )}
         <Link href="/fasilitas" className={`ochoco-nav-link ${pathname.startsWith('/fasilitas') ? 'active' : ''}`}>
           FACILITIES
         </Link>
@@ -55,14 +63,6 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
         <Link href="/panduan" className={`ochoco-nav-link ${pathname.startsWith('/panduan') ? 'active' : ''}`}>
           GUIDE
         </Link>
-        {currentUser && (
-          <Link
-            href={ROLE_HOME[currentUser.role]}
-            className={`ochoco-nav-link ${pathname.startsWith('/pengguna') || pathname.startsWith('/petugas') || pathname.startsWith('/admin') ? 'active' : ''}`}
-          >
-            DASHBOARD
-          </Link>
-        )}
       </nav>
 
       {/* Center: Logo */}
@@ -116,18 +116,18 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
       {mobileOpen && (
         <div className="ochoco-mobile-menu">
           <Link href="/" onClick={() => setMobileOpen(false)}>HOME</Link>
+          {currentUser && (
+            <Link href={ROLE_HOME[currentUser.role]} onClick={() => setMobileOpen(false)}>
+              DASHBOARD ({currentUser.role.toUpperCase()})
+            </Link>
+          )}
           <Link href="/fasilitas" onClick={() => setMobileOpen(false)}>FACILITIES</Link>
           <Link href="/jadwal" onClick={() => setMobileOpen(false)}>SCHEDULE</Link>
           <Link href="/panduan" onClick={() => setMobileOpen(false)}>GUIDE</Link>
           {currentUser ? (
-            <>
-              <Link href={ROLE_HOME[currentUser.role]} onClick={() => setMobileOpen(false)}>
-                DASHBOARD ({currentUser.role.toUpperCase()})
-              </Link>
-              <button type="button" onClick={handleLogout} className="ochoco-btn-logout">
-                Keluar ({currentUser.nama})
-              </button>
-            </>
+            <button type="button" onClick={handleLogout} className="ochoco-btn-logout">
+              Keluar ({currentUser.nama})
+            </button>
           ) : (
             <Link
               href="/login"

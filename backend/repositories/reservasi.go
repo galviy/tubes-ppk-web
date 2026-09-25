@@ -29,8 +29,9 @@ type ReservasiFilter struct {
 	Offset int
 }
 
-// ReservasiTerpakai adalah satu baris reservasi APPROVED yang mengunci
-// ruangan atau sejumlah unit alat pada rentang waktu tertentu.
+// ReservasiTerpakai adalah satu baris reservasi aktif (PENDING atau APPROVED)
+// pada rentang waktu tertentu. PENDING hanya menandai slot "menunggu", bukan
+// mengunci; APPROVED yang mengunci kuota ruangan/alat.
 type ReservasiTerpakai struct {
 	ReservasiId int
 	RuanganId   *int
@@ -38,6 +39,7 @@ type ReservasiTerpakai struct {
 	Jumlah      int
 	Mulai       time.Time
 	Selesai     time.Time
+	StatusKode  string
 }
 
 func intPtr(n sql.NullInt64) *int {
@@ -552,15 +554,15 @@ func CountReservasiMenunggu() (int, error) {
 	return total, err
 }
 
-// ListReservasiApprovedRange mengambil reservasi APPROVED yang bertabrakan
-// dengan rentang, untuk perhitungan ketersediaan slot.
-func ListReservasiApprovedRange(mulai, selesai time.Time) ([]ReservasiTerpakai, error) {
+// ListReservasiAktifRange mengambil reservasi PENDING dan APPROVED yang
+// bertabrakan dengan rentang, untuk perhitungan status slot jadwal.
+func ListReservasiAktifRange(mulai, selesai time.Time) ([]ReservasiTerpakai, error) {
 	rows, err := config.Query(`
 		SELECT r.id, r.ruangan_reservasi, ar.id_alat, COALESCE(ar.jumlah, 0),
-		       r.waktu_peminjaman, r.waktu_peminjaman_selesai
+		       r.waktu_peminjaman, r.waktu_peminjaman_selesai, r.status_reservasi
 		FROM reservasi r
 		LEFT JOIN alat_reservasi ar ON ar.id_reservasi = r.id
-		WHERE r.status_reservasi = 'APPROVED'
+		WHERE r.status_reservasi IN ('PENDING', 'APPROVED')
 		  AND r.waktu_peminjaman < ?
 		  AND r.waktu_peminjaman_selesai > ?`, selesai, mulai)
 	if err != nil {
@@ -575,7 +577,7 @@ func ListReservasiApprovedRange(mulai, selesai time.Time) ([]ReservasiTerpakai, 
 			ruanganID sql.NullInt64
 			alatID    sql.NullInt64
 		)
-		if err := rows.Scan(&item.ReservasiId, &ruanganID, &alatID, &item.Jumlah, &item.Mulai, &item.Selesai); err != nil {
+		if err := rows.Scan(&item.ReservasiId, &ruanganID, &alatID, &item.Jumlah, &item.Mulai, &item.Selesai, &item.StatusKode); err != nil {
 			return nil, err
 		}
 		item.RuanganId = intPtr(ruanganID)

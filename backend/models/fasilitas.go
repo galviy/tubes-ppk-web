@@ -1,17 +1,18 @@
 package models
 
 type Fasilitas struct {
-	Id        string   `json:"id"`
-	RefId     int      `json:"ref_id"`
-	Tipe      string   `json:"tipe"`
-	Name      string   `json:"name"`
-	Type      string   `json:"type"`
-	Loc       string   `json:"loc"`
-	Cap       int      `json:"cap"`
-	Desc      string   `json:"desc"`
-	Amenities []string `json:"amenities"`
-	Status    string   `json:"status"`
-	Image     *string  `json:"image"`
+	Id             string   `json:"id"`
+	RefId          int      `json:"ref_id"`
+	Tipe           string   `json:"tipe"`
+	Name           string   `json:"name"`
+	Type           string   `json:"type"`
+	Loc            string   `json:"loc"`
+	Cap            int      `json:"cap"`
+	JumlahTersedia int      `json:"jumlah_tersedia"`
+	Desc           string   `json:"desc"`
+	Amenities      []string `json:"amenities"`
+	Status         string   `json:"status"`
+	Image          *string  `json:"image"`
 }
 
 // Ruangan dan Alat adalah baris tabel apa adanya, dipakai repository

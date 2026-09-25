@@ -620,7 +620,7 @@ export default function KelolaFasilitasPage() {
                   <span style={{ fontWeight: 600, color: '#b59876', fontSize: 13 }}>{f.type}</span>
                 </td>
                 <td>{f.loc}</td>
-                <td>{f.cap} {f.type?.toLowerCase() === 'alat' ? 'unit' : 'orang'}</td>
+                <td>{f.tipe === 'alat' ? f.tersedia ?? f.cap : f.cap} {f.tipe === 'alat' ? 'unit' : 'orang'}</td>
                 <td>
                   <span
                     className={`pill ${

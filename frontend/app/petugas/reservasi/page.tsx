@@ -25,10 +25,14 @@ export default function PetugasReservasiPage() {
   });
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Sort: 'menunggu' first, then 'disetujui', then others
+  // Kelompokkan per status (menunggu dulu), lalu pengajuan paling awal di atas
+  // supaya antrean persetujuan mengikuti siapa yang memesan lebih dulu.
   const sorted = [...reservations].sort((a, b) => {
     const order: Record<string, number> = { menunggu: 1, disetujui: 2, ditolak: 3, dibatalkan: 4, selesai: 5 };
-    return (order[a.status] || 6) - (order[b.status] || 6);
+    const byStatus = (order[a.status] || 6) - (order[b.status] || 6);
+    if (byStatus !== 0) return byStatus;
+    const byCreated = a.createdAt.localeCompare(b.createdAt);
+    return byCreated !== 0 ? byCreated : (a.backendId ?? a.id) - (b.backendId ?? b.id);
   });
 
   const filtered = filterStatus === 'semua' ? sorted : sorted.filter((r) => r.status === filterStatus);
@@ -197,7 +201,7 @@ export default function PetugasReservasiPage() {
 
                     {/* PESERTA / UNIT */}
                     <td style={{ whiteSpace: 'nowrap', fontSize: 13 }}>
-                      {r.peserta ? `${r.peserta} ${fac?.type?.toLowerCase() === 'alat' ? 'unit' : 'orang'}` : '-'}
+                      {r.peserta ? `${r.peserta} ${fac?.tipe === 'alat' ? 'unit' : 'orang'}` : '-'}
                     </td>
 
                     {/* TUJUAN */}

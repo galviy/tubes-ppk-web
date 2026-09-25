@@ -143,7 +143,7 @@ export default function AdminSemuaReservasiPage() {
                       <div style={{ fontWeight: 600, color: '#181D24' }}>{r.pemohon}</div>
                       {r.peserta && (
                         <div style={{ fontSize: 11, color: '#6B7280' }}>
-                          {fac?.type?.toLowerCase() === 'alat' ? `Jumlah: ${r.peserta} unit` : `Estimasi: ${r.peserta} peserta`}
+                          {fac?.tipe === 'alat' ? `Jumlah: ${r.peserta} unit` : `Estimasi: ${r.peserta} peserta`}
                         </div>
                       )}
                     </td>

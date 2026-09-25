@@ -59,6 +59,7 @@ function mapBackendFasilitas(b: BackendFasilitas): Facility {
     type: b.type,
     loc: b.loc,
     cap: b.cap,
+    tersedia: typeof b.jumlah_tersedia === 'number' ? b.jumlah_tersedia : undefined,
     desc: b.desc,
     amenities: Array.isArray(b.amenities) ? b.amenities : [],
     status,

@@ -86,8 +86,8 @@ export default function ReservationDetailModal({
           <div><span>Tanggal</span><b>{formatDateIndo(reservation.tanggal)}</b></div>
           <div><span>Waktu</span><b>{reservation.start} - {reservation.end}</b></div>
           <div>
-            <span>{facility?.type?.toLowerCase() === 'alat' ? 'Jumlah unit' : 'Jumlah peserta'}</span>
-            <b>{reservation.peserta ? `${reservation.peserta} ${facility?.type?.toLowerCase() === 'alat' ? 'unit' : 'orang'}` : '-'}</b>
+            <span>{facility?.tipe === 'alat' ? 'Jumlah unit' : 'Jumlah peserta'}</span>
+            <b>{reservation.peserta ? `${reservation.peserta} ${facility?.tipe === 'alat' ? 'unit' : 'orang'}` : '-'}</b>
           </div>
           <div><span>Tujuan</span><b>{reservation.tujuan}</b></div>
           <div><span>Status</span><b>{label}</b></div>

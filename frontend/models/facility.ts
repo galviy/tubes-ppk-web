@@ -13,6 +13,9 @@ export interface Facility {
   type: FacilityType;
   loc: string;
   cap: number;
+  // Jumlah unit siap pakai untuk alat (dari `jumlah_tersedia` backend);
+  // untuk ruangan tidak dipakai, pakai `cap` sebagai kapasitas orang.
+  tersedia?: number;
   desc: string;
   amenities: string[];
   status: FacilityStatus;
@@ -23,7 +26,7 @@ export interface Facility {
   tipe?: 'ruangan' | 'alat';
 }
 
-export type SlotState = 'passed' | 'avail' | 'booked' | 'maint';
+export type SlotState = 'passed' | 'avail' | 'pending' | 'booked' | 'maint';
 
 export interface TimeSlot {
   start: string; // "07:00"

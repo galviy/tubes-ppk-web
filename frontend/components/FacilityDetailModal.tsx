@@ -49,8 +49,8 @@ export default function FacilityDetailModal({ facility, onClose }: FacilityDetai
 
         <div className="modal-info-grid">
           <div>
-            <span className="lbl-sm">{facility.type?.toLowerCase() === 'alat' ? 'Jumlah Tersedia' : 'Kapasitas'}</span>
-            <div>{facility.cap} {facility.type?.toLowerCase() === 'alat' ? 'unit' : 'orang'}</div>
+            <span className="lbl-sm">{facility.tipe === 'alat' ? 'Jumlah Tersedia' : 'Kapasitas'}</span>
+            <div>{facility.tipe === 'alat' ? facility.tersedia ?? facility.cap : facility.cap} {facility.tipe === 'alat' ? 'unit' : 'orang'}</div>
           </div>
           <div><span className="lbl-sm">Kelengkapan</span><div>{facility.amenities.join(', ') || '-'}</div></div>
         </div>

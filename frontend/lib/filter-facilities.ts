@@ -34,19 +34,20 @@ export function filterFacilities(list: Facility[], filters: FacilityFilters): Fa
       const isFilterUnit = filters.kapasitas.includes('unit');
       const isFilterOrang = filters.kapasitas.includes('orang');
 
-      if (f.type?.toLowerCase() === 'alat') {
-        // Alat diukur dalam jumlah unit, bukan kapasitas orang
+      if (f.tipe === 'alat') {
+        // Alat diukur dalam jumlah unit tersedia, bukan kapasitas orang
+        const jumlah = f.tersedia ?? f.cap;
         if (isFilterOrang) return false;
         if (isFilterUnit) {
           if (filters.kapasitas.includes('<')) {
             const num = parseInt(filters.kapasitas.replace(/[^0-9]/g, ''), 10) || 5;
-            if (f.cap >= num) return false;
+            if (jumlah >= num) return false;
           } else if (filters.kapasitas.includes('>')) {
             const num = parseInt(filters.kapasitas.replace(/[^0-9]/g, ''), 10) || 10;
-            if (f.cap <= num) return false;
+            if (jumlah <= num) return false;
           } else if (filters.kapasitas.includes('-')) {
             const parts = filters.kapasitas.split('-').map((s) => parseInt(s.replace(/[^0-9]/g, ''), 10));
-            if (parts.length === 2 && (f.cap < parts[0] || f.cap > parts[1])) return false;
+            if (parts.length === 2 && (jumlah < parts[0] || jumlah > parts[1])) return false;
           }
         }
       } else {

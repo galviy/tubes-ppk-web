@@ -48,15 +48,16 @@ func toFasilitasRuangan(r models.Ruangan) models.Fasilitas {
 
 func toFasilitasAlat(a models.Alat) models.Fasilitas {
 	return models.Fasilitas{
-		Id:        models.TipeFasilitasAlat + "-" + strconv.Itoa(a.Id),
-		RefId:     a.Id,
-		Tipe:      models.TipeFasilitasAlat,
-		Name:      a.Nama,
-		Type:      a.Kategori,
-		Loc:       alatLokasiDefault,
-		Cap:       a.BanyakAlat,
-		Amenities: []string{},
-		Status:    mapStatusAlat(a.Status, a.JumlahTersedia),
+		Id:             models.TipeFasilitasAlat + "-" + strconv.Itoa(a.Id),
+		RefId:          a.Id,
+		Tipe:           models.TipeFasilitasAlat,
+		Name:           a.Nama,
+		Type:           a.Kategori,
+		Loc:            alatLokasiDefault,
+		Cap:            a.BanyakAlat,
+		JumlahTersedia: a.JumlahTersedia,
+		Amenities:      []string{},
+		Status:         mapStatusAlat(a.Status, a.JumlahTersedia),
 	}
 }
 

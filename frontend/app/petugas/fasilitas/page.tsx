@@ -62,7 +62,7 @@ export default function PetugasFasilitasPage() {
                 <td style={{ fontWeight: 600, color: '#181D24' }}>{f.name}</td>
                 <td style={{ color: '#4B5563', fontSize: 13 }}>{f.type}</td>
                 <td style={{ color: '#4B5563', fontSize: 13 }}>{f.loc}</td>
-                <td style={{ color: '#4B5563', fontSize: 13 }}>{f.cap ? `${f.cap} ${f.type?.toLowerCase() === 'alat' ? 'unit' : 'orang'}` : '-'}</td>
+                <td style={{ color: '#4B5563', fontSize: 13 }}>{f.tipe === 'alat' ? `${f.tersedia ?? f.cap} unit` : f.cap ? `${f.cap} orang` : '-'}</td>
                 <td>
                   <span
                     className={`pill ${STATUS_META[f.status]?.pill ?? 'avail'}`}
