@@ -310,8 +310,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         backendId: m.backendId,
         sumber: 'backend' as const,
         facilityId: m.facilityId,
-        // Backend tidak mengembalikan nama pelapor (hanya user_report id).
-        pelapor: `Pengguna #${(row as Record<string, unknown>)['user_report'] ?? '?'}`,
+        // Nama asli bila backend mengirim username_report; fallback ID.
+        pelapor: m.pelaporNama ?? `Pengguna #${(row as Record<string, unknown>)['user_report'] ?? '?'}`,
         kategori: m.kategori,
         deskripsi: m.deskripsi,
         foto: m.foto,

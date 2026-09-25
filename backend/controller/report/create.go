@@ -116,6 +116,9 @@ func CreateLaporan(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		fotoPath = filepath.Join(uploadDir, uuid.NewString()+ext)
+		// Simpan slash di DB agar bisa dipakai langsung sebagai URL
+		// (/uploads/...) di semua OS (Windows Join memakai backslash).
+		fotoPath = filepath.ToSlash(fotoPath)
 		dst, err := os.Create(fotoPath)
 		if err != nil {
 			utils.ResponseJSONMessage(w, "Gagal menyimpan foto", http.StatusInternalServerError, false)

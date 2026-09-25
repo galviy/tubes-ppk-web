@@ -174,5 +174,12 @@ func SetupRoutes() *http.ServeMux {
 			middleware.RolePetugas, middleware.RoleAdmin,
 		)),
 	)
+	// File bukti laporan (uploads/reports/<uuid>.png). Wajib login:
+	// <img> same-origin otomatis mengirim cookie session_id.
+	// StripPrefix agar /uploads/x -> file uploads/x (relatif ke backend/).
+	mux.Handle(
+		"GET /uploads/",
+		middleware.Auth(http.StripPrefix("/uploads/", http.FileServer(http.Dir("uploads")))),
+	)
 	return mux
 }

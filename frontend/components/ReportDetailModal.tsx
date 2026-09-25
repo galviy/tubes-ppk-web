@@ -2,6 +2,7 @@
 
 import { Report, ReportStatus } from '@/models/report';
 import { Facility } from '@/models/facility';
+import ReportFoto from '@/components/ReportFoto';
 
 const STATUS_PILL: Record<ReportStatus, [string, string]> = {
   baru: ['busy', 'Baru'],
@@ -72,8 +73,8 @@ export default function ReportDetailModal({ report, facility, onClose }: ReportD
               BUKTI FOTO KERUSAKAN
             </div>
             <div style={{ width: '100%', maxHeight: 200, borderRadius: 6, overflow: 'hidden', border: '1px solid #D5D0C7', background: '#15171a' }}>
-              <img
-                src={report.foto.startsWith('data:') || report.foto.startsWith('http') ? report.foto : 'https://images.unsplash.com/photo-1616832880699-8541b04005c2?w=600&q=80'}
+              <ReportFoto
+                foto={report.foto}
                 alt="Foto Bukti Kerusakan"
                 style={{ width: '100%', height: '100%', maxHeight: 200, objectFit: 'contain', display: 'block' }}
               />

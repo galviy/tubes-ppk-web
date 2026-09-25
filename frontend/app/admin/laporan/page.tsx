@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { ReportStatus } from '@/models/report';
+import ReportFoto from '@/components/ReportFoto';
 
 const STATUS_CONFIG: Record<ReportStatus, { pillClass: string; label: string }> = {
   baru: { pillClass: 'busy', label: 'Baru' },
@@ -169,8 +170,8 @@ export default function AdminSemuaLaporanPage() {
                             onClick={() => setPreviewPhoto(r.foto || null)}
                             title="Klik untuk memperbesar foto bukti"
                           >
-                            <img
-                              src={r.foto}
+                            <ReportFoto
+                              foto={r.foto}
                               alt="Thumbnail Bukti"
                               className="ochoco-photo-thumb-img"
                             />
@@ -214,7 +215,7 @@ export default function AdminSemuaLaporanPage() {
                 </svg>
               </button>
             </div>
-            <img src={previewPhoto} alt="Bukti Foto Lengkap" className="ochoco-lightbox-img" />
+            <ReportFoto foto={previewPhoto} alt="Bukti Foto Lengkap" className="ochoco-lightbox-img" />
           </div>
         </div>
       )}
