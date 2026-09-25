@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { ReportStatus } from '@/models/report';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
+import ReportFoto from '@/components/ReportFoto';
 
 const STATUS_CONFIG: Record<ReportStatus, { pillClass: string; label: string }> = {
   baru: { pillClass: 'busy', label: 'Baru' },
@@ -22,8 +23,22 @@ export default function PetugasLaporanPage() {
     onConfirm: () => {},
   });
 
+  function reportFailure(message?: string) {
+    setModalConfig({
+      isOpen: true,
+      title: 'Pembaruan Status Gagal',
+      subtitle: message || 'Status laporan tidak dapat diproses.',
+      confirmText: 'Mengerti',
+      confirmVariant: 'danger',
+      showInput: false,
+      onConfirm: () => {},
+    });
+  }
+
   function handleProses(id: number) {
-    updateReportStatus(id, 'diproses');
+    void updateReportStatus(id, 'diproses').then((res) => {
+      if (!res.ok) reportFailure(res.message);
+    });
   }
 
   function handleSelesai(id: number) {
@@ -39,7 +54,9 @@ export default function PetugasLaporanPage() {
       showInput: true,
       requireInput: true,
       onConfirm: (catatan) => {
-        updateReportStatus(id, 'selesai', catatan);
+        void updateReportStatus(id, 'selesai', catatan).then((res) => {
+          if (!res.ok) reportFailure(res.message);
+        });
       },
     });
   }
@@ -56,7 +73,9 @@ export default function PetugasLaporanPage() {
       showInput: true,
       requireInput: true,
       onConfirm: (catatan) => {
-        updateReportStatus(id, 'ditolak', catatan);
+        void updateReportStatus(id, 'ditolak', catatan).then((res) => {
+          if (!res.ok) reportFailure(res.message);
+        });
       },
     });
   }
@@ -171,8 +190,8 @@ export default function PetugasLaporanPage() {
                             onClick={() => setPreviewPhoto(r.foto || null)}
                             title="Klik untuk memperbesar foto bukti"
                           >
-                            <img
-                              src={r.foto}
+                            <ReportFoto
+                              foto={r.foto}
                               alt="Thumbnail Bukti"
                               className="ochoco-photo-thumb-img"
                             />
@@ -259,7 +278,7 @@ export default function PetugasLaporanPage() {
                 </svg>
               </button>
             </div>
-            <img src={previewPhoto} alt="Bukti Foto Lengkap" className="ochoco-lightbox-img" />
+            <ReportFoto foto={previewPhoto} alt="Bukti Foto Lengkap" className="ochoco-lightbox-img" />
           </div>
         </div>
       )}

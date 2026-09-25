@@ -7,6 +7,7 @@ import (
 	"backend-ppk/controller/admin/verifikasi"
 	akademik "backend-ppk/controller/akademik"
 	"backend-ppk/controller/auth"
+	tolak "backend-ppk/controller/admin/tolak"
 	publik_fasilitas "backend-ppk/controller/fasilitas"
 	petugas_fasilitas "backend-ppk/controller/petugas/fasilitas"
 	petugas_report "backend-ppk/controller/petugas/report"
@@ -106,6 +107,38 @@ func SetupRoutes() *http.ServeMux {
 		"POST /admin/create_fasilitas/alat",
 		middleware.AdminAuth(http.HandlerFunc(fasilitas.Create_Alat)),
 	)
+	mux.Handle(
+		"POST /admin/tolak_mhs",
+		middleware.AdminAuth(http.HandlerFunc(tolak.Tolak_MHS)),
+	)
+	mux.Handle(
+		"POST /admin/tolak_dosen",
+		middleware.AdminAuth(http.HandlerFunc(tolak.Tolak_Dosen)),
+	)
+	mux.Handle(
+		"POST /admin/tolak_staff",
+		middleware.AdminAuth(http.HandlerFunc(tolak.Tolak_Staff)),
+	)
+	mux.Handle(
+		"POST /admin/users/status",
+		middleware.AdminAuth(http.HandlerFunc(admin.Users_Status)),
+	)
+	mux.Handle(
+		"POST /admin/update_fasilitas/ruangan",
+		middleware.AdminAuth(http.HandlerFunc(fasilitas.Update_ruangan)),
+	)
+	mux.Handle(
+		"POST /admin/update_fasilitas/alat",
+		middleware.AdminAuth(http.HandlerFunc(fasilitas.Update_alat)),
+	)
+	mux.Handle(
+		"POST /admin/delete_fasilitas/ruangan",
+		middleware.AdminAuth(http.HandlerFunc(fasilitas.Delete_ruangan)),
+	)
+	mux.Handle(
+		"POST /admin/delete_fasilitas/alat",
+		middleware.AdminAuth(http.HandlerFunc(fasilitas.Delete_alat)),
+	)
 	mux.HandleFunc("GET /fakultas", akademik.ListFakultas)
 	mux.HandleFunc("GET /prodi", akademik.ListProdi)
 
@@ -173,6 +206,13 @@ func SetupRoutes() *http.ServeMux {
 			http.HandlerFunc(petugas_fasilitas.UpdateStatus),
 			middleware.RolePetugas, middleware.RoleAdmin,
 		)),
+	)
+	// File bukti laporan (uploads/reports/<uuid>.png). Wajib login:
+	// <img> same-origin otomatis mengirim cookie session_id.
+	// StripPrefix agar /uploads/x -> file uploads/x (relatif ke backend/).
+	mux.Handle(
+		"GET /uploads/",
+		middleware.Auth(http.StripPrefix("/uploads/", http.FileServer(http.Dir("uploads")))),
 	)
 	return mux
 }

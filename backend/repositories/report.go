@@ -43,14 +43,14 @@ func scanReportDetail(row interface {
 	Scan(dest ...any) error
 }) (models.ReportDetail, error) {
 	var d models.ReportDetail
-	var foto, catatan, namaRuangan, namaAlat sql.NullString
+	var foto, catatan, namaRuangan, namaAlat, username sql.NullString
 	var resolvedAt sql.NullTime
 	var ruanganId, alatId sql.NullInt64
 
 	err := row.Scan(
 		&d.Id, &d.WaktuDibuat, &foto, &d.UserReport, &d.Alasan,
 		&d.KategoriLaporan, &d.StatusLaporan, &catatan, &resolvedAt,
-		&ruanganId, &alatId, &namaRuangan, &namaAlat,
+		&ruanganId, &alatId, &namaRuangan, &namaAlat, &username,
 	)
 	if err != nil {
 		return d, err
@@ -78,6 +78,9 @@ func scanReportDetail(row interface {
 	if namaAlat.Valid {
 		d.NamaAlat = &namaAlat.String
 	}
+	if username.Valid {
+		d.UsernameReport = &username.String
+	}
 	return d, nil
 }
 
@@ -85,10 +88,11 @@ func ListByUser(userId int) ([]models.ReportDetail, error) {
 	rows, err := config.DB.Query(
 		`SELECT r.id, r.waktu_dibuat, r.foto, r.user_report, r.alasan,
 			r.kategori_laporan, r.status_laporan, r.catatan_resolusi, r.resolved_at,
-			r.report_ruangan, r.report_alat, ru.nama_ruangan, a.nama_alat
+			r.report_ruangan, r.report_alat, ru.nama_ruangan, a.nama_alat, u.username
 		FROM report r
 		LEFT JOIN ruangan ru ON ru.id = r.report_ruangan
 		LEFT JOIN alat a ON a.id = r.report_alat
+		LEFT JOIN user u ON u.id = r.user_report
 		WHERE r.user_report = ? ORDER BY r.waktu_dibuat DESC`, userId)
 	if err != nil {
 		return nil, err
@@ -110,10 +114,11 @@ func GetReportByID(id, userId int) (*models.ReportDetail, error) {
 	d, err := scanReportDetail(config.DB.QueryRow(
 		`SELECT r.id, r.waktu_dibuat, r.foto, r.user_report, r.alasan,
 			r.kategori_laporan, r.status_laporan, r.catatan_resolusi, r.resolved_at,
-			r.report_ruangan, r.report_alat, ru.nama_ruangan, a.nama_alat
+			r.report_ruangan, r.report_alat, ru.nama_ruangan, a.nama_alat, u.username
 		FROM report r
 		LEFT JOIN ruangan ru ON ru.id = r.report_ruangan
 		LEFT JOIN alat a ON a.id = r.report_alat
+		LEFT JOIN user u ON u.id = r.user_report
 		WHERE r.id = ? AND r.user_report = ?`, id, userId))
 	if err != nil {
 		return nil, err
@@ -125,10 +130,11 @@ func GetReportByIDForPetugas(id int) (*models.ReportDetail, error) {
 	d, err := scanReportDetail(config.DB.QueryRow(
 		`SELECT r.id, r.waktu_dibuat, r.foto, r.user_report, r.alasan,
 			r.kategori_laporan, r.status_laporan, r.catatan_resolusi, r.resolved_at,
-			r.report_ruangan, r.report_alat, ru.nama_ruangan, a.nama_alat
+			r.report_ruangan, r.report_alat, ru.nama_ruangan, a.nama_alat, u.username
 		FROM report r
 		LEFT JOIN ruangan ru ON ru.id = r.report_ruangan
 		LEFT JOIN alat a ON a.id = r.report_alat
+		LEFT JOIN user u ON u.id = r.user_report
 		WHERE r.id = ?`, id))
 	if err != nil {
 		return nil, err
@@ -140,10 +146,11 @@ func ListAllReports() ([]models.ReportDetail, error) {
 	rows, err := config.DB.Query(
 		`SELECT r.id, r.waktu_dibuat, r.foto, r.user_report, r.alasan,
 			r.kategori_laporan, r.status_laporan, r.catatan_resolusi, r.resolved_at,
-			r.report_ruangan, r.report_alat, ru.nama_ruangan, a.nama_alat
+			r.report_ruangan, r.report_alat, ru.nama_ruangan, a.nama_alat, u.username
 		FROM report r
 		LEFT JOIN ruangan ru ON ru.id = r.report_ruangan
 		LEFT JOIN alat a ON a.id = r.report_alat
+		LEFT JOIN user u ON u.id = r.user_report
 		ORDER BY r.waktu_dibuat DESC`)
 	if err != nil {
 		return nil, err

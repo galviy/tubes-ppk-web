@@ -6,6 +6,13 @@ export const SITE_CONFIG = {
   fullName: 'Sistem Reservasi & Pelaporan Fasilitas Kampus',
   institution: 'Universitas Diponegoro',
   campus: 'Kampus Tembalang / Pleburan',
+
+  // Backend Go TIDAK diubah. Browser memanggil /api/* yang diteruskan
+  // Next.js rewrites() ke http://127.0.0.1:8080/* (lihat next.config.js).
+  api: {
+    base: process.env.NEXT_PUBLIC_API_URL || '/api',
+    backendDirect: 'http://127.0.0.1:8080',
+  },
   
   // Aturan Operasional Reservasi (Sesuai Ketentuan Tugas PPK 2026)
   operational: {

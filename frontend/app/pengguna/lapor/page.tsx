@@ -25,13 +25,19 @@ function LaporKerusakanContent() {
   const [deskripsi, setDeskripsi] = useState('');
   const [fileName, setFileName] = useState('');
   const [filePreview, setFilePreview] = useState('');
-  const [fileType, setFileType] = useState<'image' | 'video' | null>(null);
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
     isOpen: false,
     title: '',
     onConfirm: () => {},
   });
+  const [bannerNotice, setBannerNotice] = useState<{
+    type: 'success' | 'error';
+    title: string;
+    message: string;
+  } | null>(null);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -50,9 +56,25 @@ function LaporKerusakanContent() {
       return;
     }
 
+    // Ikuti backend: hanya JPG/JPEG/PNG (video ditolak server).
+    const isImage = /^(image\/jpeg|image\/png|image\/jpg)$/.test(file.type);
+    const extOk = /\.(jpe?g|png)$/i.test(file.name);
+    if (!isImage || !extOk) {
+      setModalConfig({
+        isOpen: true,
+        title: 'Format File Tidak Didukung',
+        subtitle: 'Backend hanya menerima foto JPG atau PNG. Video tidak dapat diproses.',
+        confirmText: 'Mengerti',
+        confirmVariant: 'warning',
+        showInput: false,
+        onConfirm: () => {},
+      });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
     setFileName(file.name);
-    const isVid = file.type.startsWith('video/');
-    setFileType(isVid ? 'video' : 'image');
+    setFotoFile(file);
 
     const reader = new FileReader();
     reader.onload = () => {
@@ -63,7 +85,7 @@ function LaporKerusakanContent() {
     reader.readAsDataURL(file);
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!kategori) {
       setModalConfig({
         isOpen: true,
@@ -89,26 +111,54 @@ function LaporKerusakanContent() {
       return;
     }
 
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     submitReport({
       facilityId,
       kategori,
       deskripsi: deskripsi.trim(),
       foto: filePreview || fileName || undefined,
-    });
-    setDeskripsi('');
-    setKategori('');
-    setFileName('');
-    setFilePreview('');
-    setFileType(null);
+      fotoFile,
+    }).then((result) => {
+      setIsSubmitting(false);
+      if (!result.ok) {
+        setBannerNotice({
+          type: 'error',
+          title: 'Pengiriman Laporan Gagal',
+          message: result.message || 'Laporan tidak dapat diproses oleh server. Silakan coba lagi.',
+        });
+        setModalConfig({
+          isOpen: true,
+          title: 'Laporan Gagal Terkirim',
+          subtitle: result.message || 'Laporan tidak dapat diproses oleh server. Silakan coba lagi.',
+          confirmText: 'Mengerti',
+          confirmVariant: 'danger',
+          showInput: false,
+          onConfirm: () => {},
+        });
+        return;
+      }
+      setDeskripsi('');
+      setKategori('');
+      setFileName('');
+      setFilePreview('');
+      setFotoFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
 
-    setModalConfig({
-      isOpen: true,
-      title: 'Laporan Kerusakan Terkirim',
-      subtitle: 'Terima kasih atas laporan Anda. Laporan kerusakan telah masuk ke sistem dan akan segera ditindaklanjuti oleh petugas sarpras.',
-      confirmText: 'Selesai',
-      confirmVariant: 'primary',
-      showInput: false,
-      onConfirm: () => {},
+      setBannerNotice({
+        type: 'success',
+        title: 'Laporan Kerusakan Berhasil Terkirim',
+        message: 'Terima kasih atas laporan Anda. Laporan kerusakan telah masuk ke sistem dan akan segera ditindaklanjuti oleh petugas sarpras.',
+      });
+      setModalConfig({
+        isOpen: true,
+        title: 'Laporan Kerusakan Terkirim',
+        subtitle: 'Terima kasih atas laporan Anda. Laporan kerusakan telah masuk ke sistem dan akan segera ditindaklanjuti oleh petugas sarpras.',
+        confirmText: 'Selesai',
+        confirmVariant: 'success',
+        showInput: false,
+        onConfirm: () => {},
+      });
     });
   }
 
@@ -116,8 +166,28 @@ function LaporKerusakanContent() {
     <div>
       <div className="content-head">
         <h2>LAPORKAN KERUSAKAN FASILITAS</h2>
-        <p>Isi formulir di bawah dengan bukti foto/video untuk mempercepat tindak lanjut perbaikan sarpras Universitas Diponegoro.</p>
+        <p>Isi formulir di bawah dengan bukti foto untuk mempercepat tindak lanjut perbaikan sarpras Universitas Diponegoro.</p>
       </div>
+
+      {/* Prominent Feedback Banner */}
+      {bannerNotice && (
+        <div className={`status-banner ${bannerNotice.type}`}>
+          <div>
+            <div className="status-banner-badge">
+              {bannerNotice.type === 'success' ? '✓ SUCCESS • BERHASIL' : '✕ FAILED • GAGAL'}
+            </div>
+            <div className="status-banner-title">{bannerNotice.title}</div>
+            <div className="status-banner-desc">{bannerNotice.message}</div>
+          </div>
+          <button
+            type="button"
+            className="status-banner-close"
+            onClick={() => setBannerNotice(null)}
+          >
+            ✕ Tutup
+          </button>
+        </div>
+      )}
 
       <div className="panel">
         <div className="form-grid">
@@ -148,14 +218,16 @@ function LaporKerusakanContent() {
               value={deskripsi}
               onChange={(e) => setDeskripsi(e.target.value)}
               placeholder="Jelaskan secara detail masalah atau kerusakan yang kamu temukan..."
+              maxLength={255}
             />
+            <span className="field-hint">{deskripsi.trim().length}/255 karakter</span>
           </div>
 
-          {/* Unggah Foto / Video Bukti Kerusakan (dengan preview seperti di Admin) */}
+          {/* Unggah Foto Bukti Kerusakan (dengan preview seperti di Admin) */}
           <div className="fgroup full">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <label style={{ margin: 0 }}>
-                Foto / Video Bukti <span className="opt">(opsional)</span>
+                Foto Bukti <span className="opt">(opsional)</span>
               </label>
               <span style={{ fontSize: 11, color: '#6B7280' }}>Format JPG, PNG (Maks. 2MB)</span>
             </div>
@@ -178,19 +250,11 @@ function LaporKerusakanContent() {
                 }}
               >
                 {filePreview ? (
-                  fileType === 'video' ? (
-                    <video
-                      src={filePreview}
-                      controls
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <img
-                      src={filePreview}
-                      alt="Preview Bukti Kerusakan"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  )
+                  <img
+                    src={filePreview}
+                    alt="Preview Bukti Kerusakan"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
                 ) : (
                   <div style={{ textAlign: 'center', color: '#9CA3AF', padding: 8 }}>
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -198,7 +262,7 @@ function LaporKerusakanContent() {
                       <circle cx="8.5" cy="8.5" r="1.5" />
                       <polyline points="21 15 16 10 5 21" />
                     </svg>
-                    <div style={{ fontSize: 10, marginTop: 4 }}>Belum ada foto/video</div>
+                    <div style={{ fontSize: 10, marginTop: 4 }}>Belum ada foto</div>
                   </div>
                 )}
               </div>
@@ -226,11 +290,11 @@ function LaporKerusakanContent() {
                       <polyline points="17 8 12 3 7 8" />
                       <line x1="12" y1="3" x2="12" y2="15" />
                     </svg>
-                    <span>Upload Foto / Video</span>
+                    <span>Upload Foto</span>
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="image/*,video/*"
+                      accept="image/jpeg,image/png,image/jpg"
                       style={{ display: 'none' }}
                       onChange={handleFileChange}
                     />
@@ -242,7 +306,7 @@ function LaporKerusakanContent() {
                       onClick={() => {
                         setFilePreview('');
                         setFileName('');
-                        setFileType(null);
+                        setFotoFile(null);
                         if (fileInputRef.current) fileInputRef.current.value = '';
                       }}
                       style={{
@@ -283,13 +347,16 @@ function LaporKerusakanContent() {
 
                 <input
                   type="text"
-                  placeholder="Atau tempel URL foto/video bukti langsung (contoh: https://...)"
+                  placeholder="Atau tempel URL foto bukti langsung (contoh: https://...)"
                   value={filePreview.startsWith('data:') ? `(File diunggah: ${fileName})` : filePreview}
                   onChange={(e) => {
                     const val = e.target.value;
                     setFilePreview(val);
                     setFileName(val ? 'Lampiran URL' : '');
-                    setFileType(val.endsWith('.mp4') || val.endsWith('.webm') ? 'video' : 'image');
+                    // URL tidak dikirim ke backend (hanya file); URL tetap
+                    // tersimpan di cermin lokal untuk ditampilkan.
+                    setFotoFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
                   }}
                   style={{ fontSize: 12, padding: '7px 12px' }}
                 />
@@ -302,8 +369,8 @@ function LaporKerusakanContent() {
           </div>
         </div>
         <div className="btn-row" style={{ marginTop: 16 }}>
-          <button className="btn primary" onClick={handleSubmit}>
-            Kirim laporan
+          <button className="btn primary" onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? 'Mengirim…' : 'Kirim laporan'}
           </button>
         </div>
       </div>

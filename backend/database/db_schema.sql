@@ -650,6 +650,22 @@ SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-/*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
+--
+-- Event structure for event `auto_cancel_unapproved_reservasi`
+--
+
+/*!50106 DROP EVENT IF EXISTS `auto_cancel_unapproved_reservasi` */;
+DELIMITER ;;
+/*!50106 CREATE EVENT `auto_cancel_unapproved_reservasi`
+ON SCHEDULE EVERY 1 MINUTE
+STARTS CURRENT_TIMESTAMP
+COMMENT 'Membatalkan otomatis reservasi PENDING 2 jam sebelum waktu mulai reservasi'
+DO BEGIN
+    UPDATE `reservasi`
+    SET `status_reservasi` = 'CANCELLED'
+    WHERE `status_reservasi` = 'PENDING'
+      AND `waktu_peminjaman` <= NOW() + INTERVAL 2 HOUR;
+END */ ;;
+DELIMITER ;
 
 -- Dump completed on 2026-09-19 20:53:18

@@ -3,7 +3,13 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
-import { generateTimeSlots, currentHHMM } from '@/lib/slots';
+import {
+  generateTimeSlots,
+  currentHHMM,
+  getTodayDateString,
+  isReservationDeadlineValid,
+  getEarliestReservableDate,
+} from '@/lib/slots';
 import { TimeSlot } from '@/models/facility';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
 
@@ -168,7 +174,7 @@ const PERIODS = [
 
 function AjukanReservasiContent() {
   const searchParams = useSearchParams();
-  const { facilities, isSlotTaken, submitReservation } = useAppData();
+  const { facilities, isSlotTaken, submitReservation, currentUser } = useAppData();
   const availableFacilities = facilities.filter((f) => f.status !== 'repair');
 
   const preselect = searchParams.get('facility');
@@ -178,20 +184,28 @@ function AjukanReservasiContent() {
       ''
   );
 
+  const earliestDate = useMemo(() => getEarliestReservableDate(), []);
   const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
     isOpen: false,
     title: '',
     onConfirm: () => {},
   });
-  const [tanggal, setTanggal] = useState('2026-09-18');
+  const [bannerNotice, setBannerNotice] = useState<{
+    type: 'success' | 'error';
+    title: string;
+    message: string;
+  } | null>(null);
+  const [tanggal, setTanggal] = useState(earliestDate);
   const [tujuan, setTujuan] = useState('');
   const [peserta, setPeserta] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Jam Mulai dan Jam Selesai yang independen dan presisi
   const [startTime, setStartTime] = useState<string>('');
   const [endTime, setEndTime] = useState<string>('');
 
   const facility = facilities.find((f) => f.id === facilityId);
+  const currentUserIdent = currentUser?.nama || currentUser?.email || '';
 
   // Daftar slot start yang berada dalam rentang [startTime, endTime)
   const pickedSlots = useMemo(() => {
@@ -199,11 +213,13 @@ function AjukanReservasiContent() {
     return SLOTS.filter((s) => s.start >= startTime && s.start < endTime).map((s) => s.start);
   }, [startTime, endTime]);
 
-  // Cek bentrok terhadap slot yang dipilih
+  // Cek bentrok terhadap slot yang dipilih untuk tanggal dan user spesifik
   const conflictSlots = useMemo(() => {
     if (!facility || pickedSlots.length === 0) return [];
-    return pickedSlots.filter((slotStart) => isSlotTaken(facility.id, slotStart));
-  }, [facility, pickedSlots, isSlotTaken]);
+    return pickedSlots.filter((slotStart) =>
+      isSlotTaken(facility.id, slotStart, undefined, tanggal, currentUserIdent)
+    );
+  }, [facility, pickedSlots, isSlotTaken, tanggal, currentUserIdent]);
 
   const hasConflict = conflictSlots.length > 0;
 
@@ -247,7 +263,9 @@ function AjukanReservasiContent() {
 
   // Interaksi klik kartu slot yang cerdas & sinkron dengan periode
   function handleSlotClick(slot: TimeSlot) {
-    if (!facility || isSlotTaken(facility.id, slot.start)) return;
+    if (!facility) return;
+    const isTaken = isSlotTaken(facility.id, slot.start, undefined, tanggal, currentUserIdent);
+    if (isTaken) return;
 
     // 1. Jika belum ada yang dipilih: pilih slot ini (30 menit)
     if (!startTime || !endTime) {
@@ -299,16 +317,40 @@ function AjukanReservasiContent() {
   const pesertaNum = parseInt(peserta, 10) || 0;
   const overCapacity = !!facility && pesertaNum > facility.cap;
 
-  function doSubmit() {
-    if (!facility) return;
-    submitReservation({
-      facilityId: facility.id,
-      tanggal,
-      start: startTime,
-      end: endTime,
-      tujuan: tujuan.trim(),
-      peserta: pesertaNum || undefined,
-    });
+  async function doSubmit() {
+    if (!facility || isSubmitting) return;
+    setIsSubmitting(true);
+    let result: { ok: boolean; message?: string };
+    try {
+      result = await submitReservation({
+        facilityId: facility.id,
+        tanggal,
+        start: startTime,
+        end: endTime,
+        tujuan: tujuan.trim(),
+        peserta: pesertaNum || undefined,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+
+    if (!result.ok) {
+      setBannerNotice({
+        type: 'error',
+        title: 'Pengajuan Reservasi Gagal',
+        message: result.message || 'Reservasi tidak dapat diproses karena jadwal bentrok atau kendala server. Silakan coba lagi.',
+      });
+      setModalConfig({
+        isOpen: true,
+        title: 'Pengajuan Reservasi Gagal',
+        subtitle: result.message || 'Reservasi tidak dapat diproses karena jadwal bentrok atau kendala server. Silakan coba lagi.',
+        confirmText: 'Mengerti',
+        confirmVariant: 'danger',
+        showInput: false,
+        onConfirm: () => {},
+      });
+      return;
+    }
 
     const bookedFacilityName = facility.name;
     const bookedTime = `${tanggal}, ${startTime} - ${endTime} WIB`;
@@ -318,12 +360,18 @@ function AjukanReservasiContent() {
     setTujuan('');
     setPeserta('');
 
+    setBannerNotice({
+      type: 'success',
+      title: 'Permohonan Reservasi Berhasil Terkirim',
+      message: `Reservasi berhasil diajukan untuk ${bookedFacilityName} (${bookedTime}). Permohonan Anda telah masuk ke antrean persetujuan petugas sarpras.`,
+    });
+
     setModalConfig({
       isOpen: true,
       title: 'Permohonan Berhasil Diajukan',
       subtitle: `Reservasi berhasil diajukan untuk ${bookedFacilityName} (${bookedTime}). Permohonan Anda telah masuk ke antrean persetujuan petugas sarpras.`,
       confirmText: 'Selesai',
-      confirmVariant: 'primary',
+      confirmVariant: 'success',
       showInput: false,
       onConfirm: () => {},
     });
@@ -331,6 +379,23 @@ function AjukanReservasiContent() {
 
   function handleSubmit() {
     if (!facility) return;
+    if (!isReservationDeadlineValid(tanggal)) {
+      setBannerNotice({
+        type: 'error',
+        title: 'Batas Waktu Reservasi Terlewat',
+        message: `Maksimal reservasi diajukan pada H-1 pukul 00.00 WIB (contoh: reservasi tanggal 25 maksimal diajukan tanggal 24 pukul 00.00 WIB). Tanggal ${tanggal} sudah tidak dapat dipesan. Silakan pilih mulai dari tanggal ${earliestDate}.`,
+      });
+      setModalConfig({
+        isOpen: true,
+        title: 'Batas Waktu Terlewat',
+        subtitle: `Maksimal reservasi diajukan pada H-1 pukul 00.00 WIB (contoh: reservasi tanggal 25 maksimal diajukan tanggal 24 pukul 00.00 WIB). Silakan pilih tanggal mulai dari ${earliestDate}.`,
+        confirmText: 'Pilih Tanggal Lain',
+        confirmVariant: 'danger',
+        showInput: false,
+        onConfirm: () => {},
+      });
+      return;
+    }
     if (!startTime || !endTime || pickedSlots.length === 0) {
       setModalConfig({
         isOpen: true,
@@ -344,10 +409,15 @@ function AjukanReservasiContent() {
       return;
     }
     if (hasConflict) {
+      setBannerNotice({
+        type: 'error',
+        title: 'Rentang Jadwal Bentrok',
+        message: `Rentang jam yang dipilih (${startTime} - ${endTime} WIB) pada tanggal ${tanggal} bentrok dengan jadwal reservasi yang sudah terpakai atau disetujui. Silakan pilih rentang jam yang berstatus hijau (Tersedia).`,
+      });
       setModalConfig({
         isOpen: true,
         title: 'Rentang Jadwal Bentrok',
-        subtitle: 'Rentang jam yang dipilih bentrok dengan jadwal reservasi lain yang sudah terpakai. Silakan pilih rentang yang berstatus tersedia.',
+        subtitle: `Rentang jam yang dipilih (${startTime} - ${endTime} WIB) pada tanggal ${tanggal} bentrok dengan jadwal reservasi lain yang sudah terpakai atau disetujui. Silakan pilih rentang yang berstatus tersedia.`,
         confirmText: 'Pilih Jam Lain',
         confirmVariant: 'danger',
         showInput: false,
@@ -380,13 +450,13 @@ function AjukanReservasiContent() {
         confirmVariant: 'warning',
         showInput: false,
         onConfirm: () => {
-          doSubmit();
+          void doSubmit();
         },
       });
       return;
     }
 
-    doSubmit();
+    void doSubmit();
   }
 
   return (
@@ -398,8 +468,28 @@ function AjukanReservasiContent() {
       </div>
 
       <div className="alert info">
-        Jam operasional kampus: <b>07.00 - 20.00 WIB</b> · Durasi kelipatan <b>30 menit</b> · Slot dikunci sementara selama pengisian formulir.
+        Jam operasional kampus: <b>07.00 - 20.00 WIB</b> · Durasi kelipatan <b>30 menit</b> · Batas pengajuan: <b>H-1 pukul 00.00 WIB</b> (contoh: reservasi tgl 25 maksimal diajukan tgl 24 pukul 00.00 WIB).
       </div>
+
+      {/* Prominent Feedback Banner */}
+      {bannerNotice && (
+        <div className={`status-banner ${bannerNotice.type}`}>
+          <div>
+            <div className="status-banner-badge">
+              {bannerNotice.type === 'success' ? '✓ SUCCESS • BERHASIL' : '✕ FAILED • GAGAL'}
+            </div>
+            <div className="status-banner-title">{bannerNotice.title}</div>
+            <div className="status-banner-desc">{bannerNotice.message}</div>
+          </div>
+          <button
+            type="button"
+            className="status-banner-close"
+            onClick={() => setBannerNotice(null)}
+          >
+            ✕ Tutup
+          </button>
+        </div>
+      )}
 
       <div className="panel">
         <div className="form-grid">
@@ -418,7 +508,26 @@ function AjukanReservasiContent() {
           {/* Date Selection */}
           <div className="fgroup">
             <label>Tanggal Peminjaman</label>
-            <input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} />
+            <input
+              type="date"
+              min={earliestDate}
+              value={tanggal}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val && !isReservationDeadlineValid(val)) {
+                  setBannerNotice({
+                    type: 'error',
+                    title: 'Batas Waktu Reservasi Terlewat',
+                    message: `Maksimal reservasi diajukan pada H-1 pukul 00.00 WIB. Tanggal ${val} tidak memenuhi syarat. Tanggal paling awal yang tersedia adalah ${earliestDate}.`,
+                  });
+                  setTanggal(earliestDate);
+                } else {
+                  setTanggal(val);
+                }
+                setStartTime('');
+                setEndTime('');
+              }}
+            />
           </div>
 
           {/* Start Time Dropdown (Always opens downward) */}
@@ -504,7 +613,7 @@ function AjukanReservasiContent() {
                     <div className="sched-period-head">{period.label}</div>
                     <div className="slot-grid-lg">
                       {periodSlots.map((slot) => {
-                        const isTaken = isSlotTaken(facility.id, slot.start);
+                        const isTaken = isSlotTaken(facility.id, slot.start, undefined, tanggal, currentUserIdent);
                         const isPicked = pickedSlots.includes(slot.start);
 
                         let stateClass = 'avail';
@@ -525,7 +634,11 @@ function AjukanReservasiContent() {
                             className={`slot-lg ${stateClass}`}
                             disabled={isTaken}
                             onClick={() => handleSlotClick(slot)}
-                            title={isTaken ? 'Slot sudah terpakai' : `${slot.start} - ${slot.end} WIB (Klik untuk memilih)`}
+                            title={
+                              isTaken
+                                ? 'Slot sudah dikunci (sudah Anda pesan atau sudah disetujui untuk pemohon lain)'
+                                : `${slot.start} - ${slot.end} WIB (Klik untuk memilih)`
+                            }
                           >
                             <span className="slot-bar" />
                             <div className="slot-lg-body">
@@ -553,36 +666,66 @@ function AjukanReservasiContent() {
               <div
                 style={{
                   marginTop: 18,
-                  padding: '14px 20px',
-                  borderRadius: 4,
-                  border: hasConflict ? '1px solid #FECACA' : '1px solid #BBF7D0',
+                  padding: '16px 20px',
+                  borderRadius: 6,
+                  border: hasConflict ? '2px solid #EF4444' : '2px solid #22C55E',
                   background: hasConflict ? '#FEF2F2' : '#F0FDF4',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   flexWrap: 'wrap',
-                  gap: 10,
+                  gap: 12,
                 }}
               >
                 <div>
-                  <span style={{ fontSize: 13, color: '#1F2937' }}>
+                  <div style={{ marginBottom: 4 }}>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '3px 10px',
+                        borderRadius: 4,
+                        fontSize: 12,
+                        fontWeight: 800,
+                        letterSpacing: '0.05em',
+                        textTransform: 'uppercase',
+                        background: hasConflict ? '#FEE2E2' : '#DCFCE7',
+                        color: hasConflict ? '#B91C1C' : '#15803D',
+                        border: hasConflict ? '1px solid #FCA5A5' : '1px solid #86EFAC',
+                      }}
+                    >
+                      {hasConflict ? '✕ FAILED • JADWAL BENTROK' : '✓ SUCCESS • KETERSEDIAAN AMAN'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 16, color: '#1F2937' }}>
                     Jadwal Terpilih:{' '}
-                    <strong style={{ fontSize: 15, color: hasConflict ? '#DC2626' : '#15803D' }}>
+                    <strong style={{ fontSize: 17, color: hasConflict ? '#DC2626' : '#15803D' }}>
                       {startTime} - {endTime} WIB
                     </strong>{' '}
-                    ({pickedSlots.length} slot · {(pickedSlots.length * 0.5).toFixed(1)} jam)
-                  </span>
-                  {hasConflict && (
-                    <div style={{ color: '#DC2626', fontSize: 12, fontWeight: 600, marginTop: 4 }}>
-                      ⚠️ Terdapat slot yang bentrok pada rentang jam ini. Silakan pilih rentang jam lain yang tersedia.
+                    ({pickedSlots.length} slot · {(pickedSlots.length * 0.5).toFixed(1)} jam peminjaman)
+                  </div>
+                  {hasConflict ? (
+                    <div style={{ color: '#B91C1C', fontSize: 14, fontWeight: 600, marginTop: 4 }}>
+                      ⚠️ Rentang waktu ini bertabrakan dengan jadwal yang sudah disetujui / direservasi pada tanggal {tanggal}. Silakan pilih slot hijau yang tersedia.
+                    </div>
+                  ) : (
+                    <div style={{ color: '#166534', fontSize: 14, marginTop: 4 }}>
+                      Semua slot pada rentang ini berstatus tersedia dan siap diajukan untuk tanggal {tanggal}.
                     </div>
                   )}
                 </div>
-                {!hasConflict && (
-                  <span style={{ color: '#166534', fontSize: 12, fontWeight: 600, background: '#DCFCE7', padding: '6px 12px', borderRadius: 4 }}>
-                    ✓ Ketersediaan Aman
-                  </span>
-                )}
+                <div>
+                  {hasConflict ? (
+                    <span style={{ color: '#FFFFFF', fontSize: 13, fontWeight: 700, background: '#DC2626', padding: '8px 14px', borderRadius: 4 }}>
+                      Tidak Dapat Dipinjam
+                    </span>
+                  ) : (
+                    <span style={{ color: '#FFFFFF', fontSize: 13, fontWeight: 700, background: '#16A34A', padding: '8px 14px', borderRadius: 4 }}>
+                      ✓ Siap Diajukan
+                    </span>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -630,9 +773,9 @@ function AjukanReservasiContent() {
             type="button"
             className="btn primary"
             onClick={handleSubmit}
-            disabled={hasConflict || !startTime || !endTime}
+            disabled={hasConflict || !startTime || !endTime || isSubmitting}
           >
-            Ajukan Reservasi
+            {isSubmitting ? 'Mengirim…' : 'Ajukan Reservasi'}
           </button>
         </div>
       </div>

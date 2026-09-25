@@ -81,13 +81,29 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
 
   const facility = facilities.find((f) => f.id === activeFacilityId) ?? facilities[0];
 
+  useEffect(() => {
+    if (facilities.length > 0 && (!activeFacilityId || !facilities.some((f) => f.id === activeFacilityId))) {
+      onSelectFacility(facilities[0].id);
+    }
+  }, [facilities, activeFacilityId, onSelectFacility]);
+
   const slotStates = useMemo(() => {
-    if (!now) return SLOTS.map(() => 'passed' as SlotState);
+    if (!now || !facility) return SLOTS.map(() => 'passed' as SlotState);
     return SLOTS.map((slot) => getSlotState(facility, slot.start, reservations));
   }, [facility, reservations, now]);
 
   const availableCount = slotStates.filter((s) => s === 'avail').length;
   const availablePct = Math.round((availableCount / SLOTS.length) * 100);
+
+  if (!facility) {
+    return (
+      <div className="sched-card" style={{ padding: '48px 24px', textAlign: 'center' }}>
+        <p style={{ color: '#6B7280', fontSize: 15, margin: 0 }}>
+          {facilities.length === 0 ? 'Memuat data ketersediaan jadwal fasilitas...' : 'Pilih fasilitas untuk melihat jadwal.'}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="sched-card">

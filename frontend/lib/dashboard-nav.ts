@@ -3,7 +3,7 @@
 // Konfigurasi navigasi dashboard, terpusat di satu tempat supaya
 // aturan "siapa boleh lihat section apa" konsisten di seluruh app.
 
-import { UserRole } from '@/mock/fake-users-db';
+import { UserRole } from '@/models/user';
 
 export interface NavItem {
   href: string;

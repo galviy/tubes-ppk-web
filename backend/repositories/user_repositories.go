@@ -1058,16 +1058,17 @@ func GetStaffPending(limit int) ([]tampung_staff_pending, error) {
 }
 
 type tampung struct {
-	ID       int
-	Username string
-	Email    string
-	Role     int
+	ID         int
+	Username   string
+	Email      string
+	Role       int
+	IsVerified int
 }
 
 func GetUsers(limit int) ([]tampung, error) {
 
 	rows, err := config.Query(`
-		SELECT id, username, email, user_role
+		SELECT id, username, email, user_role, isVerified
 		FROM user
 		ORDER BY id, username
 		LIMIT ?
@@ -1088,6 +1089,7 @@ func GetUsers(limit int) ([]tampung, error) {
 			&user.Username,
 			&user.Email,
 			&user.Role,
+			&user.IsVerified,
 		)
 
 		if err != nil {

@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { ReservationStatus } from '@/models/reservation';
-import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
-import { hasRangeConflict } from '@/lib/slots';
 
 const STATUS_CONFIG: Record<ReservationStatus, { pillClass: string; label: string }> = {
   menunggu: { pillClass: 'busy', label: 'Menunggu' },
@@ -14,71 +12,9 @@ const STATUS_CONFIG: Record<ReservationStatus, { pillClass: string; label: strin
 };
 
 export default function PetugasReservasiPage() {
-  const {
-    reservations,
-    facilityById,
-    approveReservation,
-    rejectReservation,
-    cancelApprovedReservation,
-    resetReservationToWaiting,
-    isSlotTaken,
-  } = useAppData();
+  const { reservations, facilityById } = useAppData();
 
   const [filterStatus, setFilterStatus] = useState<string>('semua');
-  const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
-    isOpen: false,
-    title: '',
-    onConfirm: () => {},
-  });
-
-  function handleApprove(id: number) {
-    const result = approveReservation(id);
-    if (!result.ok) {
-      setModalConfig({
-        isOpen: true,
-        title: 'Jadwal Bentrok',
-        subtitle: result.message || 'Jadwal yang diajukan bertabrakan dengan reservasi lain yang telah disetujui.',
-        confirmText: 'Mengerti',
-        confirmVariant: 'warning',
-        showInput: false,
-        onConfirm: () => {},
-      });
-    }
-  }
-
-  function handleReject(id: number) {
-    setModalConfig({
-      isOpen: true,
-      title: 'Tolak Permohonan Reservasi',
-      subtitle: 'Masukkan alasan penolakan permohonan reservasi. Catatan ini akan dicatat dalam riwayat pemohon.',
-      label: 'Alasan Penolakan',
-      placeholder: 'Contoh: Fasilitas sedang dalam pemeliharaan berkala atau ada kegiatan dinas prioritas.',
-      confirmText: 'Tolak Reservasi',
-      confirmVariant: 'danger',
-      showInput: true,
-      requireInput: true,
-      onConfirm: (alasan) => {
-        rejectReservation(id);
-      },
-    });
-  }
-
-  function handleCancelApproved(id: number) {
-    setModalConfig({
-      isOpen: true,
-      title: 'Pembatalan Mendesak Reservasi',
-      subtitle: 'Reservasi ini telah disetujui sebelumnya. Masukkan alasan pembatalan mendesak.',
-      label: 'Alasan Pembatalan Mendesak',
-      placeholder: 'Contoh: Terjadi kendala teknis darurat pada fasilitas.',
-      confirmText: 'Batalkan Reservasi',
-      confirmVariant: 'danger',
-      showInput: true,
-      requireInput: true,
-      onConfirm: (alasan) => {
-        cancelApprovedReservation(id, alasan);
-      },
-    });
-  }
 
   // Sort: 'menunggu' first, then 'disetujui', then others
   const sorted = [...reservations].sort((a, b) => {
@@ -93,7 +29,7 @@ export default function PetugasReservasiPage() {
       {/* Header Split matching Reference Image 3 */}
       <div className="dash-split-header">
         <h2>Antrian reservasi</h2>
-        <p>Verifikasi permohonan baru (setujui/tolak) dan kelola pembatalan reservasi yang telah disetujui.</p>
+        <p>Antrean read-only: backend belum menyediakan endpoint persetujuan/penolakan/pembatalan reservasi.</p>
       </div>
 
       {/* Filter Chips */}
@@ -145,14 +81,16 @@ export default function PetugasReservasiPage() {
               <tr>
                 <td colSpan={7} style={{ textAlign: 'center', padding: '36px', color: '#6B7280' }}>
                   Tidak ada reservasi dalam kategori ini.
+                  <div style={{ fontSize: 12, marginTop: 8 }}>
+                    Catatan: backend hanya mengembalikan reservasi milik akun yang login — pengajuan
+                    milik pengguna lain (mis. 4 antrean PENDING saat ini) tidak terlihat di sini.
+                    Antrean lintas-pengguna membutuhkan endpoint backend yang belum tersedia.
+                  </div>
                 </td>
               </tr>
             ) : (
               filtered.map((r) => {
                 const fac = facilityById(r.facilityId);
-                const conflict =
-                  r.status === 'menunggu' &&
-                  !!hasRangeConflict(reservations, r.facilityId, r.tanggal, r.start, r.end, r.id);
                 const cfg = STATUS_CONFIG[r.status] || { pillClass: 'neutral', label: r.status };
 
                 return (
@@ -190,38 +128,30 @@ export default function PetugasReservasiPage() {
                       </span>
                     </td>
 
-                    {/* TINDAKAN */}
+                    {/* TINDAKAN (no-op: backend belum menyediakan endpoint) */}
                     <td style={{ whiteSpace: 'nowrap', textAlign: 'left' }}>
                       {r.status === 'menunggu' && (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                          <select
-                            className="table-select-action"
-                            value="menunggu"
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (val === 'setuju') handleApprove(r.id);
-                              if (val === 'tolak') handleReject(r.id);
-                            }}
-                          >
-                            <option value="menunggu">Menunggu</option>
-                            <option value="setuju" disabled={conflict}>Setuju</option>
-                            <option value="tolak">Tolak</option>
-                          </select>
-                          {conflict && (
-                            <span style={{ color: '#dc2626', fontSize: 11, fontWeight: 600 }}>
-                              Bentrok
-                            </span>
-                          )}
-                        </div>
+                        <select
+                          className="table-select-action"
+                          value="menunggu"
+                          title="Menunggu endpoint backend — pilihan tidak melakukan apa-apa"
+                          onChange={(e) => {
+                            e.target.value = 'menunggu';
+                          }}
+                        >
+                          <option value="menunggu">Menunggu</option>
+                          <option value="setuju">Setuju</option>
+                          <option value="tolak">Tolak</option>
+                        </select>
                       )}
 
                       {r.status === 'disetujui' && (
                         <select
                           className="table-select-action"
                           value="setuju"
+                          title="Menunggu endpoint backend — pilihan tidak melakukan apa-apa"
                           onChange={(e) => {
-                            const val = e.target.value;
-                            if (val === 'batal') handleCancelApproved(r.id);
+                            e.target.value = 'setuju';
                           }}
                         >
                           <option value="setuju">Setuju</option>
@@ -246,11 +176,6 @@ export default function PetugasReservasiPage() {
           </tbody>
         </table>
       </div>
-
-      <ActionPromptModal
-        config={modalConfig}
-        onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))}
-      />
     </div>
   );
 }
