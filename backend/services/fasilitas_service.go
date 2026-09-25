@@ -102,3 +102,49 @@ func mapAlat(rows []models.Alat) []models.Fasilitas {
 	}
 	return list
 }
+
+// ListFasilitasFiltered menerapkan filter US 2 dan pagination opsional
+// (limit 0 = tampilkan semua). Mengembalikan data halaman + total sebelum dipotong.
+func ListFasilitasFiltered(tipe, q, lokasi string, kapasitasMin, page, limit int) ([]models.Fasilitas, int, error) {
+	list, err := ListFasilitas(tipe)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	q = strings.ToLower(strings.TrimSpace(q))
+	lokasi = strings.ToLower(strings.TrimSpace(lokasi))
+
+	filtered := make([]models.Fasilitas, 0, len(list))
+	for _, f := range list {
+		if q != "" &&
+			!strings.Contains(strings.ToLower(f.Name), q) &&
+			!strings.Contains(strings.ToLower(f.Type), q) {
+			continue
+		}
+		if lokasi != "" && !strings.Contains(strings.ToLower(f.Loc), lokasi) {
+			continue
+		}
+		if kapasitasMin > 0 && f.Cap < kapasitasMin {
+			continue
+		}
+		filtered = append(filtered, f)
+	}
+
+	total := len(filtered)
+	if limit > 0 {
+		start := (page - 1) * limit
+		if start < 0 {
+			start = 0
+		}
+		if start >= total {
+			return []models.Fasilitas{}, total, nil
+		}
+		end := start + limit
+		if end > total {
+			end = total
+		}
+		filtered = filtered[start:end]
+	}
+
+	return filtered, total, nil
+}
