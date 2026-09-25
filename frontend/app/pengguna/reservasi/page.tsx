@@ -180,6 +180,15 @@ const PERIODS = [
   { label: 'MALAM', from: '18:00', to: '20:00' },
 ];
 
+interface SelectedToolItem {
+  facilityId: string;
+  refId: number;
+  nama: string;
+  jumlah: number;
+  stokTersedia: number;
+  lokasi: string;
+}
+
 function AjukanReservasiContent() {
   const searchParams = useSearchParams();
   const { facilities, isSlotTaken, fetchSlotAvailability, submitReservation, currentUser, reservations } = useAppData();
@@ -187,6 +196,61 @@ function AjukanReservasiContent() {
 
   const preselect = searchParams.get('facility');
   const tipeParam = searchParams.get('tipe');
+
+  // State untuk alat pendukung saat memesan ruangan
+  const [selectedTools, setSelectedTools] = useState<SelectedToolItem[]>([]);
+  const [toolToPickId, setToolToPickId] = useState<string>('');
+  const [toolToPickQty, setToolToPickQty] = useState<number>(1);
+
+  // Pool alat kampus yang siap dipinjam
+  const availableTools = useMemo(() => {
+    return availableFacilities.filter(isAlatFacility);
+  }, [availableFacilities]);
+
+  // Alat yang belum dipilih oleh pemohon
+  const unselectedTools = useMemo(() => {
+    const chosenIds = new Set(selectedTools.map((t) => t.facilityId));
+    return availableTools.filter((t) => !chosenIds.has(t.id));
+  }, [availableTools, selectedTools]);
+
+  const handleAddTool = () => {
+    if (!toolToPickId) return;
+    const targetTool = availableTools.find((t) => t.id === toolToPickId);
+    if (!targetTool || typeof targetTool.refId !== 'number') return;
+
+    const maxStock = Math.max(1, targetTool.tersedia ?? targetTool.cap ?? 1);
+    const qty = Math.min(Math.max(1, toolToPickQty || 1), maxStock);
+
+    setSelectedTools((prev) => [
+      ...prev,
+      {
+        facilityId: targetTool.id,
+        refId: targetTool.refId!,
+        nama: targetTool.name,
+        jumlah: qty,
+        stokTersedia: maxStock,
+        lokasi: targetTool.loc,
+      },
+    ]);
+
+    setToolToPickId('');
+    setToolToPickQty(1);
+  };
+
+  const handleRemoveTool = (fId: string) => {
+    setSelectedTools((prev) => prev.filter((t) => t.facilityId !== fId));
+  };
+
+  const handleUpdateToolQty = (fId: string, delta: number) => {
+    setSelectedTools((prev) =>
+      prev.map((t) => {
+        if (t.facilityId !== fId) return t;
+        const next = t.jumlah + delta;
+        if (next < 1 || next > t.stokTersedia) return t;
+        return { ...t, jumlah: next };
+      })
+    );
+  };
 
   // Deteksi jenis tab awal (ruangan vs alat) dari URL param atau fasilitas preselect
   const preselectFacility = preselect ? facilities.find((f) => f.id === preselect) : null;
@@ -346,6 +410,11 @@ function AjukanReservasiContent() {
     if (newTab === activeTab) return;
     setActiveTab(newTab);
     setSelectedCategory('semua');
+    if (newTab === 'alat') {
+      setSelectedTools([]);
+      setToolToPickId('');
+      setToolToPickQty(1);
+    }
     const newPool = availableFacilities.filter((f) =>
       newTab === 'alat' ? isAlatFacility(f) : isRuanganFacility(f)
     );
@@ -482,6 +551,15 @@ function AjukanReservasiContent() {
       return;
     }
 
+    const toolPayload =
+      activeTab === 'ruangan' && selectedTools.length > 0
+        ? selectedTools.map((t) => ({
+            id: t.refId,
+            nama: t.nama,
+            jumlah: t.jumlah,
+          }))
+        : undefined;
+
     setIsSubmitting(true);
     let result: { ok: boolean; message?: string };
     try {
@@ -492,6 +570,7 @@ function AjukanReservasiContent() {
         end: endTime,
         tujuan: tujuan.trim(),
         peserta: pesertaNum || undefined,
+        alat: toolPayload,
       });
     } finally {
       setIsSubmitting(false);
@@ -517,11 +596,18 @@ function AjukanReservasiContent() {
 
     const bookedFacilityName = facility.name;
     const bookedTime = `${formatDateIndo(tanggal)}, ${startTime} - ${endTime} WIB`;
+    const toolSummaryText =
+      activeTab === 'ruangan' && selectedTools.length > 0
+        ? ` beserta alat pendukung: ${selectedTools.map((t) => `${t.nama} (${t.jumlah} unit)`).join(', ')}`
+        : '';
 
     setStartTime('');
     setEndTime('');
     setTujuan('');
     setPeserta('');
+    setSelectedTools([]);
+    setToolToPickId('');
+    setToolToPickQty(1);
 
     void fetchSlotAvailability(tanggal).then((map) => {
       if (map) setPublicUnavailable(map);
@@ -530,13 +616,13 @@ function AjukanReservasiContent() {
     setBannerNotice({
       type: 'success',
       title: 'Permohonan Reservasi Berhasil Terkirim',
-      message: `Reservasi berhasil diajukan untuk ${bookedFacilityName} (${bookedTime}). Permohonan Anda telah masuk ke antrean persetujuan petugas sarpras.`,
+      message: `Reservasi berhasil diajukan untuk ${bookedFacilityName}${toolSummaryText} (${bookedTime}). Permohonan Anda telah masuk ke antrean persetujuan petugas sarpras.`,
     });
 
     setModalConfig({
       isOpen: true,
       title: 'Permohonan Berhasil Diajukan',
-      subtitle: `Reservasi berhasil diajukan untuk ${bookedFacilityName} (${bookedTime}). Permohonan Anda telah masuk ke antrean persetujuan petugas sarpras.`,
+      subtitle: `Reservasi berhasil diajukan untuk ${bookedFacilityName}${toolSummaryText} (${bookedTime}). Permohonan Anda telah masuk ke antrean persetujuan petugas sarpras.`,
       confirmText: 'Selesai',
       confirmVariant: 'success',
       showInput: false,
@@ -598,6 +684,18 @@ function AjukanReservasiContent() {
         title: 'Tujuan Penggunaan Belum Diisi',
         subtitle: 'Silakan isi tujuan penggunaan fasilitas untuk keperluan evaluasi petugas sarpras.',
         confirmText: 'Lengkapi Data',
+        confirmVariant: 'warning',
+        showInput: false,
+        onConfirm: () => {},
+      });
+      return;
+    }
+    if (activeTab === 'ruangan' && selectedTools.some((t) => t.jumlah > t.stokTersedia)) {
+      setModalConfig({
+        isOpen: true,
+        title: 'Jumlah Alat Melebihi Stok',
+        subtitle: 'Salah satu alat pendukung melebihi stok yang tersedia. Silakan sesuaikan jumlah alat.',
+        confirmText: 'Sesuaikan Data',
         confirmVariant: 'warning',
         showInput: false,
         onConfirm: () => {},
@@ -1068,6 +1166,319 @@ function AjukanReservasiContent() {
               </span>
             )}
           </div>
+
+          {/* Menu Peralatan Pendukung Ruangan (Khusus Tab Reservasi Ruangan) */}
+          {activeTab === 'ruangan' && (
+            <div
+              className="fgroup full"
+              style={{
+                marginTop: 6,
+                padding: '20px 22px',
+                background: '#FAF8F5',
+                border: '1px solid #E5E0D8',
+                borderRadius: 8,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 10,
+                  marginBottom: 14,
+                }}
+              >
+                <div>
+                  <label
+                    style={{
+                      margin: 0,
+                      fontSize: 15,
+                      fontWeight: 700,
+                      color: '#181D24',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                    }}
+                  >
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ color: '#b59876' }}
+                    >
+                      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                    </svg>
+                    Peralatan Pendukung Ruangan{' '}
+                    <span style={{ fontSize: 13, fontWeight: 500, color: '#726C64' }}>
+                      (Opsional)
+                    </span>
+                  </label>
+                  <p style={{ margin: '4px 0 0 0', fontSize: 13.5, color: '#6B7280' }}>
+                    Sewa peralatan kampus sekaligus bersama ruangan ini (misal proyektor, mic wireless, sound system).
+                  </p>
+                </div>
+                {selectedTools.length > 0 && (
+                  <span
+                    style={{
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      background: '#15171a',
+                      color: '#b59876',
+                      border: '1px solid #b59876',
+                      padding: '4px 12px',
+                      borderRadius: 12,
+                    }}
+                  >
+                    {selectedTools.length} alat ditambahkan
+                  </span>
+                )}
+              </div>
+
+              {/* Toolbar Pilihan & Jumlah Alat */}
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 12,
+                  alignItems: 'center',
+                  background: '#FFFFFF',
+                  padding: '14px 16px',
+                  borderRadius: 6,
+                  border: '1px solid #D5D0C7',
+                  marginBottom: 14,
+                }}
+              >
+                <div style={{ flex: '1 1 260px', minWidth: 220 }}>
+                  <select
+                    value={toolToPickId}
+                    onChange={(e) => {
+                      const nextId = e.target.value;
+                      setToolToPickId(nextId);
+                      setToolToPickQty(1);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      fontSize: 14.5,
+                      border: '1px solid #D5D0C7',
+                      borderRadius: 4,
+                    }}
+                    aria-label="Pilih Alat Pendukung"
+                  >
+                    <option value="">-- Pilih Alat Pendukung Kampus --</option>
+                    {unselectedTools.map((t) => {
+                      const stock = t.tersedia ?? t.cap ?? 0;
+                      return (
+                        <option key={t.id} value={t.id} disabled={stock <= 0}>
+                          {t.name} ({t.loc}) - Stok: {stock} unit
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <label
+                    htmlFor="tool-qty-input"
+                    style={{ fontSize: 13.5, color: '#374151', margin: 0, fontWeight: 600 }}
+                  >
+                    Jumlah:
+                  </label>
+                  <input
+                    id="tool-qty-input"
+                    type="number"
+                    min={1}
+                    max={
+                      toolToPickId
+                        ? availableTools.find((t) => t.id === toolToPickId)?.tersedia ??
+                          availableTools.find((t) => t.id === toolToPickId)?.cap ?? 1
+                        : 1
+                    }
+                    value={toolToPickQty}
+                    onChange={(e) => setToolToPickQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                    disabled={!toolToPickId}
+                    style={{
+                      width: 75,
+                      padding: '9px 8px',
+                      textAlign: 'center',
+                      fontSize: 14.5,
+                      fontWeight: 600,
+                      border: '1px solid #D5D0C7',
+                      borderRadius: 4,
+                    }}
+                    aria-label="Jumlah unit alat"
+                  />
+                  <span style={{ fontSize: 13, color: '#6B7280', fontWeight: 500 }}>unit</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAddTool}
+                  disabled={!toolToPickId}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '10px 18px',
+                    background: toolToPickId ? '#15171a' : '#E5E7EB',
+                    color: toolToPickId ? '#b59876' : '#9CA3AF',
+                    border: '1px solid transparent',
+                    borderRadius: 4,
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: toolToPickId ? 'pointer' : 'not-allowed',
+                    minHeight: 44,
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <span style={{ fontSize: 16 }}>+</span> Tambah Alat
+                </button>
+              </div>
+
+              {/* Daftar Alat Pendukung Terpilih */}
+              {selectedTools.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {selectedTools.map((tool) => (
+                    <div
+                      key={tool.facilityId}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: 12,
+                        background: '#FFFFFF',
+                        border: '1px solid #E5E0D8',
+                        borderRadius: 6,
+                        padding: '12px 18px',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 15, color: '#181D24' }}>
+                          {tool.nama}
+                        </div>
+                        <div style={{ fontSize: 13, color: '#6B7280', marginTop: 3 }}>
+                          Lokasi: {tool.lokasi} • Maks. ketersediaan: {tool.stokTersedia} unit
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            border: '1px solid #D5D0C7',
+                            borderRadius: 4,
+                            background: '#FAF8F5',
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateToolQty(tool.facilityId, -1)}
+                            disabled={tool.jumlah <= 1}
+                            style={{
+                              width: 38,
+                              height: 38,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: 'transparent',
+                              border: 'none',
+                              cursor: tool.jumlah <= 1 ? 'not-allowed' : 'pointer',
+                              color: tool.jumlah <= 1 ? '#D1D5DB' : '#181D24',
+                              fontWeight: 700,
+                              fontSize: 16,
+                            }}
+                            aria-label="Kurangi jumlah alat"
+                          >
+                            -
+                          </button>
+                          <span
+                            style={{
+                              minWidth: 36,
+                              textAlign: 'center',
+                              fontWeight: 700,
+                              fontSize: 14.5,
+                              color: '#181D24',
+                            }}
+                          >
+                            {tool.jumlah}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateToolQty(tool.facilityId, 1)}
+                            disabled={tool.jumlah >= tool.stokTersedia}
+                            style={{
+                              width: 38,
+                              height: 38,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: 'transparent',
+                              border: 'none',
+                              cursor: tool.jumlah >= tool.stokTersedia ? 'not-allowed' : 'pointer',
+                              color: tool.jumlah >= tool.stokTersedia ? '#D1D5DB' : '#181D24',
+                              fontWeight: 700,
+                              fontSize: 16,
+                            }}
+                            aria-label="Tambah jumlah alat"
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        <span style={{ fontSize: 13.5, color: '#4B5563', fontWeight: 600 }}>
+                          unit
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTool(tool.facilityId)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            padding: '7px 14px',
+                            borderRadius: 4,
+                            border: '1px solid #FECACA',
+                            background: '#FEF2F2',
+                            color: '#DC2626',
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            minHeight: 38,
+                          }}
+                          aria-label={`Hapus ${tool.nama} dari daftar`}
+                        >
+                          ✕ Hapus
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    padding: '18px',
+                    textAlign: 'center',
+                    background: '#FFFFFF',
+                    borderRadius: 6,
+                    border: '1px dashed #D5D0C7',
+                    color: '#6B7280',
+                    fontSize: 13.5,
+                  }}
+                >
+                  Belum ada alat pendukung yang dipilih. Gunakan menu di atas jika ingin meminjam alat bersama ruangan.
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Action Button */}

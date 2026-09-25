@@ -683,6 +683,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (!facility) {
           return { ok: false, message: 'Fasilitas tidak ditemukan.' };
         }
+        const mappedAlat =
+          input.alat && input.alat.length > 0
+            ? input.alat.map((item) => ({
+                alat_id: item.id,
+                jumlah: item.jumlah,
+              }))
+            : undefined;
+
         const conv = toCreateReservasiBody(
           facility,
           input.tanggal,
@@ -690,6 +698,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           input.end,
           input.tujuan,
           input.peserta,
+          mappedAlat,
         );
         if (conv.kind === 'unsupported') {
           return { ok: false, message: conv.reason };
