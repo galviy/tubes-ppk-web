@@ -33,10 +33,11 @@ func Show_user(w http.ResponseWriter, r *http.Request) {
 
 	for _, user := range users {
 		response = append(response, map[string]any{
-			"id":       user.ID,
-			"username": user.Username,
-			"email":    user.Email,
-			"role":     user.Role,
+			"id":          user.ID,
+			"username":    user.Username,
+			"email":       user.Email,
+			"role":        user.Role,
+			"is_verified": user.IsVerified,
 		})
 	}
 

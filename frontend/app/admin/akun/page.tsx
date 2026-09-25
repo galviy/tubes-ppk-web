@@ -144,9 +144,9 @@ export default function KelolaAkunPage() {
     pendingAccounts,
     registeredAccounts,
     registerAccountDirectly,
+    toggleAccountStatus,
     verifyPendingAccount,
     deleteAccount,
-    toggleAccountStatus,
   } = useAppData();
 
   const [tab, setTab] = useState<'daftar' | 'verifikasi'>('daftar');
@@ -993,7 +993,9 @@ export default function KelolaAkunPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredAccounts.map((acc) => (
+                  filteredAccounts.map((acc) => {
+                    const aktif = acc.isVerified !== false;
+                    return (
                     <tr key={acc.id}>
                       <td style={{ fontFamily: 'monospace', fontSize: 13 }}>{acc.id}</td>
                       <td style={{ fontWeight: 600, color: '#181D24' }}>@{acc.username}</td>
@@ -1004,27 +1006,27 @@ export default function KelolaAkunPage() {
                         </span>
                       </td>
                       <td style={{ whiteSpace: 'nowrap' }}>
-                        <span className={`pill ${acc.status === 'nonaktif' ? 'danger' : 'avail'}`} style={{ fontSize: 11 }}>
-                          {acc.status === 'nonaktif' ? 'Nonaktif' : 'Aktif'}
+                        <span className={`pill ${aktif ? 'avail' : 'danger'}`} style={{ fontSize: 11 }}>
+                          {aktif ? 'Aktif' : 'Nonaktif'}
                         </span>
                       </td>
                       <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
                         <div style={{ display: 'inline-flex', gap: 6 }}>
                           <button
                             type="button"
-                            onClick={() => handleToggleStatus(acc.id, acc.username, acc.status)}
+                            onClick={() => handleToggleStatus(acc.id, acc.username, aktif ? 'aktif' : 'nonaktif')}
                             style={{
                               padding: '5px 10px',
                               fontSize: 11,
                               fontWeight: 600,
                               borderRadius: 4,
                               cursor: 'pointer',
-                              border: acc.status === 'nonaktif' ? '1px solid #BBF7D0' : '1px solid #FECACA',
-                              background: acc.status === 'nonaktif' ? '#F0FDF4' : '#FEF2F2',
-                              color: acc.status === 'nonaktif' ? '#166534' : '#DC2626',
+                              border: aktif ? '1px solid #FECACA' : '1px solid #86EFAC',
+                              background: aktif ? '#FEF2F2' : '#F0FDF4',
+                              color: aktif ? '#DC2626' : '#166534',
                             }}
                           >
-                            {acc.status === 'nonaktif' ? 'Aktifkan' : 'Nonaktifkan'}
+                            {aktif ? 'Nonaktifkan' : 'Aktifkan'}
                           </button>
                           <button
                             type="button"
@@ -1045,7 +1047,8 @@ export default function KelolaAkunPage() {
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -1128,19 +1131,20 @@ export default function KelolaAkunPage() {
                   </td>
                   <td style={{ whiteSpace: 'nowrap', textAlign: 'left' }}>
                     {a.status === 'menunggu' ? (
-                      // Setujui wired ke backend; Tolak no-op (tak ada endpoint).
+                      // Setujui + Tolak wired ke backend (tolak_mhs/dosen/staff).
                       <select
                         className="table-select-action"
                         value="menunggu"
                         onChange={(e) => {
                           const val = e.target.value;
                           e.target.value = 'menunggu';
-                          if (val === 'setuju') {
-                            void verifyPendingAccount(a.id, true).then((res) => {
+                          if (val === 'setuju' || val === 'tolak') {
+                            const approve = val === 'setuju';
+                            void verifyPendingAccount(a.id, approve).then((res) => {
                               if (!res.ok) {
                                 setModalConfig({
                                   isOpen: true,
-                                  title: 'Verifikasi Gagal',
+                                  title: approve ? 'Verifikasi Gagal' : 'Penolakan Gagal',
                                   subtitle:
                                     res.message || 'Status verifikasi tidak dapat diproses.',
                                   confirmText: 'Mengerti',
