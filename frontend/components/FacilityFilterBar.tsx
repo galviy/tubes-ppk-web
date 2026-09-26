@@ -54,6 +54,16 @@ export default function FacilityFilterBar({ filters, onChange, tabType = 'semua'
       </div>
 
       <div className="fgroup">
+        <label>Cari Nama / Kata Kunci</label>
+        <input
+          type="text"
+          placeholder={tabType === 'ruangan' ? 'Cari nama ruangan...' : tabType === 'alat' ? 'Cari nama alat...' : 'Cari nama fasilitas...'}
+          value={filters.search || ''}
+          onChange={(e) => onChange({ ...filters, search: e.target.value })}
+        />
+      </div>
+
+      <div className="fgroup">
         <label>{tabType === 'alat' ? 'Kategori Alat' : tabType === 'ruangan' ? 'Kategori Ruangan' : 'Tipe fasilitas'}</label>
         <select
           value={filters.category}

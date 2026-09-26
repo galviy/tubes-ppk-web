@@ -106,6 +106,21 @@ export default function RiwayatReservasiPage() {
                   >
                     {isAlat ? 'Alat' : 'Ruangan'}
                   </span>
+                  {!isAlat && r.alat && r.alat.length > 0 && (
+                    <span
+                      style={{
+                        fontSize: 11,
+                        padding: '2px 7px',
+                        borderRadius: 4,
+                        fontWeight: 700,
+                        background: '#15171a',
+                        color: '#b59876',
+                        border: '1px solid #b59876',
+                      }}
+                    >
+                      + {r.alat.length} Alat
+                    </span>
+                  )}
                   <span className={`pill ${cls}`}>{label}</span>
                 </div>
                 <button className="btn ghost" onClick={() => setDetailFor(r)}>
@@ -133,6 +148,26 @@ export default function RiwayatReservasiPage() {
                     {facility?.loc || '-'}
                   </span>
                 </div>
+                {!isAlat && r.alat && r.alat.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      padding: '6px 10px',
+                      background: '#FAF8F5',
+                      border: '1px solid #E5E0D8',
+                      borderRadius: 4,
+                      fontSize: 13,
+                      color: '#181D24',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <span style={{ fontWeight: 700, color: '#937654' }}>Alat Pendukung:</span>
+                    <span>{r.alat.map((a) => `${a.nama} (${a.jumlah} unit)`).join(', ')}</span>
+                  </div>
+                )}
                 <div style={{ marginTop: 12, color: 'var(--ink-body)', fontSize: 14 }}>
                   Tujuan: {r.tujuan}
                 </div>

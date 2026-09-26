@@ -91,6 +91,14 @@ export default function ReservationDetailModal({
             <b>{reservation.peserta ? `${reservation.peserta} ${isAlatReservation(reservation, facility) ? 'unit' : 'orang'}` : '-'}</b>
           </div>
           <div><span>Tujuan</span><b>{reservation.tujuan}</b></div>
+          {reservation.alat && reservation.alat.length > 0 && (
+            <div>
+              <span>Alat Pendukung</span>
+              <b>
+                {reservation.alat.map((a) => `${a.nama} (${a.jumlah} unit)`).join(', ')}
+              </b>
+            </div>
+          )}
           <div><span>Status</span><b>{label}</b></div>
           <div><span>Tanggal pengajuan</span><b>{formatDateTime(reservation.createdAt)}</b></div>
           {reservation.catatanBatal && (

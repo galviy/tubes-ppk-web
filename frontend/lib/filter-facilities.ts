@@ -10,6 +10,7 @@ export interface FacilityFilters {
   lokasi: string;
   kapasitas: string;
   status: string;
+  search?: string;
 }
 
 export const DEFAULT_FILTERS: FacilityFilters = {
@@ -17,6 +18,7 @@ export const DEFAULT_FILTERS: FacilityFilters = {
   lokasi: 'Semua Gedung',
   kapasitas: 'Semua Kapasitas / Jumlah',
   status: 'Semua Status',
+  search: '',
 };
 
 function capacityBand(cap: number): '<40' | '40-100' | '>100' {
@@ -65,6 +67,15 @@ export function filterFacilities(list: Facility[], filters: FacilityFilters): Fa
     if (filters.status === 'Tersedia' && f.status !== 'avail') return false;
     if (filters.status === 'Perbaikan' && f.status !== 'repair') return false;
     if (filters.status === 'Nonaktif' && f.status !== 'nonaktif') return false;
+
+    if (filters.search && filters.search.trim()) {
+      const q = filters.search.toLowerCase().trim();
+      const matchName = f.name.toLowerCase().includes(q);
+      const matchLoc = f.loc.toLowerCase().includes(q);
+      const matchType = f.type.toLowerCase().includes(q);
+      const matchDesc = f.desc.toLowerCase().includes(q);
+      if (!matchName && !matchLoc && !matchType && !matchDesc) return false;
+    }
 
     return true;
   });

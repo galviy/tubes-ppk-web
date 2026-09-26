@@ -282,37 +282,78 @@ function AdminReservasiContent() {
                   <tr key={r.id}>
                     {/* TIPE BADGE */}
                     <td style={{ whiteSpace: 'nowrap' }}>
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          fontSize: 12,
-                          fontWeight: 600,
-                          padding: '3px 8px',
-                          borderRadius: 4,
-                          background: isAlat ? '#FEF3C7' : '#EFF6FF',
-                          color: isAlat ? '#92400E' : '#1E40AF',
-                          border: isAlat ? '1px solid #FDE68A' : '1px solid #DBEAFE',
-                        }}
-                      >
-                        {isAlat ? 'Alat' : 'Ruangan'}
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            padding: '3px 8px',
+                            borderRadius: 4,
+                            background: isAlat ? '#FEF3C7' : '#EFF6FF',
+                            color: isAlat ? '#92400E' : '#1E40AF',
+                            border: isAlat ? '1px solid #FDE68A' : '1px solid #DBEAFE',
+                          }}
+                        >
+                          {isAlat ? 'Alat' : 'Ruangan'}
+                        </span>
+                        {!isAlat && r.alat && r.alat.length > 0 && (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              fontWeight: 700,
+                              background: '#15171a',
+                              color: '#b59876',
+                              border: '1px solid #b59876',
+                            }}
+                          >
+                            + {r.alat.length} Alat
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     {/* FASILITAS */}
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <div style={{ fontWeight: 600, color: '#181D24' }}>
-                        {fac?.name || `Fasilitas #${r.facilityId}`}
+                        {fac?.name || r.ruanganNama || `Fasilitas #${r.facilityId}`}
                       </div>
                       <div style={{ fontSize: 13.5, color: '#6B7280' }}>
-                        {fac?.type} • {fac?.loc}
+                        {fac?.type || '-'} • {fac?.loc || '-'}
                         {fac?.status === 'repair' && (
                           <span style={{ color: '#d97706', fontWeight: 600, marginLeft: 6 }}>
                             [Perbaikan]
                           </span>
                         )}
                       </div>
+                      {!isAlat && r.alat && r.alat.length > 0 && (
+                        <div
+                          style={{
+                            marginTop: 5,
+                            padding: '4px 8px',
+                            background: '#FAF8F5',
+                            border: '1px solid #D5D0C7',
+                            borderRadius: 4,
+                            fontSize: 12,
+                            color: '#181D24',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            flexWrap: 'wrap',
+                            maxWidth: 320,
+                            whiteSpace: 'normal',
+                          }}
+                        >
+                          <span style={{ fontWeight: 700, color: '#937654' }}>Alat dipinjam:</span>
+                          <span style={{ fontWeight: 600 }}>
+                            {r.alat.map((a) => `${a.nama} (${a.jumlah} unit)`).join(', ')}
+                          </span>
+                        </div>
+                      )}
                     </td>
 
                     {/* PEMOHON */}
@@ -321,6 +362,11 @@ function AdminReservasiContent() {
                       {r.peserta && (
                         <div style={{ fontSize: 13, color: '#6B7280' }}>
                           {isAlat ? `Jumlah: ${r.peserta} unit` : `Estimasi: ${r.peserta} orang`}
+                        </div>
+                      )}
+                      {!isAlat && r.alat && r.alat.length > 0 && (
+                        <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 2 }}>
+                          ({r.alat.reduce((sum, a) => sum + a.jumlah, 0)} unit alat pendukung)
                         </div>
                       )}
                     </td>

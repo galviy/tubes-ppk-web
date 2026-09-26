@@ -116,7 +116,7 @@ Login hanya menerima akun backend terverifikasi (`POST /auth/login` + `GET /user
   - *Dashboard Petugas & Admin*: Menampilkan slot pending secara visual dan antrean verifikasi untuk segera disetujui atau ditolak.
   - *Slot Disetujui (ACC)*: Terkunci otomatis menjadi **Terpakai** (merah) untuk seluruh pengguna dan publik.
 
-### 4. Batas Waktu Pengajuan Reservasi Paling Cepat H+2
+### 4. Batas Waktu Pengajuan Reservasi Paling Lambat H-2
 - Sesuai kebijakan operasional sarpras kampus Undip, permohonan reservasi wajib diajukan minimal 2 hari kalender sebelum tanggal kegiatan (contoh: jika hari ini tanggal 25, pemesanan paling awal yang diizinkan adalah untuk tanggal 27).
 - Sistem memvalidasi tanggal secara otomatis baik melalui pemilih tanggal (*date picker*), banner panduan, maupun dialog modal peringatan.
 

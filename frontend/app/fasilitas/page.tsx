@@ -31,6 +31,7 @@ function FasilitasContent() {
     lokasi: searchParams.get('lokasi') || DEFAULT_FILTERS.lokasi,
     kapasitas: searchParams.get('kapasitas') || DEFAULT_FILTERS.kapasitas,
     status: searchParams.get('status') || DEFAULT_FILTERS.status,
+    search: searchParams.get('q') || searchParams.get('search') || '',
   });
   const [detailId, setDetailId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -51,10 +52,10 @@ function FasilitasContent() {
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [filters.category, filters.lokasi, filters.kapasitas, filters.status, tabType]);
+  }, [filters.category, filters.lokasi, filters.kapasitas, filters.status, filters.search, tabType]);
 
   return (
-    <div className="ochoco-page-wrapper">
+    <div className="ochoco-page-wrapper" suppressHydrationWarning>
       <Navbar variant="dashboard" />
 
       {/* Top Breadcrumb & Back Navigation Bar */}

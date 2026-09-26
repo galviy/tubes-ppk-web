@@ -10,9 +10,10 @@ import (
 )
 
 func ConnectDB() {
-	err := godotenv.Load("../.env")
-	if err != nil {
-		log.Fatal(err)
+	if err := godotenv.Load("../.env"); err != nil {
+		if err2 := godotenv.Load(".env"); err2 != nil {
+			log.Println("Info: file .env tidak ditemukan di ../.env atau .env, membaca environment variables sistem")
+		}
 	}
 
 	dbUser := os.Getenv("DB_USERNAME")
@@ -23,6 +24,7 @@ func ConnectDB() {
 
 	dsn := dbUser + ":" + password + "@tcp(" + dbIP + ":" + dbPort + ")/" + dbName + "?parseTime=true"
 
+	var err error
 	DB, err = sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatal(err)

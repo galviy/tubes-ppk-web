@@ -24,6 +24,7 @@ import {
   backendListReservasiRuangan,
   backendListSemuaLaporan,
   backendLogin,
+  backendLogout,
   backendMe,
   backendPetugasCancelReservasi,
   backendPetugasUpdateReservasi,
@@ -126,7 +127,7 @@ interface AppDataValue {
 
   // Auth
   login: (email: string, password: string) => Promise<AuthResult>;
-  logout: () => void;
+  logout: () => Promise<void>;
   submitSelfRegistration: (
     namaOrInput:
       | string
@@ -600,9 +601,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           };
         }
       },
-      // Backend tidak punya POST /auth/logout (frozen): logout hanya
-      // menghapus user lokal. Cookie server kedaluwarsa sendiri (1 jam).
-      logout: () => setCurrentUser(null),
+      // Backend POST /auth/logout menghapus session di server dan membersihkan cookie session_id.
+      logout: async () => {
+        try {
+          await backendLogout();
+        } catch (e) {
+          console.error('[logout] error:', e);
+        }
+        setCurrentUser(null);
+      },
       submitSelfRegistration: async (namaOrInput, email, peran, nim, phone, fakultas) => {
         let input: SelfRegisterInput;
         if (typeof namaOrInput === 'object') {
@@ -683,6 +690,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (!facility) {
           return { ok: false, message: 'Fasilitas tidak ditemukan.' };
         }
+        const mappedAlat =
+          input.alat && input.alat.length > 0
+            ? input.alat.map((item) => ({
+                alat_id: item.id,
+                jumlah: item.jumlah,
+              }))
+            : undefined;
+
         const conv = toCreateReservasiBody(
           facility,
           input.tanggal,
@@ -690,6 +705,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           input.end,
           input.tujuan,
           input.peserta,
+          mappedAlat,
         );
         if (conv.kind === 'unsupported') {
           return { ok: false, message: conv.reason };

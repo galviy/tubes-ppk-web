@@ -21,7 +21,14 @@ export default function StatusLaporanPage() {
     refreshReportsMine();
   }, [refreshReportsMine]);
 
-  const mine = reports.filter((r) => r.pelapor === currentUser?.nama);
+  const currentIdent = currentUser?.nama || currentUser?.email || '';
+  const mine = reports.filter(
+    (r) =>
+      !r.pelapor ||
+      r.pelapor === currentUser?.nama ||
+      r.pelapor === currentUser?.email ||
+      (currentIdent && r.pelapor.toLowerCase() === currentIdent.toLowerCase()),
+  );
   const [detailFor, setDetailFor] = useState<Report | null>(null);
 
   return (

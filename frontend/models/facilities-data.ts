@@ -74,11 +74,13 @@ export function isRuanganFacility(facility?: {
 }
 
 export function isAlatReservation(
-  reservation: { facilityId?: string; alat?: unknown[] },
+  reservation: { facilityId?: string; alat?: unknown[]; ruanganId?: number },
   facility?: { tipe?: string; id?: string; type?: string }
 ): boolean {
+  if (reservation.ruanganId && reservation.ruanganId > 0) return false;
+  if (reservation.facilityId?.startsWith('ruangan-') || reservation.facilityId?.startsWith('r-')) return false;
+  if (facility && !isAlatFacility(facility)) return false;
   if (facility && isAlatFacility(facility)) return true;
-  if (reservation.facilityId?.startsWith('alat-')) return true;
-  if (Array.isArray(reservation.alat) && reservation.alat.length > 0) return true;
+  if (reservation.facilityId?.startsWith('alat-') || reservation.facilityId?.startsWith('a-')) return true;
   return false;
 }

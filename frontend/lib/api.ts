@@ -103,6 +103,12 @@ export function backendLogin(email: string, password: string) {
   });
 }
 
+export function backendLogout() {
+  return apiFetch<never>('/auth/logout', {
+    method: 'POST',
+  });
+}
+
 export interface RegisterMhsInput {
   username: string;
   email: string;
@@ -236,13 +242,28 @@ export interface CreateReservasiRuanganInput {
   waktu_peminjaman_selesai: string; // "YYYY-MM-DD HH:MM:SS"
   alasan_peminjaman: string;
   jumlah_peserta: number;
+  alat?: Array<{ alat_id: number; jumlah: number }>;
 }
 
 export function backendCreateReservasiRuangan(input: CreateReservasiRuanganInput) {
+  const p = new URLSearchParams();
+  p.set('ruangan_reservasi', String(input.ruangan_reservasi));
+  p.set('waktu_peminjaman', input.waktu_peminjaman);
+  p.set('waktu_peminjaman_selesai', input.waktu_peminjaman_selesai);
+  p.set('alasan_peminjaman', input.alasan_peminjaman);
+  p.set('jumlah_peserta', String(input.jumlah_peserta));
+
+  if (input.alat && input.alat.length > 0) {
+    for (const item of input.alat) {
+      p.append('alat_reservasi[]', String(item.alat_id));
+      p.append('jumlah_peminjaman[]', String(item.jumlah));
+    }
+  }
+
   return apiFetch<never>('/reservasi/create_reservasi/ruangan', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: formBody({ ...input }),
+    body: p,
   });
 }
 
@@ -401,6 +422,7 @@ export function toCreateReservasiBody(
   end: string,
   tujuan: string,
   peserta?: number,
+  alat?: Array<{ alat_id: number; jumlah: number }>,
 ): CreateReservasiBody {
   if (!tanggal || !start || !end || end <= start) {
     return { kind: 'unsupported', reason: 'Rentang waktu tidak valid.' };
@@ -442,6 +464,7 @@ export function toCreateReservasiBody(
       waktu_peminjaman_selesai,
       alasan_peminjaman: alasan,
       jumlah_peserta: peserta && peserta >= 1 ? Math.floor(peserta) : 1,
+      alat: alat && alat.length > 0 ? alat : undefined,
     },
   };
 }
