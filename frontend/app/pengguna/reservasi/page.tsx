@@ -26,6 +26,365 @@ const SLOTS = generateTimeSlots();
 const START_OPTIONS = SLOTS.map((s) => s.start); // '07:00' to '19:30'
 const END_OPTIONS = SLOTS.map((s) => s.end);     // '07:30' to '20:00' (includes 20:00)
 
+const MONTH_NAMES_ID = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
+
+const WEEKDAY_NAMES_ID = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
+// Custom date picker that ALWAYS opens downwards and matches the public schedule calendar style
+function DownwardDatePicker({
+  label,
+  value,
+  minDate,
+  onChange,
+  onInvalidDate,
+}: {
+  label: string;
+  value: string;
+  minDate?: string;
+  onChange: (val: string) => void;
+  onInvalidDate?: (val: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const parsed = useMemo(() => {
+    const parts = (value || getTodayDateString()).split('-').map(Number);
+    if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+      return { y: parts[0], m: parts[1] - 1, d: parts[2] };
+    }
+    const now = new Date();
+    return { y: now.getFullYear(), m: now.getMonth(), d: now.getDate() };
+  }, [value]);
+
+  const [viewYear, setViewYear] = useState(parsed.y);
+  const [viewMonth, setViewMonth] = useState(parsed.m);
+
+  useEffect(() => {
+    setViewYear(parsed.y);
+    setViewMonth(parsed.m);
+  }, [parsed.y, parsed.m]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handlePrevMonth = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear((y) => y - 1);
+    } else {
+      setViewMonth((m) => m - 1);
+    }
+  };
+
+  const handleNextMonth = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear((y) => y + 1);
+    } else {
+      setViewMonth((m) => m + 1);
+    }
+  };
+
+  const calendarDays = useMemo(() => {
+    const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+    const daysInCurrentMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const daysInPrevMonth = new Date(viewYear, viewMonth, 0).getDate();
+
+    const days: { dateStr: string; dayNum: number; isCurrentMonth: boolean; isDisabled: boolean }[] = [];
+
+    for (let i = firstDay - 1; i >= 0; i--) {
+      const d = daysInPrevMonth - i;
+      const prevM = viewMonth === 0 ? 11 : viewMonth - 1;
+      const prevY = viewMonth === 0 ? viewYear - 1 : viewYear;
+      const dateStr = `${prevY}-${String(prevM + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      days.push({
+        dateStr,
+        dayNum: d,
+        isCurrentMonth: false,
+        isDisabled: minDate ? dateStr < minDate : false,
+      });
+    }
+
+    for (let d = 1; d <= daysInCurrentMonth; d++) {
+      const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      days.push({
+        dateStr,
+        dayNum: d,
+        isCurrentMonth: true,
+        isDisabled: minDate ? dateStr < minDate : false,
+      });
+    }
+
+    const totalSlots = Math.ceil(days.length / 7) * 7;
+    const nextPadding = totalSlots - days.length;
+    for (let d = 1; d <= nextPadding; d++) {
+      const nextM = viewMonth === 11 ? 0 : viewMonth + 1;
+      const nextY = viewMonth === 11 ? viewYear + 1 : viewYear;
+      const dateStr = `${nextY}-${String(nextM + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      days.push({
+        dateStr,
+        dayNum: d,
+        isCurrentMonth: false,
+        isDisabled: minDate ? dateStr < minDate : false,
+      });
+    }
+
+    return days;
+  }, [viewYear, viewMonth, minDate]);
+
+  const todayStr = getTodayDateString();
+
+  const displayLabel = useMemo(() => {
+    if (!value) return 'Pilih Tanggal';
+    const parts = value.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return value;
+  }, [value]);
+
+  return (
+    <div className="fgroup" ref={dropdownRef} style={{ position: 'relative' }}>
+      <label>{label}</label>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        style={{
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '10px 14px',
+          borderRadius: 6,
+          border: open ? '1.5px solid #b59876' : '1px solid #D5D0C7',
+          background: '#FFFFFF',
+          color: value ? '#181D24' : '#6B7280',
+          fontSize: 14,
+          fontFamily: 'inherit',
+          cursor: 'pointer',
+          textAlign: 'left',
+          outline: 'none',
+          boxShadow: open ? '0 0 0 3px rgba(181, 152, 118, 0.15)' : 'none',
+          transition: 'all 0.15s ease',
+        }}
+        aria-label="Pilih tanggal peminjaman"
+        aria-expanded={open}
+      >
+        <span style={{ fontWeight: 400 }}>
+          {displayLabel}
+        </span>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#b59876"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ flexShrink: 0 }}
+        >
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            zIndex: 9999,
+            background: '#FFFFFF',
+            border: '1px solid #D5D0C7',
+            borderRadius: 8,
+            boxShadow: '0 12px 32px rgba(24, 29, 36, 0.18)',
+            padding: 14,
+            width: 290,
+            userSelect: 'none',
+            animation: 'fadeIn 0.15s ease-out',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 12,
+              paddingBottom: 8,
+              borderBottom: '1px solid #E5E0D8',
+            }}
+          >
+            <button
+              type="button"
+              onClick={handlePrevMonth}
+              style={{
+                background: 'none',
+                border: '1px solid #E5E0D8',
+                borderRadius: 4,
+                width: 28,
+                height: 28,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#4B5563',
+              }}
+              title="Bulan Sebelumnya"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </button>
+
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: '#181D24' }}>
+              {MONTH_NAMES_ID[viewMonth]} {viewYear}
+            </span>
+
+            <button
+              type="button"
+              onClick={handleNextMonth}
+              style={{
+                background: 'none',
+                border: '1px solid #E5E0D8',
+                borderRadius: 4,
+                width: 28,
+                height: 28,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#4B5563',
+              }}
+              title="Bulan Selanjutnya"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(7, 1fr)',
+              textAlign: 'center',
+              marginBottom: 6,
+              fontSize: 11.5,
+              fontWeight: 700,
+              color: '#6B7280',
+            }}
+          >
+            {WEEKDAY_NAMES_ID.map((w, idx) => (
+              <span key={w} style={{ color: idx === 0 ? '#DC2626' : undefined }}>
+                {w}
+              </span>
+            ))}
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(7, 1fr)',
+              gap: 2,
+            }}
+          >
+            {calendarDays.map((d) => {
+              const isSelected = d.dateStr === value;
+              const isToday = d.dateStr === todayStr;
+
+              return (
+                <button
+                  key={d.dateStr}
+                  type="button"
+                  disabled={d.isDisabled}
+                  onClick={() => {
+                    if (d.isDisabled) {
+                      onInvalidDate?.(d.dateStr);
+                      return;
+                    }
+                    onChange(d.dateStr);
+                    setOpen(false);
+                  }}
+                  style={{
+                    background: isSelected ? '#15171A' : isToday ? '#FAF8F5' : 'transparent',
+                    color: isSelected
+                      ? '#b59876'
+                      : d.isDisabled
+                      ? '#D1D5DB'
+                      : d.isCurrentMonth
+                      ? '#181D24'
+                      : '#9CA3AF',
+                    border: isToday && !isSelected ? '1px solid #b59876' : '1px solid transparent',
+                    borderRadius: 4,
+                    height: 32,
+                    fontSize: 12.5,
+                    fontWeight: isSelected || isToday ? 700 : 500,
+                    cursor: d.isDisabled ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.1s ease',
+                    opacity: d.isDisabled ? 0.45 : 1,
+                  }}
+                  title={d.isDisabled ? `${d.dateStr} (Pemesanan minimal H-2)` : d.dateStr}
+                >
+                  {d.dayNum}
+                </button>
+              );
+            })}
+          </div>
+
+          <div
+            style={{
+              marginTop: 10,
+              paddingTop: 8,
+              borderTop: '1px solid #E5E0D8',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span style={{ fontSize: 11.5, color: '#6B7280' }}>
+              Min. {minDate ? `${minDate.split('-')[2]}/${minDate.split('-')[1]}/${minDate.split('-')[0]}` : 'H-2'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#b59876',
+                fontSize: 12.5,
+                fontWeight: 700,
+                cursor: 'pointer',
+                padding: '4px 6px',
+              }}
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Custom dropdown that ALWAYS opens downwards with smooth scroll
 function DownwardTimeSelect({
   label,
@@ -955,30 +1314,24 @@ function AjukanReservasiContent() {
             </select>
           </div>
 
-          {/* Date Selection */}
-          <div className="fgroup">
-            <label>Tanggal Peminjaman</label>
-            <input
-              type="date"
-              min={earliestDate}
-              value={tanggal}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val && !isReservationDeadlineValid(val)) {
-                  setBannerNotice({
-                    type: 'error',
-                    title: 'Tanggal Terlalu Dekat',
-                    message: `Pengajuan reservasi paling lambat H-2. Tanggal ${formatDateIndo(val)} belum memenuhi syarat. Tanggal paling awal yang tersedia adalah ${formatDateIndo(earliestDate)}.`,
-                  });
-                  setTanggal(earliestDate);
-                } else {
-                  setTanggal(val);
-                }
-                setStartTime('');
-                setEndTime('');
-              }}
-            />
-          </div>
+          {/* Date Selection (Always opens downward with full calendar size) */}
+          <DownwardDatePicker
+            label="Tanggal Peminjaman"
+            value={tanggal}
+            minDate={earliestDate}
+            onChange={(val) => {
+              setTanggal(val);
+              setStartTime('');
+              setEndTime('');
+            }}
+            onInvalidDate={(val) => {
+              setBannerNotice({
+                type: 'error',
+                title: 'Tanggal Terlalu Dekat',
+                message: `Pengajuan reservasi paling lambat H-2. Tanggal ${formatDateIndo(val)} belum memenuhi syarat. Tanggal paling awal yang tersedia adalah ${formatDateIndo(earliestDate)}.`,
+              });
+            }}
+          />
 
           {/* Start Time Dropdown (Always opens downward) */}
           <DownwardTimeSelect

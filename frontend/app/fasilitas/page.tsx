@@ -55,7 +55,7 @@ function FasilitasContent() {
   }, [filters.category, filters.lokasi, filters.kapasitas, filters.status, filters.search, tabType]);
 
   return (
-    <div className="ochoco-page-wrapper">
+    <div className="ochoco-page-wrapper" suppressHydrationWarning>
       <Navbar variant="dashboard" />
 
       {/* Top Breadcrumb & Back Navigation Bar */}
