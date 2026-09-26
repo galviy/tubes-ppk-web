@@ -60,15 +60,6 @@ export default function FacilityFilterBar({ filters, onChange, tabType = 'semua'
           placeholder={tabType === 'ruangan' ? 'Cari nama ruangan...' : tabType === 'alat' ? 'Cari nama alat...' : 'Cari nama fasilitas...'}
           value={filters.search || ''}
           onChange={(e) => onChange({ ...filters, search: e.target.value })}
-          style={{
-            width: '100%',
-            padding: '9px 12px',
-            borderRadius: 6,
-            border: '1px solid #D5D0C7',
-            fontSize: 13.5,
-            fontFamily: 'inherit',
-            boxSizing: 'border-box',
-          }}
         />
       </div>
 
