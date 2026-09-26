@@ -56,12 +56,12 @@ export function formatDateIndo(dateStr: string | null | undefined): string {
 }
 
 // Selaras aturan backend (services.reservasi_service.go: hariMinimalPengajuan):
-// reservasi paling cepat H+2, yaitu minimal 2 hari sebelum tanggal kegiatan.
+// reservasi paling lambat H-2, yaitu minimal 2 hari sebelum tanggal kegiatan.
 export const HARI_MINIMAL_PENGAJUAN = 2;
 
 /**
  * Cek apakah reservasi untuk tanggal target memenuhi batas waktu:
- * paling cepat H+2 (hari ini dan besok belum bisa dipesan).
+ * paling lambat H-2 (hari ini dan besok belum bisa dipesan).
  * Contoh: hari ini tanggal 25, tanggal paling awal yang bisa dipesan adalah 27.
  */
 export function isReservationDeadlineValid(targetDateStr: string, now: Date = new Date()): boolean {
@@ -109,6 +109,68 @@ export function matchesFacility(resFacilityId?: string, targetFacilityId?: strin
   return false;
 }
 
+/**
+ * Cek apakah reservasi r berdampak pada targetFacilityId.
+ * Mendukung:
+ * 1. Kecocokan langsung fasilitas primer (ruangan vs ruangan, atau alat vs alat).
+ * 2. Reservasi ruangan yang menyertakan alat pendukung (r.alat) terhadap slot alat tersebut.
+ */
+export function reservationAffectsFacility(r: Reservation, targetFacilityId?: string): boolean {
+  if (!targetFacilityId) return false;
+  if (matchesFacility(r.facilityId, targetFacilityId)) return true;
+
+  // Jika target fasilitas adalah alat, periksa apakah reservasi ruangan menyertakan alat ini
+  const isTargetRuangan =
+    targetFacilityId.startsWith('ruangan-') || targetFacilityId.startsWith('r-');
+  if (!isTargetRuangan) {
+    const targetNumericId = parseInt(targetFacilityId.replace(/^(alat|a)-/i, ''), 10);
+    if (!Number.isNaN(targetNumericId)) {
+      if (Array.isArray(r.alat) && r.alat.length > 0) {
+        return r.alat.some((item) => item.id === targetNumericId);
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Cek apakah dua reservasi memperebutkan fasilitas atau alat yang sama.
+ */
+export function reservationsShareFacility(r1: Reservation, r2: Reservation): boolean {
+  if (matchesFacility(r1.facilityId, r2.facilityId)) return true;
+
+  const alatIds1 = new Set<number>();
+  if (r1.facilityId.startsWith('alat-') || r1.facilityId.startsWith('a-')) {
+    const nid = parseInt(r1.facilityId.replace(/^(alat|a)-/i, ''), 10);
+    if (!Number.isNaN(nid)) alatIds1.add(nid);
+  }
+  if (Array.isArray(r1.alat)) {
+    for (const item of r1.alat) {
+      if (item && typeof item.id === 'number') alatIds1.add(item.id);
+    }
+  }
+
+  const alatIds2 = new Set<number>();
+  if (r2.facilityId.startsWith('alat-') || r2.facilityId.startsWith('a-')) {
+    const nid = parseInt(r2.facilityId.replace(/^(alat|a)-/i, ''), 10);
+    if (!Number.isNaN(nid)) alatIds2.add(nid);
+  }
+  if (Array.isArray(r2.alat)) {
+    for (const item of r2.alat) {
+      if (item && typeof item.id === 'number') alatIds2.add(item.id);
+    }
+  }
+
+  if (alatIds1.size > 0 && alatIds2.size > 0) {
+    for (const id of alatIds1) {
+      if (alatIds2.has(id)) return true;
+    }
+  }
+
+  return false;
+}
+
 export type SlotBooking = 'avail' | 'pending' | 'booked';
 
 /**
@@ -128,7 +190,7 @@ export function getSlotBooking(
 ): SlotBooking {
   const active = reservations.filter(
     (r) =>
-      matchesFacility(r.facilityId, facilityId) &&
+      reservationAffectsFacility(r, facilityId) &&
       r.id !== excludeId &&
       r.status !== 'ditolak' &&
       r.status !== 'dibatalkan' &&
@@ -194,7 +256,7 @@ export function hasRangeConflict(
 ): Reservation | undefined {
   const overlaps = reservations.filter(
     (r) =>
-      matchesFacility(r.facilityId, facilityId) &&
+      reservationAffectsFacility(r, facilityId) &&
       r.tanggal === tanggal &&
       r.id !== excludeId &&
       r.status !== 'ditolak' &&
@@ -239,7 +301,8 @@ export function backendStatusToSlotState(status: string, tersedia: boolean): Slo
 
 /**
  * Tentukan status visual satu slot.
- * Memeriksa status dari backend (jadwal publik) dan data reservasi lokal.
+ * Memeriksa status dari data reservasi lokal (termasuk sinkronisasi ruangan + alat)
+ * dan data backend (jadwal publik).
  */
 export function getSlotState(
   facility: Facility,
@@ -254,48 +317,36 @@ export function getSlotState(
 
   let state: SlotState = 'avail';
 
-  // 1. Jika backend mengembalikan status terpakai atau nonaktif:
-  if (backend) {
+  // 1. Cek dari reservasi lokal terlebih dahulu (lebih kaya konteks user & sinkron ruangan + alat)
+  const localBooking = getSlotBooking(
+    reservations,
+    facility.id,
+    slotStart,
+    undefined,
+    tanggal,
+    currentUserIdentifier,
+    userRole
+  );
+
+  if (localBooking === 'booked') {
+    state = 'booked';
+  } else if (localBooking === 'pending') {
+    state = 'pending';
+  } else if (backend) {
     if (backend.status === 'terpakai' || (!backend.tersedia && backend.status !== 'menunggu')) {
       return 'booked';
     }
     if (backend.status === 'nonaktif') {
       return 'maint';
     }
-    // Jika backend bilang 'menunggu':
-    // Hanya tampil 'pending' jika role petugas/admin atau pemesan adalah pengguna saat ini
     if (backend.status === 'menunggu') {
       const isOfficerOrAdmin = userRole === 'petugas' || userRole === 'admin';
-      if (isOfficerOrAdmin) {
-        state = 'pending';
-      } else {
-        // Cek apakah reservasi ini milik pemesan saat ini
-        const booking = getSlotBooking(
-          reservations,
-          facility.id,
-          slotStart,
-          undefined,
-          tanggal,
-          currentUserIdentifier,
-          userRole
-        );
-        state = booking;
-      }
+      state = isOfficerOrAdmin ? 'pending' : 'avail';
     } else {
       state = backendStatusToSlotState(backend.status, backend.tersedia);
     }
   } else {
-    // 2. Tanpa data backend, hitung dari data reservasi lokal
-    const booking = getSlotBooking(
-      reservations,
-      facility.id,
-      slotStart,
-      undefined,
-      tanggal,
-      currentUserIdentifier,
-      userRole
-    );
-    state = booking;
+    state = localBooking;
   }
 
   if (state !== 'avail' && state !== 'pending') return state;

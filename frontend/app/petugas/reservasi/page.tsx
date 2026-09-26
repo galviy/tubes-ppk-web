@@ -66,6 +66,22 @@ function PetugasReservasiContent() {
   const countRuangan = reservations.filter((r) => !isAlatReservation(r, facilityById(r.facilityId))).length;
   const countAlat = reservations.filter((r) => isAlatReservation(r, facilityById(r.facilityId))).length;
 
+  const tabReservations = useMemo(() => {
+    return reservations.filter((r) => {
+      const fac = facilityById(r.facilityId);
+      const isAlat = isAlatReservation(r, fac);
+      if (tabType === 'ruangan') return !isAlat;
+      if (tabType === 'alat') return isAlat;
+      return true;
+    });
+  }, [reservations, facilityById, tabType]);
+
+  const countTabSemua = tabReservations.length;
+  const countTabMenunggu = tabReservations.filter((r) => r.status === 'menunggu').length;
+  const countTabDisetujui = tabReservations.filter((r) => r.status === 'disetujui').length;
+  const countTabDitolak = tabReservations.filter((r) => r.status === 'ditolak').length;
+  const countTabDibatalkan = tabReservations.filter((r) => r.status === 'dibatalkan').length;
+
   // Kategori dinamis sesuai sub-tab yang dipilih
   const categoryOptions = useMemo(() => {
     if (tabType === 'ruangan') {
@@ -89,11 +105,8 @@ function PetugasReservasiContent() {
   // Mode 'antrean': menunggu dulu, pengajuan paling awal di atas (siapa cepat dia dapat).
   // Mode 'terbaru': pengajuan paling baru di atas.
   const filtered = useMemo(() => {
-    const list = reservations.filter((r) => {
+    const list = tabReservations.filter((r) => {
       const fac = facilityById(r.facilityId);
-      const isAlat = isAlatReservation(r, fac);
-      if (tabType === 'ruangan' && isAlat) return false;
-      if (tabType === 'alat' && !isAlat) return false;
       if (filterStatus !== 'semua' && r.status !== filterStatus) return false;
       if (filterCategory !== 'semua' && fac?.type !== filterCategory) return false;
       if (filterTanggal && r.tanggal !== filterTanggal) return false;
@@ -113,11 +126,16 @@ function PetugasReservasiContent() {
     });
   }, [reservations, facilityById, tabType, filterStatus, filterCategory, filterTanggal, sortMode]);
 
-  function handleApprove(id: number, facilityName: string, pemohon: string) {
+  function formatAlatInfo(alat?: { nama: string; jumlah: number }[]): string {
+    if (!alat || alat.length === 0) return '';
+    return ` beserta alat (${alat.map((a) => `${a.nama}: ${a.jumlah} unit`).join(', ')})`;
+  }
+
+  function handleApprove(id: number, facilityName: string, pemohon: string, alatInfo = '') {
     setModalConfig({
       isOpen: true,
       title: 'Setujui Permohonan Reservasi',
-      subtitle: `Apakah Anda yakin ingin menyetujui reservasi ${facilityName} yang diajukan oleh ${pemohon}?`,
+      subtitle: `Apakah Anda yakin ingin menyetujui reservasi ${facilityName}${alatInfo} yang diajukan oleh ${pemohon}?`,
       confirmText: 'Setujui',
       confirmVariant: 'success',
       showInput: false,
@@ -132,11 +150,11 @@ function PetugasReservasiContent() {
     });
   }
 
-  function handleReject(id: number, facilityName: string, pemohon: string) {
+  function handleReject(id: number, facilityName: string, pemohon: string, alatInfo = '') {
     setModalConfig({
       isOpen: true,
       title: 'Tolak Permohonan Reservasi',
-      subtitle: `Berikan alasan penolakan reservasi ${facilityName} oleh ${pemohon} agar diketahui pemohon.`,
+      subtitle: `Berikan alasan penolakan reservasi ${facilityName}${alatInfo} oleh ${pemohon} agar diketahui pemohon.`,
       label: 'Alasan Penolakan',
       placeholder: 'Contoh: Ruangan akan digunakan untuk kegiatan kedinasan fakultas...',
       confirmText: 'Tolak Reservasi',
@@ -154,11 +172,11 @@ function PetugasReservasiContent() {
     });
   }
 
-  function handleCancelEmergency(id: number, facilityName: string, pemohon: string) {
+  function handleCancelEmergency(id: number, facilityName: string, pemohon: string, alatInfo = '') {
     setModalConfig({
       isOpen: true,
       title: 'Batalkan Reservasi (Kondisi Mendesak)',
-      subtitle: `Membatalkan reservasi ${facilityName} milik ${pemohon} yang telah disetujui sebelumnya.`,
+      subtitle: `Membatalkan reservasi ${facilityName}${alatInfo} milik ${pemohon} yang telah disetujui sebelumnya.`,
       label: 'Alasan Pembatalan',
       placeholder: 'Contoh: Terjadi gangguan kelistrikan atau perbaikan darurat...',
       confirmText: 'Batalkan Reservasi',
@@ -324,11 +342,11 @@ function PetugasReservasiContent() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 18 }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {[
-            { key: 'semua', label: `Semua (${reservations.length})` },
-            { key: 'menunggu', label: `Menunggu (${reservations.filter((r) => r.status === 'menunggu').length})` },
-            { key: 'disetujui', label: `Disetujui (${reservations.filter((r) => r.status === 'disetujui').length})` },
-            { key: 'ditolak', label: `Ditolak (${reservations.filter((r) => r.status === 'ditolak').length})` },
-            { key: 'dibatalkan', label: `Dibatalkan (${reservations.filter((r) => r.status === 'dibatalkan').length})` },
+            { key: 'semua', label: `Semua (${countTabSemua})` },
+            { key: 'menunggu', label: `Menunggu (${countTabMenunggu})` },
+            { key: 'disetujui', label: `Disetujui (${countTabDisetujui})` },
+            { key: 'ditolak', label: `Ditolak (${countTabDitolak})` },
+            { key: 'dibatalkan', label: `Dibatalkan (${countTabDibatalkan})` },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -441,8 +459,8 @@ function PetugasReservasiContent() {
       </div>
 
       {/* Table matching Reference Image 3 */}
-      <div className="panel table-scroll" style={{ padding: 0, overflow: 'hidden' }}>
-        <table>
+      <div className="panel table-scroll" style={{ padding: 0, overflowX: 'auto' }}>
+        <table style={{ minWidth: 1000 }}>
           <thead>
             <tr>
               <th>Pemohon</th>
@@ -485,10 +503,49 @@ function PetugasReservasiContent() {
                         >
                           {isAlat ? 'Alat' : 'Ruangan'}
                         </span>
+                        {!isAlat && r.alat && r.alat.length > 0 && (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              fontWeight: 700,
+                              background: '#15171a',
+                              color: '#b59876',
+                              border: '1px solid #b59876',
+                            }}
+                          >
+                            + {r.alat.length} Alat
+                          </span>
+                        )}
                       </div>
                       <div style={{ fontSize: 13, color: '#6B7280' }}>
                         {fac?.type || '-'} • {fac?.loc || '-'}
                       </div>
+                      {!isAlat && r.alat && r.alat.length > 0 && (
+                        <div
+                          style={{
+                            marginTop: 5,
+                            padding: '4px 8px',
+                            background: '#FAF8F5',
+                            border: '1px solid #D5D0C7',
+                            borderRadius: 4,
+                            fontSize: 12,
+                            color: '#181D24',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            flexWrap: 'wrap',
+                            maxWidth: 320,
+                            whiteSpace: 'normal',
+                          }}
+                        >
+                          <span style={{ fontWeight: 700, color: '#937654' }}>Alat dipinjam:</span>
+                          <span style={{ fontWeight: 600 }}>
+                            {r.alat.map((a) => `${a.nama} (${a.jumlah} unit)`).join(', ')}
+                          </span>
+                        </div>
+                      )}
                     </td>
 
                     {/* JADWAL */}
@@ -499,7 +556,12 @@ function PetugasReservasiContent() {
 
                     {/* PESERTA / UNIT */}
                     <td style={{ whiteSpace: 'nowrap', fontSize: 13 }}>
-                      {r.peserta ? `${r.peserta} ${isAlat ? 'unit' : 'orang'}` : '-'}
+                      <div>{r.peserta ? `${r.peserta} ${isAlat ? 'unit' : 'orang'}` : '-'}</div>
+                      {!isAlat && r.alat && r.alat.length > 0 && (
+                        <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 2 }}>
+                          ({r.alat.reduce((sum, a) => sum + a.jumlah, 0)} unit alat pendukung)
+                        </div>
+                      )}
                     </td>
 
                     {/* TUJUAN */}
@@ -515,14 +577,14 @@ function PetugasReservasiContent() {
                     </td>
 
                     {/* TINDAKAN */}
-                    <td style={{ whiteSpace: 'nowrap', textAlign: 'left' }}>
+                    <td style={{ textAlign: 'left', minWidth: 160 }}>
                       {r.status === 'menunggu' && (
-                        <div style={{ display: 'flex', gap: 6 }}>
+                        <div style={{ display: 'flex', gap: 6, whiteSpace: 'nowrap' }}>
                           <button
                             type="button"
                             className="btn primary"
                             style={{ padding: '5px 12px', fontSize: 13 }}
-                            onClick={() => handleApprove(r.id, facilityName, r.pemohon)}
+                            onClick={() => handleApprove(r.id, facilityName, r.pemohon, formatAlatInfo(r.alat))}
                           >
                             Setujui
                           </button>
@@ -530,7 +592,7 @@ function PetugasReservasiContent() {
                             type="button"
                             className="btn ghost-danger"
                             style={{ padding: '5px 12px', fontSize: 13 }}
-                            onClick={() => handleReject(r.id, facilityName, r.pemohon)}
+                            onClick={() => handleReject(r.id, facilityName, r.pemohon, formatAlatInfo(r.alat))}
                           >
                             Tolak
                           </button>
@@ -541,8 +603,8 @@ function PetugasReservasiContent() {
                         <button
                           type="button"
                           className="btn ghost-danger"
-                          style={{ padding: '5px 12px', fontSize: 13 }}
-                          onClick={() => handleCancelEmergency(r.id, facilityName, r.pemohon)}
+                          style={{ padding: '5px 12px', fontSize: 13, whiteSpace: 'nowrap' }}
+                          onClick={() => handleCancelEmergency(r.id, facilityName, r.pemohon, formatAlatInfo(r.alat))}
                           title="Batalkan reservasi dalam kondisi darurat"
                         >
                           Batal (Darurat)
@@ -550,20 +612,20 @@ function PetugasReservasiContent() {
                       )}
 
                       {r.status === 'ditolak' && (
-                        <span style={{ color: '#DC2626', fontSize: 14 }} title={r.catatanBatal || undefined}>
-                          Ditolak {r.catatanBatal ? `(${r.catatanBatal})` : ''}
-                        </span>
+                        <div style={{ color: '#DC2626', fontSize: 13, maxWidth: 240, wordBreak: 'break-word', lineHeight: 1.4 }} title={r.catatanBatal || undefined}>
+                          {r.catatanBatal ? `Ditolak (${r.catatanBatal})` : '-'}
+                        </div>
                       )}
 
                       {r.status === 'dibatalkan' && (
-                        <span style={{ color: '#6B7280', fontSize: 14 }} title={r.catatanBatal || undefined}>
-                          Dibatalkan {r.catatanBatal ? `(${r.catatanBatal})` : ''}
-                        </span>
+                        <div style={{ color: '#6B7280', fontSize: 13, maxWidth: 240, wordBreak: 'break-word', lineHeight: 1.4 }} title={r.catatanBatal || undefined}>
+                          {r.catatanBatal ? `Dibatalkan (${r.catatanBatal})` : '-'}
+                        </div>
                       )}
 
                       {r.status === 'selesai' && (
-                        <span style={{ color: '#059669', fontSize: 14 }}>
-                          Selesai
+                        <span style={{ color: '#059669', fontSize: 13 }}>
+                          -
                         </span>
                       )}
                     </td>

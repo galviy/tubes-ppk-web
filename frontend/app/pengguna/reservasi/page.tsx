@@ -10,6 +10,7 @@ import {
   isReservationDeadlineValid,
   getEarliestReservableDate,
   getSlotBooking,
+  hasRangeConflict,
   formatDateIndo,
 } from '@/lib/slots';
 import { TimeSlot } from '@/models/facility';
@@ -217,6 +218,40 @@ function AjukanReservasiContent() {
     if (!toolToPickId) return;
     const targetTool = availableTools.find((t) => t.id === toolToPickId);
     if (!targetTool || typeof targetTool.refId !== 'number') return;
+
+    // Cek konflik slot alat terhadap jam yang sudah dipilih
+    if (startTime && endTime && tanggal) {
+      const conflict = hasRangeConflict(
+        reservations,
+        targetTool.id,
+        tanggal,
+        startTime,
+        endTime,
+        undefined,
+        currentUserIdent
+      );
+      if (conflict) {
+        setBannerNotice({
+          type: 'error',
+          title: 'Alat Tidak Tersedia',
+          message: `${targetTool.name} sudah terpakai atau disetujui untuk jam ${startTime} - ${endTime} WIB pada ${formatDateIndo(tanggal)}. Pilih alat lain atau ubah jam peminjaman.`,
+        });
+        return;
+      }
+      // Cek dari publicUnavailable (data publik backend)
+      const pubMap = publicUnavailable[targetTool.id];
+      const hasPubConflict =
+        pubMap &&
+        SLOTS.some((s) => s.start >= startTime && s.start < endTime && pubMap.has(s.start));
+      if (hasPubConflict) {
+        setBannerNotice({
+          type: 'error',
+          title: 'Alat Tidak Tersedia',
+          message: `${targetTool.name} sudah terpakai pada jam ${startTime} - ${endTime} WIB tanggal ${formatDateIndo(tanggal)}. Pilih alat lain atau ubah jam peminjaman.`,
+        });
+        return;
+      }
+    }
 
     const maxStock = Math.max(1, targetTool.tersedia ?? targetTool.cap ?? 1);
     const qty = Math.min(Math.max(1, toolToPickQty || 1), maxStock);
@@ -551,6 +586,40 @@ function AjukanReservasiContent() {
       return;
     }
 
+    // Cek bentrok pada alat pendukung yang dipilih
+    if (activeTab === 'ruangan' && selectedTools.length > 0) {
+      for (const tool of selectedTools) {
+        const toolConflict = hasRangeConflict(
+          reservations,
+          tool.facilityId,
+          tanggal,
+          startTime,
+          endTime,
+          undefined,
+          currentUserIdent
+        );
+        const pubMap = publicUnavailable[tool.facilityId];
+        const pubConflict = pubMap && SLOTS.some((s) => s.start >= startTime && s.start < endTime && pubMap.has(s.start));
+        if (toolConflict || pubConflict) {
+          setBannerNotice({
+            type: 'error',
+            title: 'Alat Pendukung Bentrok',
+            message: `Alat "${tool.nama}" sudah terpakai pada rentang jam ${startTime} - ${endTime} WIB. Silakan hapus atau ganti alat tersebut.`,
+          });
+          setModalConfig({
+            isOpen: true,
+            title: 'Alat Pendukung Bentrok',
+            subtitle: `Alat "${tool.nama}" tidak tersedia pada jam ${startTime} - ${endTime} WIB tanggal ${formatDateIndo(tanggal)}. Hapus alat atau ubah jadwal.`,
+            confirmText: 'Sesuaikan Jadwal/Alat',
+            confirmVariant: 'danger',
+            showInput: false,
+            onConfirm: () => {},
+          });
+          return;
+        }
+      }
+    }
+
     const toolPayload =
       activeTab === 'ruangan' && selectedTools.length > 0
         ? selectedTools.map((t) => ({
@@ -636,12 +705,12 @@ function AjukanReservasiContent() {
       setBannerNotice({
         type: 'error',
         title: 'Tanggal Terlalu Dekat',
-        message: `Pengajuan reservasi paling cepat H+2, yaitu minimal dua hari sebelum tanggal kegiatan (contoh: hari ini tanggal 25, reservasi paling awal untuk tanggal 27). Tanggal ${formatDateIndo(tanggal)} belum dapat dipesan. Silakan pilih mulai dari tanggal ${formatDateIndo(earliestDate)}.`,
+        message: `Pengajuan reservasi paling lambat H-2, yaitu minimal dua hari sebelum tanggal kegiatan (contoh: hari ini tanggal 25, reservasi paling awal untuk tanggal 27). Tanggal ${formatDateIndo(tanggal)} belum dapat dipesan. Silakan pilih mulai dari tanggal ${formatDateIndo(earliestDate)}.`,
       });
       setModalConfig({
         isOpen: true,
         title: 'Tanggal Terlalu Dekat',
-        subtitle: `Pengajuan reservasi paling cepat H+2, yaitu minimal dua hari sebelum tanggal kegiatan. Silakan pilih tanggal mulai dari ${formatDateIndo(earliestDate)}.`,
+        subtitle: `Pengajuan reservasi paling lambat H-2, yaitu minimal dua hari sebelum tanggal kegiatan. Silakan pilih tanggal mulai dari ${formatDateIndo(earliestDate)}.`,
         confirmText: 'Pilih Tanggal Lain',
         confirmVariant: 'danger',
         showInput: false,
@@ -734,7 +803,7 @@ function AjukanReservasiContent() {
       </div>
 
       <div className="alert info">
-        Jam operasional kampus: <b>07.00 - 20.00 WIB</b> · Durasi kelipatan <b>30 menit</b> · Batas pengajuan: <b>paling cepat H+2</b> (contoh: hari ini tgl 25, reservasi paling awal untuk tgl 27).
+        Jam operasional kampus: <b>07.00 - 20.00 WIB</b> · Durasi kelipatan <b>30 menit</b> · Batas pengajuan: <b>paling lambat H-2</b> (contoh: hari ini tgl 25, reservasi paling awal untuk tgl 27).
       </div>
 
       {/* Prominent Feedback Banner */}
@@ -899,7 +968,7 @@ function AjukanReservasiContent() {
                   setBannerNotice({
                     type: 'error',
                     title: 'Tanggal Terlalu Dekat',
-                    message: `Pengajuan reservasi paling cepat H+2. Tanggal ${formatDateIndo(val)} belum memenuhi syarat. Tanggal paling awal yang tersedia adalah ${formatDateIndo(earliestDate)}.`,
+                    message: `Pengajuan reservasi paling lambat H-2. Tanggal ${formatDateIndo(val)} belum memenuhi syarat. Tanggal paling awal yang tersedia adalah ${formatDateIndo(earliestDate)}.`,
                   });
                   setTanggal(earliestDate);
                 } else {
@@ -1274,9 +1343,26 @@ function AjukanReservasiContent() {
                     <option value="">-- Pilih Alat Pendukung Kampus --</option>
                     {unselectedTools.map((t) => {
                       const stock = t.tersedia ?? t.cap ?? 0;
+                      const isTimeSet = !!(startTime && endTime && tanggal);
+                      const isConflict = isTimeSet && !!hasRangeConflict(
+                        reservations,
+                        t.id,
+                        tanggal,
+                        startTime,
+                        endTime,
+                        undefined,
+                        currentUserIdent
+                      );
+                      const pubMap = publicUnavailable[t.id];
+                      const hasPubConflict = isTimeSet && !!pubMap &&
+                        SLOTS.some((s) => s.start >= startTime && s.start < endTime && pubMap.has(s.start));
+                      const unavailable = stock <= 0 || isConflict || hasPubConflict;
+                      const suffix = isConflict || hasPubConflict
+                        ? ' - Terpakai pada jam ini'
+                        : ` - Stok: ${stock} unit`;
                       return (
-                        <option key={t.id} value={t.id} disabled={stock <= 0}>
-                          {t.name} ({t.loc}) - Stok: {stock} unit
+                        <option key={t.id} value={t.id} disabled={unavailable}>
+                          {t.name} ({t.loc}){suffix}
                         </option>
                       );
                     })}

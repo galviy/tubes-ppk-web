@@ -19,8 +19,8 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
   const isHome = pathname === '/';
   const topHeaderClass = isHome ? 'transparent-hero' : 'subpage-scenic-bar';
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await logout();
     router.push('/');
   }
 

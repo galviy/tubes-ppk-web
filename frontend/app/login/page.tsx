@@ -226,20 +226,6 @@ export default function LoginPage() {
                     );
                   })}
                 </div>
-
-                {selectedDemoRole && (
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color: '#555',
-                      marginTop: 10,
-                      borderTop: '1px dashed #E5E0D8',
-                      paddingTop: 8,
-                    }}
-                  >
-                    {DEMO_ACCOUNTS.find((a) => a.role === selectedDemoRole)?.desc}
-                  </div>
-                )}
               </div>
 
               <form onSubmit={handleLoginSubmit} className="ochoco-waiting-form">

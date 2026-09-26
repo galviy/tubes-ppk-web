@@ -57,7 +57,7 @@ function JadwalContent() {
               Pilih tanggal mulai hari ini hingga beberapa hari ke depan, lalu pilih fasilitasnya, tanpa perlu login.
             </p>
             <div className="alert info" style={{ marginTop: 12 }}>
-              <b>Ketentuan Batas Waktu Reservasi</b>: Pengajuan peminjaman fasilitas paling cepat <b>H+2</b>, yaitu minimal dua hari sebelum tanggal kegiatan (contoh: reservasi untuk tanggal 27 paling cepat diajukan pada tanggal 25). Verifikasi dan persetujuan jadwal akan diproses oleh petugas sarpras.
+              <b>Ketentuan Batas Waktu Reservasi</b>: Pengajuan peminjaman fasilitas paling lambat <b>H-2</b>, yaitu minimal dua hari sebelum tanggal kegiatan (contoh: hari ini tanggal 25, reservasi paling awal untuk tanggal 27). Verifikasi dan persetujuan jadwal akan diproses oleh petugas sarpras.
             </div>
           </div>
 

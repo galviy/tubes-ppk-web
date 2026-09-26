@@ -103,6 +103,12 @@ export function backendLogin(email: string, password: string) {
   });
 }
 
+export function backendLogout() {
+  return apiFetch<never>('/auth/logout', {
+    method: 'POST',
+  });
+}
+
 export interface RegisterMhsInput {
   username: string;
   email: string;

@@ -317,7 +317,22 @@ Content-Type: application/json
 
 #### - POST   /auth/logout
 
-> Belum terimplementasi di `routes/router.go` (tidak ada handler logout). Stub, jangan dipakai sampai ada implementasi + penghapusan `Sessions[session_id]`.
+Logout pengguna. Menghapus data sesi dari memori server (`session.Sessions[session_id]`) dan membersihkan cookie `session_id` di browser dengan masa berlaku lampau (`Max-Age: -1`). Route terdaftar di `routes/router.go`.
+
+```curl
+curl -i -X POST http://127.0.0.1:8080/auth/logout \
+-b "session_id=5d6f1c09-78a8-42f8-80f8-c6e47bb462ae"
+```
+
+Response Berhasil:
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+Set-Cookie: session_id=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly
+
+{"message":"Successfully logged out","success":true}
+```
 
 ### USER
 
