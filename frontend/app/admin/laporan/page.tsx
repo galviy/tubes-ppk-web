@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { ReportStatus } from '@/models/report';
 import ReportFoto from '@/components/ReportFoto';
+import Pagination from '@/components/Pagination';
+import { reportFotoUrl } from '@/lib/api';
 import { formatDateIndo } from '@/lib/slots';
 
 const STATUS_CONFIG: Record<ReportStatus, { pillClass: string; label: string }> = {
@@ -38,6 +40,18 @@ export default function AdminSemuaLaporanPage() {
     }
     return true;
   });
+
+  // Paginasi: 10 data per halaman
+  const ITEMS_PER_PAGE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset ke halaman 1 saat filter berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, filterKategori, searchQuery]);
+
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
+  const paginatedReports = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
     <div>
@@ -102,8 +116,9 @@ export default function AdminSemuaLaporanPage() {
       </div>
 
       {/* Table Laporan */}
-      <div className="panel table-scroll" style={{ padding: 0 }}>
-        <table>
+      <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="table-scroll" style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%' }}>
           <thead>
             <tr>
               <th>Fasilitas</th>
@@ -122,18 +137,18 @@ export default function AdminSemuaLaporanPage() {
                 </td>
               </tr>
             ) : (
-              filtered.map((r) => {
+              paginatedReports.map((r) => {
                 const fac = facilityById(r.facilityId);
                 const cfg = STATUS_CONFIG[r.status] || { pillClass: 'neutral', label: r.status };
 
                 return (
                   <tr key={r.id}>
                     {/* FASILITAS */}
-                    <td style={{ whiteSpace: 'nowrap' }}>
+                    <td style={{ maxWidth: 260 }}>
                       <div style={{ fontWeight: 600, color: '#181D24' }}>
                         {fac?.name || `Fasilitas #${r.facilityId}`}
                       </div>
-                      <div style={{ fontSize: 14, color: '#6B7280' }}>
+                      <div style={{ fontSize: 13, color: '#6B7280', marginTop: 2, wordBreak: 'break-word' }}>
                         {fac?.type} • {fac?.loc}
                         {fac?.status === 'repair' && (
                           <span style={{ color: '#d97706', fontWeight: 600, marginLeft: 6 }}>
@@ -162,26 +177,54 @@ export default function AdminSemuaLaporanPage() {
 
                     {/* DESKRIPSI & RESOLUSI */}
                     <td style={{ maxWidth: 300, fontSize: 13, color: '#4B5563' }}>
-                      <div>{r.deskripsi}</div>
-                      {r.foto && (
-                        <div style={{ marginTop: 6 }}>
-                          <button
-                            type="button"
-                            className="ochoco-photo-thumb-btn"
-                            onClick={() => setPreviewPhoto(r.foto || null)}
-                            title="Klik untuk memperbesar foto bukti"
-                          >
-                            <ReportFoto
-                              foto={r.foto}
-                              alt="Thumbnail Bukti"
-                              className="ochoco-photo-thumb-img"
-                            />
-                            <span>Lihat Bukti Foto</span>
-                          </button>
-                        </div>
-                      )}
+                      <div style={{ wordBreak: 'break-word' }}>{r.deskripsi}</div>
+                      {r.foto && (() => {
+                        const fotoUrl = reportFotoUrl(r.foto);
+                        return (
+                          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <a
+                              href={fotoUrl || '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="ochoco-photo-thumb-btn"
+                              title={fotoUrl ? `Buka path foto di tab baru: ${fotoUrl}` : 'Buka foto bukti'}
+                            >
+                              <ReportFoto
+                                foto={r.foto}
+                                alt="Thumbnail Bukti"
+                                className="ochoco-photo-thumb-img"
+                              />
+                              <span>Lihat Bukti Foto</span>
+                              <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                                style={{ opacity: 0.7, flexShrink: 0 }}
+                              >
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                <polyline points="15 3 21 3 21 9" />
+                                <line x1="10" y1="14" x2="21" y2="3" />
+                              </svg>
+                            </a>
+                            <button
+                              type="button"
+                              className="ochoco-photo-quick-view-btn"
+                              onClick={() => setPreviewPhoto(r.foto || null)}
+                              title="Pratinjau foto langsung di layar"
+                            >
+                              Pratinjau
+                            </button>
+                          </div>
+                        );
+                      })()}
                       {r.catatan && (
-                        <div style={{ marginTop: 4, fontSize: 14, color: '#166534', fontStyle: 'italic' }}>
+                        <div style={{ marginTop: 6, fontSize: 13, color: '#166534', fontStyle: 'italic', wordBreak: 'break-word' }}>
                           Catatan Petugas: {r.catatan}
                         </div>
                       )}
@@ -197,6 +240,18 @@ export default function AdminSemuaLaporanPage() {
             )}
           </tbody>
         </table>
+        </div>
+
+        {/* Paginasi Data */}
+        <div style={{ padding: '0 20px 16px 20px' }}>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filtered.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </div>
 
       {/* Lightbox Modal Foto Bukti */}
@@ -205,16 +260,42 @@ export default function AdminSemuaLaporanPage() {
           <div className="ochoco-lightbox-content" onClick={(e) => e.stopPropagation()}>
             <div className="ochoco-lightbox-header">
               <span>Bukti Foto Kerusakan &amp; Kendala</span>
-              <button
-                type="button"
-                className="ochoco-lightbox-close"
-                onClick={() => setPreviewPhoto(null)}
-                aria-label="Tutup"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
-                </svg>
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {reportFotoUrl(previewPhoto) && (
+                  <a
+                    href={reportFotoUrl(previewPhoto)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      fontSize: 13,
+                      color: '#b59876',
+                      textDecoration: 'none',
+                      fontWeight: 600,
+                    }}
+                    title="Buka path file di tab baru"
+                  >
+                    <span>Buka Path File</span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                      <polyline points="15 3 21 3 21 9" />
+                      <line x1="10" y1="14" x2="21" y2="3" />
+                    </svg>
+                  </a>
+                )}
+                <button
+                  type="button"
+                  className="ochoco-lightbox-close"
+                  onClick={() => setPreviewPhoto(null)}
+                  aria-label="Tutup"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </div>
             </div>
             <ReportFoto foto={previewPhoto} alt="Bukti Foto Lengkap" className="ochoco-lightbox-img" />
           </div>

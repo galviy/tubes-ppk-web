@@ -29,7 +29,7 @@ func SetUserVerified(userID int, verified bool) error {
 // UpdateRuangan mengubah spesifikasi ruangan. Kategori dalam bentuk
 // nama_kategori (di-resolve ke id seperti CreateRuangan).
 // sql.ErrNoRows bila ruangan tidak ada.
-func UpdateRuangan(id int, nama string, status int, kapasitas int, lokasi string, kategori string) error {
+func UpdateRuangan(id int, nama string, status int, kapasitas int, lokasi string, kategori string, deskripsi, kelengkapan, foto string) error {
 	var exist int
 	err := config.QueryRow(`SELECT 1 FROM ruangan WHERE id = ?`, id).Scan(&exist)
 	if err != nil {
@@ -38,14 +38,15 @@ func UpdateRuangan(id int, nama string, status int, kapasitas int, lokasi string
 	_, err = config.DB.Exec(`
 		UPDATE ruangan SET
 			nama_ruangan = ?, status = ?, kapasitas = ?, lokasi = ?,
-			kategori = (SELECT id FROM kategori WHERE nama_kategori = ?)
+			kategori = (SELECT id FROM kategori WHERE nama_kategori = ?),
+			deskripsi = ?, kelengkapan = ?, foto = ?
 		WHERE id = ?
-	`, nama, status, kapasitas, lokasi, kategori, id)
+	`, nama, status, kapasitas, lokasi, kategori, deskripsi, kelengkapan, foto, id)
 	return err
 }
 
 // UpdateAlat mengubah spesifikasi alat. sql.ErrNoRows bila tidak ada.
-func UpdateAlat(id int, nama string, jumlahTersedia int, banyakAlat int, kategori string, status int) error {
+func UpdateAlat(id int, nama string, jumlahTersedia int, banyakAlat int, kategori string, status int, deskripsi, kelengkapan, foto string) error {
 	var exist int
 	err := config.QueryRow(`SELECT 1 FROM alat WHERE id = ?`, id).Scan(&exist)
 	if err != nil {
@@ -55,9 +56,10 @@ func UpdateAlat(id int, nama string, jumlahTersedia int, banyakAlat int, kategor
 		UPDATE alat SET
 			nama_alat = ?, jumlah_tersedia = ?, banyak_alat = ?,
 			kategori = (SELECT id FROM kategori WHERE nama_kategori = ?),
-			status = ?
+			status = ?,
+			deskripsi = ?, kelengkapan = ?, foto = ?
 		WHERE id = ?
-	`, nama, jumlahTersedia, banyakAlat, kategori, status, id)
+	`, nama, jumlahTersedia, banyakAlat, kategori, status, deskripsi, kelengkapan, foto, id)
 	return err
 }
 

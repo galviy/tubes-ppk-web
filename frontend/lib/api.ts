@@ -732,14 +732,24 @@ export function mapBackendReport(row: Record<string, unknown>): MappedReport | n
 }
 
 // URL tampil foto bukti: dinormalisasi ke slash + dilewatkan proxy /api
-// agar origin + cookie konsisten. Kembalikan undefined bila bukan path
-// uploads (mis. data-URL cermin lokal — komponen yang menampilkannya
-// langsung tanpa helper ini).
+// agar origin + cookie konsisten. Mendukung nama file murni, path uploads/,
+// ataupun path URL absolut.
 export function reportFotoUrl(foto?: string): string | undefined {
-  if (!foto || foto.startsWith('data:') || foto.startsWith('http')) return foto || undefined;
-  const path = foto.replace(/\\/g, '/').replace(/^\/+/, '');
-  if (!path.startsWith('uploads/')) return undefined;
-  return `${API_BASE}/${path}`;
+  if (!foto || typeof foto !== 'string') return undefined;
+  const trimmed = foto.trim();
+  if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return undefined;
+  if (trimmed.startsWith('data:') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  const clean = trimmed.replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!clean) return undefined;
+  if (clean.startsWith('api/')) {
+    return `/${clean}`;
+  }
+  if (clean.startsWith('uploads/')) {
+    return `${API_BASE}/${clean}`;
+  }
+  return `${API_BASE}/uploads/${clean}`;
 }
 
 export type PendingKind = 'mhs' | 'dosen' | 'staff';
@@ -874,3 +884,25 @@ export function roleIdToFrontend(role: string): 'admin' | 'petugas' | 'pengguna'
   if (role === '2') return 'petugas';
   return 'pengguna';
 }
+
+export interface BackendProdi {
+  id: number;
+  nama_prodi: string;
+  fakultas_id?: number;
+  nama_fakultas?: string;
+}
+
+export interface BackendFakultas {
+  id: number;
+  nama_fakultas: string;
+  prodi?: Array<{ id: number; nama_prodi: string }>;
+}
+
+export function backendListProdi() {
+  return apiFetch<BackendProdi[]>('/prodi');
+}
+
+export function backendListFakultas() {
+  return apiFetch<BackendFakultas[]>('/fakultas');
+}
+

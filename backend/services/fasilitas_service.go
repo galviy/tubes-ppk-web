@@ -3,11 +3,34 @@ package services
 import (
 	"backend-ppk/models"
 	"backend-ppk/repositories"
+	"encoding/json"
 	"strconv"
 	"strings"
 )
 
 const alatLokasiDefault = "Gudang Sarana"
+
+func parseAmenities(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return []string{}
+	}
+	if strings.HasPrefix(raw, "[") && strings.HasSuffix(raw, "]") {
+		var list []string
+		if err := json.Unmarshal([]byte(raw), &list); err == nil {
+			return list
+		}
+	}
+	parts := strings.Split(raw, ",")
+	res := make([]string, 0, len(parts))
+	for _, p := range parts {
+		t := strings.TrimSpace(p)
+		if t != "" {
+			res = append(res, t)
+		}
+	}
+	return res
+}
 
 func mapStatusRuangan(status string) string {
 	switch strings.ToLower(strings.TrimSpace(status)) {
@@ -33,6 +56,11 @@ func mapStatusAlat(status, jumlahTersedia int) string {
 }
 
 func toFasilitasRuangan(r models.Ruangan) models.Fasilitas {
+	var img *string
+	if strings.TrimSpace(r.Foto) != "" {
+		t := strings.TrimSpace(r.Foto)
+		img = &t
+	}
 	return models.Fasilitas{
 		Id:        models.TipeFasilitasRuangan + "-" + strconv.Itoa(r.Id),
 		RefId:     r.Id,
@@ -41,12 +69,19 @@ func toFasilitasRuangan(r models.Ruangan) models.Fasilitas {
 		Type:      r.Kategori,
 		Loc:       r.Lokasi,
 		Cap:       r.Kapasitas,
-		Amenities: []string{},
+		Desc:      r.Deskripsi,
+		Amenities: parseAmenities(r.Kelengkapan),
 		Status:    mapStatusRuangan(r.Status),
+		Image:     img,
 	}
 }
 
 func toFasilitasAlat(a models.Alat) models.Fasilitas {
+	var img *string
+	if strings.TrimSpace(a.Foto) != "" {
+		t := strings.TrimSpace(a.Foto)
+		img = &t
+	}
 	return models.Fasilitas{
 		Id:             models.TipeFasilitasAlat + "-" + strconv.Itoa(a.Id),
 		RefId:          a.Id,
@@ -56,8 +91,10 @@ func toFasilitasAlat(a models.Alat) models.Fasilitas {
 		Loc:            alatLokasiDefault,
 		Cap:            a.BanyakAlat,
 		JumlahTersedia: a.JumlahTersedia,
-		Amenities:      []string{},
+		Desc:           a.Deskripsi,
+		Amenities:      parseAmenities(a.Kelengkapan),
 		Status:         mapStatusAlat(a.Status, a.JumlahTersedia),
+		Image:          img,
 	}
 }
 
