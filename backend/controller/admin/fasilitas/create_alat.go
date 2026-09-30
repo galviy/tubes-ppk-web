@@ -71,9 +71,20 @@ func Create_Alat(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseJSONMessage(w, "Alat dengan nama ("+alat+") sudah exist di database!", http.StatusBadRequest, false)
 		return
 	}
-	//func CreateAlat(nama_alat string, jumlah_tersedia string, banyak_alat int, kategori string, status int) error {
+	deskripsi := r.FormValue("deskripsi")
+	if deskripsi == "" {
+		deskripsi = r.FormValue("desc")
+	}
+	kelengkapan := r.FormValue("kelengkapan")
+	if kelengkapan == "" {
+		kelengkapan = r.FormValue("amenities")
+	}
+	foto := r.FormValue("foto")
+	if foto == "" {
+		foto = r.FormValue("image")
+	}
 
-	errCreate := repositories.CreateAlat(alat, jumlahTersedia, banyakAlat, kategori, statusInt)
+	errCreate := repositories.CreateAlat(alat, jumlahTersedia, banyakAlat, kategori, statusInt, deskripsi, kelengkapan, foto)
 	if errCreate != nil {
 		log.Printf("Gagal membuat user: %v", errCreate)
 		utils.ResponseJSONMessage(w, "Internal server error", http.StatusInternalServerError, false)

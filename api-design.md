@@ -1053,6 +1053,9 @@ Field:
 | `status` | wajib, integer `0`/`1` saja |
 | `kapasistas` | wajib, integer (ejaan sesuai code) |
 | `lokasi` | wajib |
+| `deskripsi` | opsional, deskripsi rincian ruangan (alias: `desc`) |
+| `kelengkapan` | opsional, string kelengkapan dipisah koma (alias: `amenities`) |
+| `foto` | opsional, data URL base64 atau path/URL foto (alias: `image`) |
 
 Response sukses
 
@@ -1105,7 +1108,7 @@ curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
 -d "nama_alat=Proyektor&jumlah_tersedia=5&banyak_alat=10&nama_kategori=Elektronik&status=1"
 ```
 
-Field: `nama_alat` (unik, wajib), `jumlah_tersedia` (integer >=0), `banyak_alat` (integer >=0), `nama_kategori` (5-100 char, harus exist), `status` (integer 0/1). `nama_kategori` + `nama_alat` wajib.
+Field: `nama_alat` (unik, wajib), `jumlah_tersedia` (integer >=0), `banyak_alat` (integer >=0), `nama_kategori` (5-100 char, harus exist), `status` (integer 0/1), `deskripsi` (opsional), `kelengkapan` (opsional), `foto` (opsional). `nama_kategori` + `nama_alat` wajib.
 
 Response sukses
 

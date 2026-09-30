@@ -892,8 +892,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       },
 
       addFacility: async (input) => {
-        // API-only (admin). desc/amenities/image tidak punya padanan kolom
-        // backend sehingga tidak terkirim — hanya tampil di cermin lokal.
         const tipe = input.tipeSarana;
         if (tipe !== 'ruangan' && tipe !== 'alat') {
           return { ok: false, message: 'Pilih jenis sarana: ruangan atau alat.' };
@@ -906,6 +904,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           return { ok: false, message: 'Nama kategori 5-100 karakter.' };
         }
         const cap = Number.isInteger(input.cap) && input.cap > 0 ? input.cap : 1;
+        const deskripsi = (input.desc || '').trim();
+        const kelengkapan = Array.isArray(input.amenities)
+          ? input.amenities.filter(Boolean).join(', ')
+          : '';
+        const foto = (input.image || '').trim();
+
         const doCreate = () =>
           tipe === 'ruangan'
             ? backendAdminPostForm('/admin/create_fasilitas/ruangan', {
@@ -914,6 +918,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
                 status: 1,
                 kapasistas: cap,
                 lokasi: input.loc.trim(),
+                deskripsi,
+                kelengkapan,
+                foto,
               })
             : backendAdminPostForm('/admin/create_fasilitas/alat', {
                 nama_alat: input.name.trim(),
@@ -921,6 +928,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
                 banyak_alat: cap,
                 nama_kategori: kategori,
                 status: 1,
+                deskripsi,
+                kelengkapan,
+                foto,
               });
         let res = await doCreate();
         // Kategori belum ada -> buatkan dulu lalu ulangi sekali.
@@ -943,6 +953,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         const effectiveTipe = fac.tipe || (isAlatFacility(fac) ? 'alat' : 'ruangan');
         // Pertahankan ketersediaan saat ini (avail/busy -> 1).
         const statusInt = fac.status === 'repair' || fac.status === 'nonaktif' ? 0 : 1;
+        const deskripsi = (input.desc ?? fac.desc ?? '').trim();
+        const kelengkapan = Array.isArray(input.amenities)
+          ? input.amenities.filter(Boolean).join(', ')
+          : (fac.amenities || []).join(', ');
+        const foto = (input.image !== undefined ? input.image : (fac.image || '')) || '';
+
         const res =
           effectiveTipe === 'alat'
             ? await backendAdminPostForm('/admin/update_fasilitas/alat', {
@@ -952,6 +968,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
                 banyak_alat: input.cap,
                 nama_kategori: input.type.trim(),
                 status: statusInt,
+                deskripsi,
+                kelengkapan,
+                foto,
               })
             : await backendAdminPostForm('/admin/update_fasilitas/ruangan', {
                 id: fac.refId,
@@ -960,6 +979,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
                 kapasistas: input.cap,
                 lokasi: input.loc.trim(),
                 nama_kategori: input.type.trim(),
+                deskripsi,
+                kelengkapan,
+                foto,
               });
         if (!res.ok) return { ok: false, message: res.message };
         await refreshFacilities();

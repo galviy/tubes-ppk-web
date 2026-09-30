@@ -116,7 +116,7 @@ function KelolaFasilitasContent() {
       setModalConfig({
         isOpen: true,
         title: 'Data Tidak Lengkap',
-        subtitle: `Data "${f.name}" tidak memiliki referensi backend sehingga tidak bisa diubah.`,
+        subtitle: `Data "${f.name}" tidak memiliki referensi ID sehingga tidak bisa diubah.`,
         confirmText: 'Mengerti',
         confirmVariant: 'warning',
         showInput: false,
@@ -237,9 +237,10 @@ function KelolaFasilitasContent() {
         setModalConfig({
           isOpen: true,
           title: 'Fasilitas Diperbarui',
-          subtitle: `"${payload.name}" tersimpan di database backend.`,
+          subtitle: `"${payload.name}" berhasil diperbarui.`,
           confirmText: 'Selesai',
           confirmVariant: 'primary',
+          badgeVariant: 'success',
           showInput: false,
           onConfirm: () => {},
         });
@@ -249,7 +250,7 @@ function KelolaFasilitasContent() {
       }
       return;
     }
-    // Tambah via backend (desc/amenities/image tidak punya kolom backend).
+    // Tambah via backend
     setIsSubmitting(true);
     try {
       const res = await addFacility({ ...payload, tipeSarana: form.tipeSarana });
@@ -268,9 +269,10 @@ function KelolaFasilitasContent() {
       setModalConfig({
         isOpen: true,
         title: 'Fasilitas Ditambahkan',
-        subtitle: `"${payload.name}" tersimpan di database backend. Deskripsi, kelengkapan, dan foto tidak memiliki kolom backend sehingga hanya tampil lokal sementara.`,
+        subtitle: `"${payload.name}" berhasil ditambahkan.`,
         confirmText: 'Selesai',
         confirmVariant: 'primary',
+        badgeVariant: 'success',
         showInput: false,
         onConfirm: () => {},
       });
@@ -286,7 +288,7 @@ function KelolaFasilitasContent() {
       setModalConfig({
         isOpen: true,
         title: 'Data Tidak Lengkap',
-        subtitle: `Data "${f.name}" tidak memiliki referensi backend sehingga tidak bisa dinonaktifkan.`,
+        subtitle: `Data "${f.name}" tidak memiliki referensi ID sehingga tidak bisa dinonaktifkan.`,
         confirmText: 'Mengerti',
         confirmVariant: 'warning',
         showInput: false,
@@ -906,7 +908,7 @@ function KelolaFasilitasContent() {
 
                         <button
                           type="button"
-                          title="Ubah spesifikasi via backend"
+                          title="Ubah spesifikasi fasilitas"
                           onClick={() => startEdit(f)}
                           style={{
                             padding: '5px 10px',
@@ -924,7 +926,7 @@ function KelolaFasilitasContent() {
 
                         <button
                           type="button"
-                          title="Nonaktifkan via backend (soft delete)"
+                          title="Nonaktifkan fasilitas"
                           onClick={() => handleDelete(f)}
                           style={{
                             padding: '5px 10px',

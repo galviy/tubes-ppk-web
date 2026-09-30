@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
 import { UNIT_PETUGAS, FAKULTAS_UNDIP, PRODI_UNDIP } from '@/config/site';
+import { backendListProdi } from '@/lib/api';
 
 function DownwardSelect({
   label,
@@ -183,10 +184,19 @@ export default function KelolaAkunPage() {
   const [peran, setPeran] = useState('Petugas');
   const [unit, setUnit] = useState<string>(UNIT_PETUGAS[0]);
   const [fakultas, setFakultas] = useState<string>(FAKULTAS_UNDIP[0]);
+  const [prodiOptions, setProdiOptions] = useState<string[]>([...PRODI_UNDIP]);
   const [prodi, setProdi] = useState<string>(PRODI_UNDIP[0]);
   const [angkatan, setAngkatan] = useState('2024');
   const [password, setPassword] = useState('Sipinjam2026!');
   const [showPass, setShowPass] = useState(false);
+
+  useEffect(() => {
+    backendListProdi().then((res) => {
+      if (res.ok && res.data && res.data.length > 0) {
+        setProdiOptions(res.data.map((p) => p.nama_prodi));
+      }
+    });
+  }, []);
 
   // Search & Filter for Registered Accounts Table
   const [searchQuery, setSearchQuery] = useState('');
@@ -328,7 +338,7 @@ export default function KelolaAkunPage() {
       setModalConfig({
         isOpen: true,
         title: 'Username Tidak Valid',
-        subtitle: 'Username akun harus berukuran minimal 5 karakter sesuai spesifikasi backend sistem.',
+        subtitle: 'Username akun harus berukuran minimal 5 karakter.',
         confirmText: 'Perbaiki',
         confirmVariant: 'warning',
         showInput: false,
@@ -341,7 +351,7 @@ export default function KelolaAkunPage() {
       setModalConfig({
         isOpen: true,
         title: 'Kata Sandi Belum Memenuhi Syarat',
-        subtitle: 'Kata sandi harus minimal 5 karakter, serta wajib mengandung minimal 1 huruf kapital (A-Z) dan 1 simbol (@, !, #, dll) sesuai standar keamanan backend.',
+        subtitle: 'Kata sandi harus minimal 5 karakter, serta wajib mengandung minimal 1 huruf kapital (A-Z) dan 1 simbol (@, !, #, dll).',
         confirmText: 'Perbaiki Sandi',
         confirmVariant: 'warning',
         showInput: false,
@@ -355,7 +365,7 @@ export default function KelolaAkunPage() {
         setModalConfig({
           isOpen: true,
           title: 'NIDN Dosen Tidak Valid',
-          subtitle: 'NIDN Dosen wajib tepat 10 digit karakter angka (contoh: 0012058001) sesuai validasi backend.',
+          subtitle: 'NIDN Dosen wajib tepat 10 digit karakter angka (contoh: 0012058001).',
           confirmText: 'Perbaiki',
           confirmVariant: 'warning',
           showInput: false,
@@ -707,7 +717,7 @@ export default function KelolaAkunPage() {
                     minLength={5}
                   />
                   <span style={{ fontSize: 13.5, color: '#6B7280', marginTop: 3 }}>
-                    Minimal 5 karakter (sinkron dengan kontrak otentikasi backend).
+                    Minimal 5 karakter alfanumerik.
                   </span>
                 </div>
 
@@ -823,7 +833,7 @@ export default function KelolaAkunPage() {
                       label="Program Studi *"
                       value={prodi}
                       onChange={setProdi}
-                      options={PRODI_UNDIP as unknown as string[]}
+                      options={prodiOptions}
                     />
 
                     {/* Fakultas */}
@@ -847,7 +857,7 @@ export default function KelolaAkunPage() {
                         required
                       />
                       <span style={{ fontSize: 13.5, color: '#6B7280', marginTop: 3 }}>
-                        Tepat 10 digit karakter angka sesuai validasi backend dosen.
+                        Tepat 10 digit angka NIDN dosen.
                       </span>
                     </div>
 
@@ -856,7 +866,7 @@ export default function KelolaAkunPage() {
                       label="Homebase Program Studi *"
                       value={prodi}
                       onChange={setProdi}
-                      options={PRODI_UNDIP as unknown as string[]}
+                      options={prodiOptions}
                     />
 
                     {/* Fakultas */}

@@ -58,9 +58,20 @@ func Create_ruangan(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseJSONMessage(w, "Ruangan dengan nama ("+ruangan+") sudah exist di database!", http.StatusBadRequest, false)
 		return
 	}
-	//func CreateRuangan(nama_ruangan string, status int, kapasitas int, lokasi string, kategori string) error {
+	deskripsi := r.FormValue("deskripsi")
+	if deskripsi == "" {
+		deskripsi = r.FormValue("desc")
+	}
+	kelengkapan := r.FormValue("kelengkapan")
+	if kelengkapan == "" {
+		kelengkapan = r.FormValue("amenities")
+	}
+	foto := r.FormValue("foto")
+	if foto == "" {
+		foto = r.FormValue("image")
+	}
 
-	errCreate := repositories.CreateRuangan(ruangan, statuslohya, kapasitaslohya, lokasi, kategori)
+	errCreate := repositories.CreateRuangan(ruangan, statuslohya, kapasitaslohya, lokasi, kategori, deskripsi, kelengkapan, foto)
 	if errCreate != nil {
 		log.Printf("Gagal membuat user: %v", errCreate)
 		utils.ResponseJSONMessage(w, "Internal server error", http.StatusInternalServerError, false)

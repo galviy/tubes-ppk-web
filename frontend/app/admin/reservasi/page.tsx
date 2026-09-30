@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useMemo, Suspense } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
 import { ReservationStatus } from '@/models/reservation';
 import { formatDateIndo } from '@/lib/slots';
+import Pagination from '@/components/Pagination';
 import {
   isAlatReservation,
   isRuanganFacility,
@@ -88,6 +89,18 @@ function AdminReservasiContent() {
     }
     return true;
   });
+
+  // Paginasi: 10 data per halaman
+  const ITEMS_PER_PAGE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset ke halaman 1 saat filter atau pencarian berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [tabType, filterStatus, filterCategory, filterFacility, searchQuery]);
+
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
+  const paginatedReservations = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
     <div>
@@ -252,31 +265,32 @@ function AdminReservasiContent() {
       </div>
 
       {/* Table Reservasi */}
-      <div className="panel table-scroll" style={{ padding: 0 }}>
-        <table>
-          <thead>
-            <tr>
-              <th>Tipe</th>
-              <th>Fasilitas &amp; Lokasi</th>
-              <th>Pemohon</th>
-              <th>Jadwal Reservasi</th>
-              <th>Keperluan Kegiatan</th>
-              <th>Status</th>
-              <th>Diajukan Pada</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
+      <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="table-scroll" style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%' }}>
+            <thead>
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', color: '#6B7280', padding: 28 }}>
-                  Tidak ada data reservasi {tabType === 'ruangan' ? 'ruangan' : tabType === 'alat' ? 'alat' : 'fasilitas'} yang sesuai dengan filter pencarian.
-                </td>
+                <th style={{ minWidth: 90 }}>Tipe</th>
+                <th style={{ minWidth: 180 }}>Fasilitas &amp; Lokasi</th>
+                <th style={{ minWidth: 140 }}>Pemohon</th>
+                <th style={{ minWidth: 130 }}>Jadwal Reservasi</th>
+                <th style={{ minWidth: 160 }}>Keperluan Kegiatan</th>
+                <th style={{ minWidth: 90 }}>Status</th>
+                <th style={{ minWidth: 120 }}>Diajukan Pada</th>
               </tr>
-            ) : (
-              filtered.map((r) => {
-                const fac = facilityById(r.facilityId);
-                const isAlat = isAlatReservation(r, fac);
-                const cfg = STATUS_CONFIG[r.status] || { pillClass: 'neutral', label: r.status };
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', color: '#6B7280', padding: 28 }}>
+                    Tidak ada data reservasi {tabType === 'ruangan' ? 'ruangan' : tabType === 'alat' ? 'alat' : 'fasilitas'} yang sesuai dengan filter pencarian.
+                  </td>
+                </tr>
+              ) : (
+                paginatedReservations.map((r) => {
+                  const fac = facilityById(r.facilityId);
+                  const isAlat = isAlatReservation(r, fac);
+                  const cfg = STATUS_CONFIG[r.status] || { pillClass: 'neutral', label: r.status };
 
                 return (
                   <tr key={r.id}>
@@ -318,11 +332,11 @@ function AdminReservasiContent() {
                     </td>
 
                     {/* FASILITAS */}
-                    <td style={{ whiteSpace: 'nowrap' }}>
+                    <td style={{ maxWidth: 280, minWidth: 170 }}>
                       <div style={{ fontWeight: 600, color: '#181D24' }}>
                         {fac?.name || r.ruanganNama || `Fasilitas #${r.facilityId}`}
                       </div>
-                      <div style={{ fontSize: 13.5, color: '#6B7280' }}>
+                      <div style={{ fontSize: 13, color: '#6B7280', marginTop: 2, wordBreak: 'break-word' }}>
                         {fac?.type || '-'} • {fac?.loc || '-'}
                         {fac?.status === 'repair' && (
                           <span style={{ color: '#d97706', fontWeight: 600, marginLeft: 6 }}>
@@ -406,6 +420,18 @@ function AdminReservasiContent() {
             )}
           </tbody>
         </table>
+        </div>
+
+        {/* Paginasi Data */}
+        <div style={{ padding: '0 20px 16px 20px' }}>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filtered.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </div>
     </div>
   );

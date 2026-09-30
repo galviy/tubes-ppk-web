@@ -56,7 +56,7 @@ function LaporKerusakanContent() {
       setModalConfig({
         isOpen: true,
         title: 'Ukuran File Terlalu Besar',
-        subtitle: 'Batas ukuran file bukti kerusakan adalah 2MB sesuai standar sistem backend. Silakan gunakan foto yang lebih ringkas.',
+        subtitle: 'Batas ukuran file bukti kerusakan adalah 2MB. Silakan gunakan foto yang lebih ringkas.',
         confirmText: 'Mengerti',
         confirmVariant: 'warning',
         showInput: false,
@@ -65,14 +65,14 @@ function LaporKerusakanContent() {
       return;
     }
 
-    // Ikuti backend: hanya JPG/JPEG/PNG (video ditolak server).
+    // Ikuti format yang didukung: hanya JPG/JPEG/PNG
     const isImage = /^(image\/jpeg|image\/png|image\/jpg)$/.test(file.type);
     const extOk = /\.(jpe?g|png)$/i.test(file.name);
     if (!isImage || !extOk) {
       setModalConfig({
         isOpen: true,
         title: 'Format File Tidak Didukung',
-        subtitle: 'Backend hanya menerima foto JPG atau PNG. Video tidak dapat diproses.',
+        subtitle: 'Sistem hanya menerima foto berformat JPG atau PNG.',
         confirmText: 'Mengerti',
         confirmVariant: 'warning',
         showInput: false,
