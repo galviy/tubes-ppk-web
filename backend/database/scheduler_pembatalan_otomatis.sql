@@ -23,7 +23,11 @@ COMMENT 'Membatalkan otomatis reservasi PENDING 2 jam sebelum waktu mulai reserv
 DO
 BEGIN
     UPDATE `reservasi`
-    SET `status_reservasi` = 'CANCELLED'
+    SET `status_reservasi` = 'CANCELLED',
+        `alasan_pembatalan` = 'Dibatalkan otomatis: tidak diproses sebelum 2 jam sebelum jadwal',
+        `waktu_dibatalkan` = NOW(),
+        `waktu_diproses` = NOW(),
+        `dibatalkan_oleh` = NULL
     WHERE `status_reservasi` = 'PENDING'
       AND `waktu_peminjaman` <= NOW() + INTERVAL 2 HOUR;
 END $$

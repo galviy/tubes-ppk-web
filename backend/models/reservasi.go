@@ -77,6 +77,7 @@ type Reservasi struct {
 	AlasanPeminjaman       *string            `json:"alasan_peminjaman"`
 	AlasanPenolakan        *string            `json:"alasan_penolakan"`
 	AlasanPembatalan       *string            `json:"alasan_pembatalan"`
+	WaktuDibatalkan        *string            `json:"waktu_dibatalkan,omitempty"`
 	Riwayat                []ReservasiRiwayat `json:"riwayat,omitempty"`
 }
 
@@ -102,10 +103,10 @@ type KetersediaanHari struct {
 }
 
 type KetersediaanFasilitas struct {
-	Id     string              `json:"id"`
-	RefId  int                 `json:"ref_id"`
-	Tipe   string              `json:"tipe"`
-	Nama   string              `json:"nama"`
-	Lokasi string              `json:"lokasi"`
-	Hari   []KetersediaanHari  `json:"hari"`
+	Id     string             `json:"id"`
+	RefId  int                `json:"ref_id"`
+	Tipe   string             `json:"tipe"`
+	Nama   string             `json:"nama"`
+	Lokasi string             `json:"lokasi"`
+	Hari   []KetersediaanHari `json:"hari"`
 }

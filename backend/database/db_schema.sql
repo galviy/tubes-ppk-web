@@ -417,6 +417,7 @@ CREATE TABLE `reservasi` (
   `status_reservasi` varchar(10) NOT NULL,
   `alasan_peminjaman` varchar(255) DEFAULT NULL,
   `alasan_pembatalan` varchar(255) DEFAULT NULL,
+  `waktu_dibatalkan` datetime DEFAULT NULL,
   `dibatalkan_oleh` int(11) DEFAULT NULL,
   `disetujui_oleh` int(11) DEFAULT NULL,
   `waktu_diproses` datetime DEFAULT NULL,
@@ -689,7 +690,11 @@ STARTS CURRENT_TIMESTAMP
 COMMENT 'Membatalkan otomatis reservasi PENDING 2 jam sebelum waktu mulai reservasi'
 DO BEGIN
     UPDATE `reservasi`
-    SET `status_reservasi` = 'CANCELLED'
+    SET `status_reservasi` = 'CANCELLED',
+        `alasan_pembatalan` = 'Dibatalkan otomatis: tidak diproses sebelum 2 jam sebelum jadwal',
+        `waktu_dibatalkan` = NOW(),
+        `waktu_diproses` = NOW(),
+        `dibatalkan_oleh` = NULL
     WHERE `status_reservasi` = 'PENDING'
       AND `waktu_peminjaman` <= NOW() + INTERVAL 2 HOUR;
 END */ ;;

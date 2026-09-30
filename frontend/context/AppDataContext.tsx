@@ -49,30 +49,49 @@ import {
 
 import { isAlatFacility } from '@/models/facilities-data';
 
+function numberFrom(value: unknown): number | undefined {
+  const n = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 function mapBackendFasilitas(b: BackendFasilitas): Facility {
+  const row = b as unknown as Record<string, unknown>;
+  const field = (...keys: string[]) => {
+    for (const key of keys) {
+      if (row[key] !== undefined && row[key] !== null) return row[key];
+    }
+    return undefined;
+  };
+  const id = String(field('id', 'Id', 'ID') ?? '');
+  const tipeRaw = String(field('tipe', 'Tipe', 'jenis') ?? '');
+  const type = String(field('type', 'Type', 'kategori') ?? '');
+  const name = String(field('name', 'Name', 'nama', 'Nama') ?? '');
+  const statusRaw = String(field('status', 'Status') ?? 'avail');
   const status = (['avail', 'busy', 'repair', 'nonaktif'] as const).includes(
-    b.status as Facility['status'],
+    statusRaw as Facility['status'],
   )
-    ? (b.status as Facility['status'])
+    ? (statusRaw as Facility['status'])
     : 'avail';
   const isAlat =
-    b.tipe === 'alat' ||
-    (typeof b.id === 'string' && b.id.startsWith('alat-')) ||
-    b.type?.toLowerCase() === 'alat' ||
-    isAlatFacility({ tipe: b.tipe, id: b.id, type: b.type, name: b.name });
+    tipeRaw.toLowerCase() === 'alat' ||
+    id.startsWith('alat-') ||
+    type.toLowerCase() === 'alat' ||
+    isAlatFacility({ tipe: tipeRaw, id, type, name });
+  const amenitiesRaw = field('amenities', 'Amenities', 'kelengkapan');
+  const image = field('image', 'Image', 'foto');
   return {
-    id: b.id,
-    refId: typeof b.ref_id === 'number' ? b.ref_id : undefined,
+    id,
+    refId: numberFrom(field('ref_id', 'RefId', 'RefID')),
     tipe: isAlat ? 'alat' : 'ruangan',
-    name: b.name,
-    type: b.type,
-    loc: b.loc,
-    cap: b.cap,
-    tersedia: typeof b.jumlah_tersedia === 'number' ? b.jumlah_tersedia : undefined,
-    desc: b.desc,
-    amenities: Array.isArray(b.amenities) ? b.amenities : [],
+    name,
+    type,
+    loc: String(field('loc', 'Loc', 'lokasi', 'Lokasi') ?? ''),
+    cap: numberFrom(field('cap', 'Cap', 'kapasitas', 'jumlah_tersedia', 'JumlahTersedia')) ?? 0,
+    tersedia: numberFrom(field('jumlah_tersedia', 'JumlahTersedia')),
+    desc: String(field('desc', 'Desc', 'deskripsi', 'Deskripsi') ?? ''),
+    amenities: Array.isArray(amenitiesRaw) ? amenitiesRaw.map(String) : [],
     status,
-    image: b.image ?? undefined,
+    image: typeof image === 'string' ? image : undefined,
   };
 }
 
@@ -113,7 +132,7 @@ interface AppDataValue {
   /** true jika backend Go terjangkau via /api (proxy rewrites). */
   backendOnline: boolean;
   /** Status sinkronisasi terakhir: bedakan "kosong" vs "gagal memuat". */
-  syncStatus: 'idle' | 'loading' | 'ok' | 'error';
+  syncStatus: 'idle' | 'loading' | 'ok' | 'partial' | 'error';
 
   facilityById: (id: string) => Facility | undefined;
   isSlotTaken: (
@@ -218,7 +237,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [registeredAccounts, setRegisteredAccounts] = useState<BackendAccount[]>([]);
   const [currentUser, setCurrentUser] = useState<LoggedInUser | null>(null);
   const [backendOnline, setBackendOnline] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'ok' | 'partial' | 'error'>('idle');
   const [availabilityMap, setAvailabilityMap] = useState<Record<string, Record<string, Set<string>>>>({});
 
   const fetchSlotAvailability = useCallback(
@@ -263,14 +282,25 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const up = await backendAvailable();
+      let up = false;
+      for (let attempt = 0; attempt < 4 && !cancelled; attempt += 1) {
+        up = await backendAvailable();
+        if (up) break;
+        if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+      }
       if (cancelled) return;
       setBackendOnline(up);
       if (!up) return;
-      const res = await backendListFasilitas();
-      if (cancelled || !res.ok) return;
-      // Server menang (termasuk list kosong yang legitimate).
-      setFacilities((res.data ?? []).map(mapBackendFasilitas));
+      for (let attempt = 0; attempt < 3 && !cancelled; attempt += 1) {
+        const res = await backendListFasilitas();
+        if (cancelled) return;
+        if (res.ok && Array.isArray(res.data)) {
+          // Server menang (termasuk list kosong yang legitimate).
+          setFacilities(res.data.map(mapBackendFasilitas));
+          return;
+        }
+        if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+      }
     })();
     return () => {
       cancelled = true;
@@ -286,7 +316,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       if (currentUser) return;
-      const me = await backendMe();
+      let me = await backendMe();
+      for (let attempt = 0; !me.ok && me.status !== 401 && me.status !== 403 && attempt < 2; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+        if (cancelled) return;
+        me = await backendMe();
+      }
       if (cancelled || !me.ok || !me.data) return;
       setCurrentUser({
         id: `backend-${me.data.email}`,
@@ -329,36 +364,43 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           });
         }
       }
-      rows.sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
+      if (res.data.length > 0 && rows.length === 0) {
+        console.warn('[sync] reservasi diterima dari backend tetapi tidak ada baris yang dapat dipetakan', res.data[0]);
+      } else {
+        if (rows.length < res.data.length) {
+          console.warn(`[sync] ${res.data.length - rows.length} baris reservasi tidak dapat dipetakan`);
+        }
+        rows.sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
 
-      // Jika ada permohonan 'menunggu' yang bertabrakan dengan permohonan 'disetujui' di fasilitas & tanggal sama,
-      // otomatis batalkan pada backend karena jadwal sudah terpakai
-      if (isOfficer) {
-        const approved = rows.filter((r) => r.status === 'disetujui');
-        const conflictsToCancel = rows.filter((r) => {
-          if (r.status !== 'menunggu') return false;
-          return approved.some(
-            (a) =>
-              a.id !== r.id &&
-              a.facilityId === r.facilityId &&
-              a.tanggal === r.tanggal &&
-              r.start < a.end &&
-              r.end > a.start
-          );
-        });
+        // Jika ada permohonan 'menunggu' yang bertabrakan dengan permohonan 'disetujui' di fasilitas & tanggal sama,
+        // otomatis batalkan pada backend karena jadwal sudah terpakai
+        if (isOfficer) {
+          const approved = rows.filter((r) => r.status === 'disetujui');
+          const conflictsToCancel = rows.filter((r) => {
+            if (r.status !== 'menunggu') return false;
+            return approved.some(
+              (a) =>
+                a.id !== r.id &&
+                a.facilityId === r.facilityId &&
+                a.tanggal === r.tanggal &&
+                r.start < a.end &&
+                r.end > a.start
+            );
+          });
 
-        if (conflictsToCancel.length > 0) {
-          for (const c of conflictsToCancel) {
-            const cId = c.backendId ?? c.id;
-            void backendPetugasCancelReservasi(cId, 'Jadwal sudah terpakai (disetujui untuk peminjam lain).').catch(console.error);
-            c.status = 'dibatalkan';
-            c.catatanBatal = 'Jadwal sudah terpakai (disetujui untuk peminjam lain).';
+          if (conflictsToCancel.length > 0) {
+            for (const c of conflictsToCancel) {
+              const cId = c.backendId ?? c.id;
+              void backendPetugasCancelReservasi(cId, 'Jadwal sudah terpakai (disetujui untuk peminjam lain).').catch(console.error);
+              c.status = 'dibatalkan';
+              c.catatanBatal = 'Jadwal sudah terpakai (disetujui untuk peminjam lain).';
+            }
           }
         }
-      }
 
-      setReservations(rows);
-      return true;
+        setReservations(rows);
+        return true;
+      }
     }
 
     // Fallback: per-jenis ruangan dan alat jika endpoint tunggal gagal
@@ -377,6 +419,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       if (m) rows.push({ ...m, pemohon: m.pemohon || sessionUser.nama, sumber: 'backend' });
     }
     rows.sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
+    const rawCount = (ru.data?.length ?? 0) + (al.data?.length ?? 0);
+    if (rawCount > 0 && rows.length === 0) {
+      console.warn('[sync] fallback reservasi berisi data tetapi tidak ada baris yang dapat dipetakan');
+      return false;
+    }
+    if (rows.length < rawCount) {
+      console.warn(`[sync] ${rawCount - rows.length} baris fallback reservasi tidak dapat dipetakan`);
+    }
     setReservations(rows);
     return true;
   }, [sessionUser]);
@@ -385,10 +435,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (!sessionUser) return false;
     const res = await backendListLaporanSaya();
     if (!res.ok) return false;
+    const rawRows = Array.isArray(res.data) ? res.data : [];
+    const mappedReports = rawRows.map(mapBackendReport).filter(Boolean) as NonNullable<
+      ReturnType<typeof mapBackendReport>
+    >[];
+    if (rawRows.length > 0 && mappedReports.length === 0) {
+      console.warn('[sync] laporan diterima dari backend tetapi tidak ada baris yang dapat dipetakan', rawRows[0]);
+      return false;
+    }
     setReports(
-      ((res.data ?? []).map(mapBackendReport).filter(Boolean) as NonNullable<
-        ReturnType<typeof mapBackendReport>
-      >[]).map((m) => ({
+      mappedReports.map((m) => ({
         id: m.backendId,
         backendId: m.backendId,
         sumber: 'backend' as const,
@@ -433,6 +489,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         catatan: m.catatan,
         createdAt: m.createdAt,
       });
+    }
+    if (rows.length > 0 && mapped.length === 0) {
+      console.warn('[sync] daftar laporan petugas tidak dapat dipetakan');
+      return false;
     }
     setReports(mapped);
     return true;
@@ -513,16 +573,44 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       setSyncStatus('loading');
-      const r1 = refreshReservations();
-      const r2 = refreshReportsMine();
-      const r3 = refreshPetugasReports();
-      const r4 = sessionUser.role === 'admin' ? refreshPendingAccounts() : Promise.resolve(true);
-      const r5 = sessionUser.role === 'admin' ? refreshAccounts() : Promise.resolve(true);
+      const retryRefresh = async (refresh: () => Promise<boolean>, label: string) => {
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          try {
+            if (await refresh()) return true;
+          } catch (error) {
+            console.warn(`[sync] ${label} gagal`, error);
+          }
+          if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+        }
+        console.warn(`[sync] ${label} belum berhasil setelah 3 percobaan`);
+        return false;
+      };
+
+      const r1 = retryRefresh(refreshReservations, 'reservasi');
+      const r2 = retryRefresh(refreshReportsMine, 'laporan pengguna');
+      const r3 = sessionUser.role === 'petugas' || sessionUser.role === 'admin'
+        ? retryRefresh(refreshPetugasReports, 'daftar laporan petugas')
+        : Promise.resolve(true);
+      const r4 = sessionUser.role === 'admin'
+        ? retryRefresh(refreshPendingAccounts, 'akun menunggu verifikasi')
+        : Promise.resolve(true);
+      const r5 = sessionUser.role === 'admin'
+        ? retryRefresh(refreshAccounts, 'daftar akun')
+        : Promise.resolve(true);
       const results = await Promise.all([r1, r2, r3, r4, r5]);
       if (cancelled) return;
-      // Gagal total (backend mati di tengah) -> 'error'; jika minimal
-      // reservasi+laporan milik sendiri OK -> 'ok' (parsial masih berguna).
-      setSyncStatus(results[0] && results[1] ? 'ok' : 'error');
+      // Data parsial tetap dapat dipakai. Error total hanya jika kedua sumber
+      // utama, reservasi dan laporan milik pengguna, sama-sama gagal.
+      const berhasil = Number(results[0]) + Number(results[1]);
+      setSyncStatus(berhasil === 2 ? 'ok' : berhasil === 1 ? 'partial' : 'error');
+
+      if (berhasil === 0) {
+        const me = await backendMe();
+        if (!cancelled && me.status === 401) {
+          console.warn('[sync] sesi backend sudah tidak berlaku; pengguna perlu masuk kembali');
+          setCurrentUser(null);
+        }
+      }
     })();
     return () => {
       cancelled = true;

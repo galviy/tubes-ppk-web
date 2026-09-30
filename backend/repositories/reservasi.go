@@ -201,19 +201,20 @@ func scanReservasiRows(rows *sql.Rows) ([]models.Reservasi, error) {
 	list := make([]models.Reservasi, 0)
 	for rows.Next() {
 		var (
-			item            models.Reservasi
-			username        sql.NullString
-			ruanganID       sql.NullInt64
-			ruanganNama     sql.NullString
-			jumlahPeserta   sql.NullInt64
+			item             models.Reservasi
+			username         sql.NullString
+			ruanganID        sql.NullInt64
+			ruanganNama      sql.NullString
+			jumlahPeserta    sql.NullInt64
 			alasanPeminjaman sql.NullString
-			alasanPenolakan sql.NullString
+			alasanPenolakan  sql.NullString
 			alasanPembatalan sql.NullString
+			waktuDibatalkan  sql.NullString
 		)
 		if err := rows.Scan(
 			&item.Id, &item.WaktuReservasiDibuat, &item.WaktuPeminjaman, &item.WaktuPeminjamanSelesai,
 			&item.StatusKode, &item.UserId, &username, &ruanganID, &ruanganNama, &jumlahPeserta,
-			&alasanPeminjaman, &alasanPenolakan, &alasanPembatalan,
+			&alasanPeminjaman, &alasanPenolakan, &alasanPembatalan, &waktuDibatalkan,
 		); err != nil {
 			return nil, err
 		}
@@ -238,6 +239,10 @@ func scanReservasiRows(rows *sql.Rows) ([]models.Reservasi, error) {
 			v := alasanPembatalan.String
 			item.AlasanPembatalan = &v
 		}
+		if waktuDibatalkan.Valid {
+			v := waktuDibatalkan.String
+			item.WaktuDibatalkan = &v
+		}
 		item.Alat = make([]models.ReservasiAlat, 0)
 		list = append(list, item)
 	}
@@ -257,7 +262,8 @@ const reservasiSelect = `
 	       r.jumlah_peserta,
 	       r.alasan_peminjaman,
 	       (SELECT tr.alasan_penolakan FROM tolak_reservasi tr WHERE tr.id_reservasi = r.id ORDER BY tr.id DESC LIMIT 1),
-	       r.alasan_pembatalan
+	       r.alasan_pembatalan,
+	       DATE_FORMAT(r.waktu_dibatalkan, '%Y-%m-%d %H:%i:%s')
 	FROM reservasi r
 	LEFT JOIN user u ON u.id = r.user_reservasi
 	LEFT JOIN ruangan ru ON ru.id = r.ruangan_reservasi`
@@ -458,7 +464,8 @@ func CancelReservasi(id int, olehUserID *int, alasan string) error {
 
 	if _, err := tx.Exec(`
 		UPDATE reservasi
-		SET status_reservasi = 'CANCELLED', alasan_pembatalan = ?, dibatalkan_oleh = ?
+		SET status_reservasi = 'CANCELLED', alasan_pembatalan = ?, dibatalkan_oleh = ?,
+		    waktu_dibatalkan = NOW(), waktu_diproses = NOW()
 		WHERE id = ?`, alasan, olehUserID, id); err != nil {
 		return err
 	}
@@ -503,7 +510,8 @@ func SinkronisasiStatusReservasi() error {
 	for _, id := range batalIDs {
 		if _, err := tx.Exec(`
 			UPDATE reservasi
-			SET status_reservasi = 'CANCELLED', alasan_pembatalan = ?, dibatalkan_oleh = NULL
+			SET status_reservasi = 'CANCELLED', alasan_pembatalan = ?, dibatalkan_oleh = NULL,
+			    waktu_dibatalkan = NOW(), waktu_diproses = NOW()
 			WHERE id = ?`, keteranganBatal, id); err != nil {
 			return err
 		}

@@ -1385,6 +1385,9 @@ tr:hover td { background: #FAF8F5; }
 .slot-lg.pending .slot-bar { background: #F59E0B; }
 .slot-lg.pending .t { color: #78350F; }
 .slot-lg.pending .s { color: #B45309; font-weight: 700; }
+.reservation-row-clickable { cursor: pointer; }
+.reservation-row-clickable:hover { background: #FAF8F5; }
+.reservation-row-clickable:focus-visible { outline: 2px solid #b59876; outline-offset: -2px; }
 
 button.slot-lg {
   cursor: pointer;
@@ -3803,4 +3806,3 @@ button.slot-lg:disabled {
   from { transform: scale(0.96); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
-

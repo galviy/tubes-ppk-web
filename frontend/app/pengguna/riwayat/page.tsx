@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { Reservation, ReservationStatus } from '@/models/reservation';
 import ReservationDetailModal from '@/components/ReservationDetailModal';
-import { formatDateIndo } from '@/lib/slots';
+import { formatDateIndo, formatDateTimeIndo } from '@/lib/slots';
 import { isAlatReservation } from '@/models/facilities-data';
 
 const STATUS_PILL: Record<ReservationStatus, [string, string]> = {
@@ -137,6 +137,10 @@ export default function RiwayatReservasiPage() {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                     {r.start} - {r.end}
                   </span>
+                  <span className="meta-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    Dipesan {formatDateTimeIndo(r.createdAt)}
+                  </span>
                   {r.peserta && (
                     <span className="meta-item">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
@@ -185,6 +189,11 @@ export default function RiwayatReservasiPage() {
                     }}
                   >
                     Catatan {r.status === 'dibatalkan' ? 'Pembatalan' : 'Penolakan'}: {r.catatanBatal}
+                  </div>
+                )}
+                {r.status === 'dibatalkan' && r.cancelledAt && (
+                  <div style={{ marginTop: 8, fontSize: 13, color: '#6B7280' }}>
+                    Waktu pembatalan: {formatDateTimeIndo(r.cancelledAt)}
                   </div>
                 )}
               </div>
