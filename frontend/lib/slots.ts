@@ -55,6 +55,20 @@ export function formatDateIndo(dateStr: string | null | undefined): string {
   return cleanStr;
 }
 
+export function formatDateTimeIndo(dateTime: string | null | undefined): string {
+  if (!dateTime) return '-';
+  const date = new Date(dateTime);
+  if (Number.isNaN(date.getTime())) return String(dateTime);
+  return date.toLocaleString('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
 // Selaras aturan backend (services.reservasi_service.go: hariMinimalPengajuan):
 // reservasi paling lambat H-2, yaitu minimal 2 hari sebelum tanggal kegiatan.
 export const HARI_MINIMAL_PENGAJUAN = 2;

@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
 import { ReservationStatus } from '@/models/reservation';
-import { formatDateIndo } from '@/lib/slots';
+import { formatDateIndo, formatDateTimeIndo } from '@/lib/slots';
 import Pagination from '@/components/Pagination';
 import {
   isAlatReservation,
@@ -267,22 +267,23 @@ function AdminReservasiContent() {
       {/* Table Reservasi */}
       <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="table-scroll" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%' }}>
+          <table style={{ minWidth: 1320, width: '100%' }}>
             <thead>
               <tr>
                 <th style={{ minWidth: 90 }}>Tipe</th>
                 <th style={{ minWidth: 180 }}>Fasilitas &amp; Lokasi</th>
+                <th style={{ minWidth: 130 }}>Waktu Reservasi</th>
                 <th style={{ minWidth: 140 }}>Pemohon</th>
                 <th style={{ minWidth: 130 }}>Jadwal Reservasi</th>
                 <th style={{ minWidth: 160 }}>Keperluan Kegiatan</th>
                 <th style={{ minWidth: 90 }}>Status</th>
-                <th style={{ minWidth: 120 }}>Diajukan Pada</th>
+                <th style={{ minWidth: 130 }}>Waktu Pembatalan</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', color: '#6B7280', padding: 28 }}>
+                  <td colSpan={8} style={{ textAlign: 'center', color: '#6B7280', padding: 28 }}>
                     Tidak ada data reservasi {tabType === 'ruangan' ? 'ruangan' : tabType === 'alat' ? 'alat' : 'fasilitas'} yang sesuai dengan filter pencarian.
                   </td>
                 </tr>
@@ -370,6 +371,11 @@ function AdminReservasiContent() {
                       )}
                     </td>
 
+                    {/* WAKTU RESERVASI */}
+                    <td style={{ whiteSpace: 'nowrap', fontSize: 13.5, color: '#4B5563' }}>
+                      {formatDateTimeIndo(r.createdAt)}
+                    </td>
+
                     {/* PEMOHON */}
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <div style={{ fontWeight: 600, color: '#181D24' }}>{r.pemohon}</div>
@@ -410,9 +416,9 @@ function AdminReservasiContent() {
                       </span>
                     </td>
 
-                    {/* TANGGAL DIAJUKAN */}
+                    {/* WAKTU PEMBATALAN */}
                     <td style={{ whiteSpace: 'nowrap', fontSize: 13.5, color: '#6B7280' }}>
-                      {formatDateIndo(r.createdAt || '2026-09-18')}
+                      {r.status === 'dibatalkan' ? formatDateTimeIndo(r.cancelledAt) : '-'}
                     </td>
                   </tr>
                 );
@@ -444,4 +450,3 @@ export default function AdminSemuaReservasiPage() {
     </Suspense>
   );
 }
-

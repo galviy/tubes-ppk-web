@@ -3,10 +3,11 @@
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
-import { ReservationStatus } from '@/models/reservation';
-import { formatDateIndo } from '@/lib/slots';
+import { Reservation, ReservationStatus } from '@/models/reservation';
+import { formatDateIndo, formatDateTimeIndo } from '@/lib/slots';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
 import Pagination from '@/components/Pagination';
+import ReservationDetailModal from '@/components/ReservationDetailModal';
 import {
   isAlatReservation,
   isRuanganFacility,
@@ -54,6 +55,7 @@ function PetugasReservasiContent() {
     onConfirm: () => {},
   });
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [detailFor, setDetailFor] = useState<Reservation | null>(null);
 
   // Auto-dismiss popup notifikasi setelah 4.5 detik
   useEffect(() => {
@@ -474,19 +476,21 @@ function PetugasReservasiContent() {
         </div>
       </div>
 
-      {/* Table matching Reference Image 3 */}
+      <p style={{ margin: '0 0 8px', textAlign: 'right', fontSize: 12.5, fontWeight: 600, color: '#6B7280' }}>
+        Klik baris untuk melihat detail reservasi.
+      </p>
       <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="table-scroll" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%' }}>
+          <table style={{ minWidth: 1180, width: '100%' }}>
             <thead>
               <tr>
                 <th style={{ minWidth: 130 }}>Pemohon</th>
                 <th style={{ minWidth: 180 }}>Fasilitas</th>
+                <th style={{ minWidth: 130 }}>Waktu Reservasi</th>
                 <th style={{ minWidth: 120 }}>Jadwal</th>
-                <th style={{ minWidth: 90 }}>Peserta / Unit</th>
-                <th style={{ minWidth: 130 }}>Tujuan</th>
                 <th style={{ minWidth: 90 }}>Status</th>
-                <th style={{ textAlign: 'left', minWidth: 130 }}>Tindakan</th>
+                <th style={{ minWidth: 130 }}>Waktu Pembatalan</th>
+                <th style={{ textAlign: 'left', minWidth: 150 }}>Tindakan</th>
               </tr>
             </thead>
             <tbody>
@@ -504,7 +508,21 @@ function PetugasReservasiContent() {
                   const cfg = STATUS_CONFIG[r.status] || { pillClass: 'neutral', label: r.status };
 
                   return (
-                    <tr key={r.id}>
+                    <tr
+                      key={r.id}
+                      className="reservation-row-clickable"
+                      tabIndex={0}
+                      aria-label={`Buka detail reservasi ${facilityName}, pemohon ${r.pemohon}`}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setDetailFor(r)}
+                      onKeyDown={(e) => {
+                        if (e.target !== e.currentTarget) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setDetailFor(r);
+                        }
+                      }}
+                    >
                       {/* PEMOHON */}
                       <td style={{ fontWeight: 600, color: '#181D24', maxWidth: 170, wordBreak: 'break-word' }}>
                         {r.pemohon}
@@ -565,25 +583,15 @@ function PetugasReservasiContent() {
                       )}
                     </td>
 
+                    {/* WAKTU RESERVASI */}
+                    <td style={{ whiteSpace: 'nowrap', fontSize: 13, color: '#4B5563' }}>
+                      {formatDateTimeIndo(r.createdAt)}
+                    </td>
+
                     {/* JADWAL */}
                     <td style={{ whiteSpace: 'nowrap', fontSize: 13 }}>
                       <div>{formatDateIndo(r.tanggal)}</div>
                       <div style={{ color: '#6B7280', fontSize: 14 }}>{r.start} - {r.end}</div>
-                    </td>
-
-                    {/* PESERTA / UNIT */}
-                    <td style={{ whiteSpace: 'nowrap', fontSize: 13 }}>
-                      <div>{r.peserta ? `${r.peserta} ${isAlat ? 'unit' : 'orang'}` : '-'}</div>
-                      {!isAlat && r.alat && r.alat.length > 0 && (
-                        <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 2 }}>
-                          ({r.alat.reduce((sum, a) => sum + a.jumlah, 0)} unit alat pendukung)
-                        </div>
-                      )}
-                    </td>
-
-                    {/* TUJUAN */}
-                    <td style={{ maxWidth: 220, fontSize: 13, color: '#4B5563' }}>
-                      {r.tujuan}
                     </td>
 
                     {/* STATUS */}
@@ -593,8 +601,13 @@ function PetugasReservasiContent() {
                       </span>
                     </td>
 
+                    {/* WAKTU PEMBATALAN */}
+                    <td style={{ whiteSpace: 'nowrap', fontSize: 13, color: '#4B5563' }}>
+                      {r.status === 'dibatalkan' ? formatDateTimeIndo(r.cancelledAt) : '-'}
+                    </td>
+
                     {/* TINDAKAN */}
-                    <td style={{ textAlign: 'left', minWidth: 160 }}>
+                    <td style={{ textAlign: 'left', minWidth: 160 }} onClick={(e) => e.stopPropagation()}>
                       {r.status === 'menunggu' && (
                         <div style={{ display: 'flex', gap: 6, whiteSpace: 'nowrap' }}>
                           <button
@@ -667,6 +680,13 @@ function PetugasReservasiContent() {
       </div>
 
       <ActionPromptModal config={modalConfig} onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))} />
+      {detailFor && (
+        <ReservationDetailModal
+          reservation={detailFor}
+          facility={facilityById(detailFor.facilityId)}
+          onClose={() => setDetailFor(null)}
+        />
+      )}
     </div>
   );
 }

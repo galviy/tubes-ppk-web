@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Reservation, ReservationStatus } from '@/models/reservation';
 import { Facility } from '@/models/facility';
 import { isAlatReservation } from '@/models/facilities-data';
 import { canSelfCancel, formatDeadline, getCancellationDeadline } from '@/lib/cancellation';
-import { formatDateIndo } from '@/lib/slots';
+import { formatDateIndo, formatDateTimeIndo } from '@/lib/slots';
 
 const STATUS_PILL: Record<ReservationStatus, [string, string]> = {
   menunggu: ['busy', 'Menunggu'],
@@ -14,16 +14,6 @@ const STATUS_PILL: Record<ReservationStatus, [string, string]> = {
   dibatalkan: ['repair', 'Dibatalkan'],
   selesai: ['avail', 'Selesai'],
 };
-
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString('id-ID', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 interface ReservationDetailModalProps {
   reservation: Reservation;
@@ -48,6 +38,14 @@ export default function ReservationDetailModal({
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
+
   async function handleConfirmCancel() {
     if (!alasan.trim()) {
       setErrorMsg('Alasan pembatalan wajib diisi.');
@@ -68,15 +66,21 @@ export default function ReservationDetailModal({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose} aria-label="Tutup">
+      <div
+        className="modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reservation-detail-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button type="button" className="modal-close" onClick={onClose} aria-label="Tutup">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
 
         <div className="modal-title-row">
-          <h3>{facility?.name || reservation.ruanganNama || `Fasilitas #${reservation.facilityId}`}</h3>
+          <h3 id="reservation-detail-title">{facility?.name || reservation.ruanganNama || `Fasilitas #${reservation.facilityId}`}</h3>
           <span className={`pill ${cls}`}>{label}</span>
         </div>
 
@@ -84,6 +88,7 @@ export default function ReservationDetailModal({
           <div><span>ID Reservasi</span><b>r{reservation.id}</b></div>
           <div><span>Fasilitas</span><b>{facility?.name || reservation.ruanganNama || '-'}</b></div>
           <div><span>Lokasi</span><b>{facility?.loc || '-'}</b></div>
+          <div><span>Waktu reservasi</span><b>{formatDateTimeIndo(reservation.createdAt)}</b></div>
           <div><span>Tanggal</span><b>{formatDateIndo(reservation.tanggal)}</b></div>
           <div><span>Waktu</span><b>{reservation.start} - {reservation.end}</b></div>
           <div>
@@ -100,7 +105,9 @@ export default function ReservationDetailModal({
             </div>
           )}
           <div><span>Status</span><b>{label}</b></div>
-          <div><span>Tanggal pengajuan</span><b>{formatDateTime(reservation.createdAt)}</b></div>
+          {reservation.status === 'dibatalkan' && (
+            <div><span>Waktu pembatalan</span><b>{formatDateTimeIndo(reservation.cancelledAt)}</b></div>
+          )}
           {reservation.catatanBatal && (
             <div><span>Catatan / Alasan</span><b>{reservation.catatanBatal}</b></div>
           )}

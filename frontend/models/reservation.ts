@@ -18,6 +18,7 @@ export interface Reservation {
   peserta?: number;
   status: ReservationStatus;
   createdAt: string; // ISO timestamp - kapan reservasi ini diajukan
+  cancelledAt?: string; // ISO timestamp - kapan reservasi dibatalkan
   catatanBatal?: string;
   // Sumber baris: 'backend' (sinkron DB).
   sumber?: 'backend';

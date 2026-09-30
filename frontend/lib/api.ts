@@ -533,6 +533,20 @@ function str(v: unknown): string {
   return typeof v === 'string' ? v : '';
 }
 
+function field(row: Record<string, unknown>, ...keys: string[]): unknown {
+  for (const key of keys) {
+    if (row[key] !== undefined && row[key] !== null) return row[key];
+  }
+  return undefined;
+}
+
+function isoDate(v: unknown): string {
+  const value = str(v);
+  if (!value) return new Date().toISOString();
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+}
+
 export type FrontendReservasiStatus = 'menunggu' | 'disetujui' | 'ditolak' | 'dibatalkan' | 'selesai';
 
 export function mapReservasiStatus(s: unknown): FrontendReservasiStatus {
@@ -568,6 +582,7 @@ export interface MappedReservasi {
   peserta?: number;
   status: FrontendReservasiStatus;
   createdAt: string;
+  cancelledAt?: string;
   catatanBatal: string;
   pemohon?: string;
   ruanganId?: number;
@@ -579,15 +594,28 @@ export interface MappedReservasi {
 
 // Mapper universal yang mendukung respons controller/reservasi/*.go baru maupun lawas
 export function mapBackendReservasi(row: Record<string, unknown>): MappedReservasi | null {
-  const id = num(row['id']);
+  const id = num(field(row, 'id', 'Id', 'ID', 'reservasi_id', 'ReservasiId'));
   if (id === undefined) return null;
 
-  const ruanganId = num(row['ruangan_id'] ?? row['Ruangan_reservasi']);
-  const alatList = Array.isArray(row['alat'])
-    ? (row['alat'] as { id: number; nama: string; jumlah: number }[])
+  const ruanganId = num(field(row, 'ruangan_id', 'Ruangan_reservasi', 'RuanganId', 'RuanganReservasi'));
+  const alatRaw = field(row, 'alat', 'Alat');
+  const alatList = Array.isArray(alatRaw)
+    ? alatRaw
+        .map((item) => {
+          if (!item || typeof item !== 'object') return null;
+          const alat = item as Record<string, unknown>;
+          const alatId = num(field(alat, 'id', 'Id', 'id_alat', 'IdAlat', 'AlatId'));
+          if (alatId === undefined) return null;
+          return {
+            id: alatId,
+            nama: str(field(alat, 'nama', 'Nama', 'nama_alat', 'NamaAlat')),
+            jumlah: num(field(alat, 'jumlah', 'Jumlah', 'jumlah_peminjaman', 'JumlahPeminjaman')) ?? 0,
+          };
+        })
+        .filter((item): item is { id: number; nama: string; jumlah: number } => item !== null)
     : [];
   const alatId =
-    num(row['alat_id'] ?? row['Alat_reservasi']) ??
+    num(field(row, 'alat_id', 'Alat_reservasi', 'AlatId', 'AlatReservasi')) ??
     (alatList.length > 0 ? num(alatList[0].id) : undefined);
 
   let facilityId = '';
@@ -600,20 +628,21 @@ export function mapBackendReservasi(row: Record<string, unknown>): MappedReserva
   }
 
   const t = splitBackendWaktu(
-    str(row['waktu_peminjaman'] ?? row['Waktu_peminjaman']),
-    str(row['waktu_peminjaman_selesai'] ?? row['Waktu_peminjaman_selesai']),
+    str(field(row, 'waktu_peminjaman', 'Waktu_peminjaman', 'WaktuPeminjaman')),
+    str(field(row, 'waktu_peminjaman_selesai', 'Waktu_peminjaman_selesai', 'WaktuPeminjamanSelesai')),
   );
-  const dibuat = str(row['waktu_reservasi_dibuat'] ?? row['Waktu_reservasi_dibuat']);
+  const dibuat = field(row, 'waktu_reservasi_dibuat', 'Waktu_reservasi_dibuat', 'WaktuReservasiDibuat');
 
   const pesertaNum =
-    num(row['jumlah_peserta'] ?? row['Jumlah_peserta']) ??
-    (alatList.length > 0 ? num(alatList[0].jumlah) : num(row['Jumlah']));
+    num(field(row, 'jumlah_peserta', 'Jumlah_peserta', 'JumlahPeserta')) ??
+    (alatList.length > 0 ? num(alatList[0].jumlah) : num(field(row, 'Jumlah', 'jumlah')));
 
-  const alasanPenolakan = str(row['alasan_penolakan'] ?? row['Alasan_penolakan']);
-  const alasanPembatalan = str(row['alasan_pembatalan'] ?? row['Alasan_pembatalan']);
+  const alasanPenolakan = str(field(row, 'alasan_penolakan', 'Alasan_penolakan', 'AlasanPenolakan'));
+  const alasanPembatalan = str(field(row, 'alasan_pembatalan', 'Alasan_pembatalan', 'AlasanPembatalan'));
+  const waktuDibatalkan = field(row, 'waktu_dibatalkan', 'Waktu_dibatalkan', 'WaktuDibatalkan');
   const catatanBatal = alasanPenolakan || alasanPembatalan || '';
 
-  const statusRaw = row['status'] ?? row['status_kode'] ?? row['Status_reservasi'];
+  const statusRaw = field(row, 'status', 'status_kode', 'Status_reservasi', 'StatusReservasi', 'Status');
 
   return {
     id,
@@ -622,17 +651,18 @@ export function mapBackendReservasi(row: Record<string, unknown>): MappedReserva
     tanggal: t.tanggal,
     start: t.start,
     end: t.end,
-    tujuan: str(row['alasan_peminjaman'] ?? row['Alasan_peminjaman']),
+    tujuan: str(field(row, 'alasan_peminjaman', 'Alasan_peminjaman', 'AlasanPeminjaman')),
     peserta: pesertaNum,
     status: mapReservasiStatus(statusRaw),
-    createdAt: dibuat ? new Date(dibuat).toISOString() : new Date().toISOString(),
+    createdAt: isoDate(dibuat),
+    cancelledAt: waktuDibatalkan ? isoDate(waktuDibatalkan) : undefined,
     catatanBatal,
-    pemohon: str(row['username'] ?? row['Username'] ?? ''),
+    pemohon: str(field(row, 'username', 'Username', 'pemohon', 'Pemohon')),
     ruanganId,
-    ruanganNama: typeof row['ruangan_nama'] === 'string' ? row['ruangan_nama'] : undefined,
+    ruanganNama: str(field(row, 'ruangan_nama', 'Ruangan_nama', 'RuanganNama')) || undefined,
     alat: alatList,
-    statusKode: str(row['status_kode']),
-    userId: num(row['user_id']),
+    statusKode: str(field(row, 'status_kode', 'Status_kode', 'StatusKode')),
+    userId: num(field(row, 'user_id', 'UserId', 'UserReservasi')),
   };
 }
 
@@ -675,29 +705,29 @@ export interface MappedReport {
 
 // Baris GET /reports, GET /petugas/reports(+/{id}) — ReportDetail + nama join.
 export function mapBackendReport(row: Record<string, unknown>): MappedReport | null {
-  const id = num(row['id']);
+  const id = num(field(row, 'id', 'Id', 'ID', 'report_id', 'ReportId'));
   if (id === undefined) return null;
-  const rRuangan = num(row['report_ruangan']);
-  const rAlat = num(row['report_alat']);
+  const rRuangan = num(field(row, 'report_ruangan', 'ReportRuangan', 'Report_ruangan'));
+  const rAlat = num(field(row, 'report_alat', 'ReportAlat', 'Report_alat'));
   let facilityId = '';
   if (rRuangan !== undefined) facilityId = `ruangan-${rRuangan}`;
   else if (rAlat !== undefined) facilityId = `alat-${rAlat}`;
   else return null;
-  const dibuat = str(row['waktu_dibuat'] ?? row['Waktu_dibuat']);
-  const foto = row['foto'];
-  const pelaporNama = row['username_report'];
+  const dibuat = field(row, 'waktu_dibuat', 'Waktu_dibuat', 'WaktuDibuat');
+  const foto = field(row, 'foto', 'Foto');
+  const pelaporNama = field(row, 'username_report', 'UsernameReport');
   return {
     id,
     backendId: id,
     facilityId,
-    kategori: str(row['kategori_laporan']),
-    deskripsi: str(row['alasan']),
+    kategori: str(field(row, 'kategori_laporan', 'KategoriLaporan')),
+    deskripsi: str(field(row, 'alasan', 'Alasan')),
     foto: typeof foto === 'string' && foto ? foto : undefined,
     pelaporNama:
       typeof pelaporNama === 'string' && pelaporNama ? pelaporNama : undefined,
-    status: mapReportStatus(row['status_laporan']),
-    catatan: str(row['catatan_resolusi']),
-    createdAt: dibuat ? new Date(dibuat).toISOString() : new Date().toISOString(),
+    status: mapReportStatus(field(row, 'status_laporan', 'StatusLaporan')),
+    catatan: str(field(row, 'catatan_resolusi', 'CatatanResolusi')),
+    createdAt: isoDate(dibuat),
   };
 }
 

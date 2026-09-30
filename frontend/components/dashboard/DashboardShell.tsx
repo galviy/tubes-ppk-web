@@ -139,9 +139,14 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               Memuat data terbaru dari server…
             </div>
           )}
+          {syncStatus === 'partial' && (
+            <div className="alert info" style={{ marginBottom: 16 }} role="status">
+              Sebagian data berhasil dimuat, tetapi reservasi atau laporan belum tersinkron. Jika salah satu daftar kosong, muat ulang halaman.
+            </div>
+          )}
           {syncStatus === 'error' && (
             <div className="alert danger" style={{ marginBottom: 16 }}>
-              Gagal memuat data terbaru dari server. Daftar kosong di bawah ini berarti
+              Gagal memuat data reservasi maupun laporan dari server. Daftar kosong di bawah ini berarti
               <b> belum termuat, bukan tidak ada data</b>. Periksa koneksi backend lalu muat ulang halaman.
             </div>
           )}
