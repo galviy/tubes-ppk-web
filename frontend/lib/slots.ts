@@ -10,6 +10,33 @@ function pad(n: number): string {
   return n.toString().padStart(2, '0');
 }
 
+export const APP_TIME_ZONE = 'Asia/Jakarta';
+
+function zonedParts(date: Date, timeZone = APP_TIME_ZONE): Record<string, string> {
+  return Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    })
+      .formatToParts(date)
+      .filter((part) => part.type !== 'literal')
+      .map((part) => [part.type, part.value])
+  );
+}
+
+export function dateKeyInJakarta(value: string | Date | null | undefined): string {
+  if (!value) return '';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const parts = zonedParts(date);
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 /** Menghasilkan 26 slot 30 menit dari 07.00 sampai 20.00. */
 export function generateTimeSlots(): TimeSlot[] {
   const slots: TimeSlot[] = [];
@@ -21,11 +48,7 @@ export function generateTimeSlots(): TimeSlot[] {
 }
 
 export function getTodayDateString(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return dateKeyInJakarta(new Date());
 }
 
 export const INDO_MONTHS = [
@@ -39,34 +62,50 @@ export const INDO_MONTHS = [
 export function formatDateIndo(dateStr: string | null | undefined): string {
   if (!dateStr) return '';
   const cleanStr = String(dateStr).trim();
+  if (/^\d{4}-\d{1,2}-\d{1,2}[T ]/.test(cleanStr)) {
+    const dateKey = dateKeyInJakarta(cleanStr);
+    if (dateKey) return formatDateKeyIndo(dateKey);
+  }
   const match = cleanStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (match) {
     const year = match[1];
     const monthIndex = parseInt(match[2], 10) - 1;
     const day = parseInt(match[3], 10);
     if (monthIndex >= 0 && monthIndex < 12) {
-      return `${day} ${INDO_MONTHS[monthIndex]} ${year}`;
+      return formatDateKeyIndo(`${year}-${pad(monthIndex + 1)}-${pad(day)}`);
     }
   }
   const d = new Date(cleanStr);
   if (!Number.isNaN(d.getTime())) {
-    return `${d.getDate()} ${INDO_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+    return formatDateKeyIndo(dateKeyInJakarta(d));
   }
   return cleanStr;
+}
+
+function formatDateKeyIndo(dateKey: string): string {
+  const match = dateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return dateKey;
+  return `${Number(match[3])} ${INDO_MONTHS[Number(match[2]) - 1]} ${match[1]}`;
 }
 
 export function formatDateTimeIndo(dateTime: string | null | undefined): string {
   if (!dateTime) return '-';
   const date = new Date(dateTime);
   if (Number.isNaN(date.getTime())) return String(dateTime);
-  return date.toLocaleString('id-ID', {
+  return `${date.toLocaleString('id-ID', {
+    timeZone: APP_TIME_ZONE,
     day: 'numeric',
     month: 'long',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-  });
+  })} WIB`;
+}
+
+export function formatTimeInJakarta(date: Date): string {
+  const parts = zonedParts(date);
+  return `${parts.hour}:${parts.minute}`;
 }
 
 // Selaras aturan backend (services.reservasi_service.go: hariMinimalPengajuan):
@@ -80,20 +119,8 @@ export const HARI_MINIMAL_PENGAJUAN = 2;
  */
 export function isReservationDeadlineValid(targetDateStr: string, now: Date = new Date()): boolean {
   if (!targetDateStr) return false;
-  const parts = targetDateStr.split('-').map(Number);
-  if (parts.length !== 3) return false;
-  const [y, m, d] = parts;
-  const target = new Date(y, m - 1, d, 0, 0, 0, 0);
-  const earliest = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate() + HARI_MINIMAL_PENGAJUAN,
-    0,
-    0,
-    0,
-    0
-  );
-  return target.getTime() >= earliest.getTime();
+  const earliest = addCalendarDays(getJakartaDateKey(now), HARI_MINIMAL_PENGAJUAN);
+  return /^\d{4}-\d{2}-\d{2}$/.test(targetDateStr) && targetDateStr >= earliest;
 }
 
 /**
@@ -101,13 +128,21 @@ export function isReservationDeadlineValid(targetDateStr: string, now: Date = ne
  * Jika hari ini tanggal 25, tanggal paling awal yang memenuhi syarat adalah tanggal 27.
  */
 export function getEarliestReservableDate(now: Date = new Date()): string {
-  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + HARI_MINIMAL_PENGAJUAN);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return addCalendarDays(getJakartaDateKey(now), HARI_MINIMAL_PENGAJUAN);
 }
 
 export function currentHHMM(): string {
-  const now = new Date();
-  return `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  return formatTimeInJakarta(new Date());
+}
+
+function getJakartaDateKey(now: Date): string {
+  return dateKeyInJakarta(now);
+}
+
+function addCalendarDays(dateKey: string, days: number): string {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const next = new Date(Date.UTC(year, month - 1, day + days));
+  return `${next.getUTCFullYear()}-${pad(next.getUTCMonth() + 1)}-${pad(next.getUTCDate())}`;
 }
 
 /** Helper pembanding ID fasilitas yang tahan terhadap variasi prefix (misal: "ruangan-2" vs "2") */

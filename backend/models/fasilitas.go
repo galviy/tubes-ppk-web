@@ -18,12 +18,15 @@ type Fasilitas struct {
 // Ruangan dan Alat adalah baris tabel apa adanya, dipakai repository
 // untuk mengembalikan hasil query tanpa pemetaan.
 type Ruangan struct {
-	Id        int
-	Nama      string
-	Status    string
-	Kapasitas int
-	Lokasi    string
-	Kategori  string
+	Id          int
+	Nama        string
+	Status      string
+	Kapasitas   int
+	Lokasi      string
+	Kategori    string
+	Deskripsi   string
+	Kelengkapan string
+	Foto        string
 }
 
 type Alat struct {
@@ -33,6 +36,9 @@ type Alat struct {
 	BanyakAlat     int
 	Status         int
 	Kategori       string
+	Deskripsi      string
+	Kelengkapan    string
+	Foto           string
 }
 
 const (

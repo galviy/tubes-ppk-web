@@ -54,7 +54,20 @@ func Update_ruangan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := repositories.UpdateRuangan(id, ruangan, statusInt, kapasitasInt, lokasi, kategori); err != nil {
+	deskripsi := r.FormValue("deskripsi")
+	if deskripsi == "" {
+		deskripsi = r.FormValue("desc")
+	}
+	kelengkapan := r.FormValue("kelengkapan")
+	if kelengkapan == "" {
+		kelengkapan = r.FormValue("amenities")
+	}
+	foto := r.FormValue("foto")
+	if foto == "" {
+		foto = r.FormValue("image")
+	}
+
+	if err := repositories.UpdateRuangan(id, ruangan, statusInt, kapasitasInt, lokasi, kategori, deskripsi, kelengkapan, foto); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			utils.ResponseJSONMessage(w, "Ruangan dengan id tersebut tidak ditemukan!", http.StatusNotFound, false)
 			return
@@ -117,7 +130,20 @@ func Update_alat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := repositories.UpdateAlat(id, alat, jumlahInt, banyakInt, kategori, statusInt); err != nil {
+	deskripsiAlat := r.FormValue("deskripsi")
+	if deskripsiAlat == "" {
+		deskripsiAlat = r.FormValue("desc")
+	}
+	kelengkapanAlat := r.FormValue("kelengkapan")
+	if kelengkapanAlat == "" {
+		kelengkapanAlat = r.FormValue("amenities")
+	}
+	fotoAlat := r.FormValue("foto")
+	if fotoAlat == "" {
+		fotoAlat = r.FormValue("image")
+	}
+
+	if err := repositories.UpdateAlat(id, alat, jumlahInt, banyakInt, kategori, statusInt, deskripsiAlat, kelengkapanAlat, fotoAlat); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			utils.ResponseJSONMessage(w, "Alat dengan id tersebut tidak ditemukan!", http.StatusNotFound, false)
 			return

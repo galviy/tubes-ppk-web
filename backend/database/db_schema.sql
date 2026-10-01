@@ -30,6 +30,9 @@ CREATE TABLE `alat` (
   `banyak_alat` int(11) NOT NULL,
   `kategori` int(11) NOT NULL,
   `status` tinyint(1) NOT NULL,
+  `deskripsi` text DEFAULT NULL,
+  `kelengkapan` text DEFAULT NULL,
+  `foto` longtext DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `alat_unique` (`nama_alat`),
   KEY `alat_kategori_FK` (`kategori`),
@@ -507,6 +510,9 @@ CREATE TABLE `ruangan` (
   `kapasitas` int(11) NOT NULL,
   `lokasi` varchar(255) NOT NULL,
   `kategori` int(11) NOT NULL,
+  `deskripsi` text DEFAULT NULL,
+  `kelengkapan` text DEFAULT NULL,
+  `foto` longtext DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `ruangan_unique` (`nama_ruangan`),
   KEY `ruangan_kategori_FK` (`kategori`),
@@ -692,11 +698,11 @@ DO BEGIN
     UPDATE `reservasi`
     SET `status_reservasi` = 'CANCELLED',
         `alasan_pembatalan` = 'Dibatalkan otomatis: tidak diproses sebelum 2 jam sebelum jadwal',
-        `waktu_dibatalkan` = NOW(),
-        `waktu_diproses` = NOW(),
+        `waktu_dibatalkan` = UTC_TIMESTAMP(),
+        `waktu_diproses` = UTC_TIMESTAMP(),
         `dibatalkan_oleh` = NULL
     WHERE `status_reservasi` = 'PENDING'
-      AND `waktu_peminjaman` <= NOW() + INTERVAL 2 HOUR;
+      AND `waktu_peminjaman` <= DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 7 HOUR), INTERVAL 2 HOUR);
 END */ ;;
 DELIMITER ;
 

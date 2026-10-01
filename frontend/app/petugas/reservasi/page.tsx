@@ -6,6 +6,7 @@ import { useAppData } from '@/context/AppDataContext';
 import { Reservation, ReservationStatus } from '@/models/reservation';
 import { formatDateIndo, formatDateTimeIndo } from '@/lib/slots';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
+import Pagination from '@/components/Pagination';
 import ReservationDetailModal from '@/components/ReservationDetailModal';
 import {
   isAlatReservation,
@@ -128,12 +129,36 @@ function PetugasReservasiContent() {
     });
   }, [reservations, facilityById, tabType, filterStatus, filterCategory, filterTanggal, sortMode]);
 
+  // Paginasi: 10 data per halaman
+  const ITEMS_PER_PAGE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset ke halaman 1 saat filter atau urutan berganti
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [tabType, filterStatus, filterCategory, filterTanggal, sortMode]);
+
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
+  const paginatedList = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filtered.slice(start, start + ITEMS_PER_PAGE);
+  }, [filtered, currentPage]);
+
   function formatAlatInfo(alat?: { nama: string; jumlah: number }[]): string {
     if (!alat || alat.length === 0) return '';
     return ` beserta alat (${alat.map((a) => `${a.nama}: ${a.jumlah} unit`).join(', ')})`;
   }
 
-  function handleApprove(id: number, facilityName: string, pemohon: string, alatInfo = '') {
+  function handleApprove(id: number, facilityName: string, pemohon: string, alatInfo = '', facilityStatus?: string) {
+    if (facilityStatus === 'repair' || facilityStatus === 'nonaktif') {
+      const statusText = facilityStatus === 'repair' ? 'dalam perbaikan' : 'nonaktif';
+      setFeedback({
+        type: 'error',
+        message: `Reservasi tidak dapat disetujui karena ${facilityName} sedang ${statusText}. Petugas harus membatalkan reservasi ini.`,
+      });
+      return;
+    }
+
     setModalConfig({
       isOpen: true,
       title: 'Setujui Permohonan Reservasi',
@@ -174,13 +199,19 @@ function PetugasReservasiContent() {
     });
   }
 
-  function handleCancelEmergency(id: number, facilityName: string, pemohon: string, alatInfo = '') {
+  function handleCancelEmergency(id: number, facilityName: string, pemohon: string, alatInfo = '', pending = false, facilityUnavailable = false) {
     setModalConfig({
       isOpen: true,
-      title: 'Batalkan Reservasi (Kondisi Mendesak)',
-      subtitle: `Membatalkan reservasi ${facilityName}${alatInfo} milik ${pemohon} yang telah disetujui sebelumnya.`,
+      title: pending ? 'Batalkan Reservasi Menunggu' : 'Batalkan Reservasi (Kondisi Mendesak)',
+      subtitle: pending && facilityUnavailable
+        ? `Fasilitas ${facilityName}${alatInfo} sedang tidak tersedia. Batalkan reservasi milik ${pemohon} dan sertakan alasannya.`
+        : pending
+        ? `Batalkan reservasi yang masih menunggu milik ${pemohon} untuk ${facilityName}${alatInfo}. Sertakan alasan pembatalan.`
+        : `Membatalkan reservasi ${facilityName}${alatInfo} milik ${pemohon} yang telah disetujui sebelumnya.`,
       label: 'Alasan Pembatalan',
-      placeholder: 'Contoh: Terjadi gangguan kelistrikan atau perbaikan darurat...',
+      placeholder: pending && facilityUnavailable
+        ? 'Contoh: Fasilitas sedang dalam perbaikan.'
+        : 'Contoh: Terjadi gangguan kelistrikan atau perbaikan darurat...',
       confirmText: 'Batalkan Reservasi',
       confirmVariant: 'danger',
       showInput: true,
@@ -463,83 +494,84 @@ function PetugasReservasiContent() {
       <p style={{ margin: '0 0 8px', textAlign: 'right', fontSize: 12.5, fontWeight: 600, color: '#6B7280' }}>
         Klik baris untuk melihat detail reservasi.
       </p>
-      <div className="panel table-scroll" style={{ padding: 0, overflowX: 'auto' }}>
-        <table style={{ minWidth: 1180 }}>
-          <thead>
-            <tr>
-              <th>Pemohon</th>
-              <th>Fasilitas</th>
-              <th>Waktu Reservasi</th>
-              <th>Jadwal</th>
-              <th>Status</th>
-              <th>Waktu Pembatalan</th>
-              <th style={{ textAlign: 'left' }}>Tindakan</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
+      <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="table-scroll" style={{ overflowX: 'auto' }}>
+          <table style={{ minWidth: 1180, width: '100%' }}>
+            <thead>
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '36px', color: '#6B7280' }}>
-                  Tidak ada reservasi yang cocok dengan filter ini.
-                </td>
+                <th style={{ minWidth: 130 }}>Pemohon</th>
+                <th style={{ minWidth: 180 }}>Fasilitas</th>
+                <th style={{ minWidth: 130 }}>Waktu Reservasi</th>
+                <th style={{ minWidth: 120 }}>Jadwal</th>
+                <th style={{ minWidth: 90 }}>Status</th>
+                <th style={{ minWidth: 130 }}>Waktu Pembatalan</th>
+                <th style={{ textAlign: 'left', minWidth: 150 }}>Tindakan</th>
               </tr>
-            ) : (
-              filtered.map((r) => {
-                const fac = facilityById(r.facilityId);
-                const isAlat = isAlatReservation(r, fac);
-                const facilityName = fac?.name || r.ruanganNama || `Fasilitas #${r.facilityId}`;
-                const cfg = STATUS_CONFIG[r.status] || { pillClass: 'neutral', label: r.status };
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '36px', color: '#6B7280' }}>
+                    Tidak ada reservasi yang cocok dengan filter ini.
+                  </td>
+                </tr>
+              ) : (
+                paginatedList.map((r) => {
+                  const fac = facilityById(r.facilityId);
+                  const isAlat = isAlatReservation(r, fac);
+                  const facilityName = fac?.name || r.ruanganNama || `Fasilitas #${r.facilityId}`;
+                  const cfg = STATUS_CONFIG[r.status] || { pillClass: 'neutral', label: r.status };
 
-                return (
-                  <tr
-                    key={r.id}
-                    className="reservation-row-clickable"
-                    tabIndex={0}
-                    aria-label={`Buka detail reservasi ${facilityName}, pemohon ${r.pemohon}`}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => setDetailFor(r)}
-                    onKeyDown={(e) => {
-                      if (e.target !== e.currentTarget) return;
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setDetailFor(r);
-                      }
-                    }}
-                  >
-                    {/* PEMOHON */}
-                    <td style={{ fontWeight: 600, color: '#181D24', whiteSpace: 'nowrap' }}>
-                      {r.pemohon}
-                    </td>
+                  return (
+                    <tr
+                      key={r.id}
+                      className="reservation-row-clickable"
+                      tabIndex={0}
+                      aria-label={`Buka detail reservasi ${facilityName}, pemohon ${r.pemohon}`}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setDetailFor(r)}
+                      onKeyDown={(e) => {
+                        if (e.target !== e.currentTarget) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setDetailFor(r);
+                        }
+                      }}
+                    >
+                      {/* PEMOHON */}
+                      <td style={{ fontWeight: 600, color: '#181D24', maxWidth: 170, wordBreak: 'break-word' }}>
+                        {r.pemohon}
+                      </td>
 
-                    {/* FASILITAS */}
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontWeight: 600, color: '#181D24' }}>{facilityName}</span>
-                        <span
-                          className="pill neutral"
-                          style={{ fontSize: 11, padding: '1px 6px', fontWeight: 600 }}
-                        >
-                          {isAlat ? 'Alat' : 'Ruangan'}
-                        </span>
-                        {!isAlat && r.alat && r.alat.length > 0 && (
+                      {/* FASILITAS */}
+                      <td style={{ maxWidth: 260, minWidth: 170 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 600, color: '#181D24' }}>{facilityName}</span>
                           <span
-                            style={{
-                              fontSize: 11,
-                              padding: '2px 6px',
-                              borderRadius: 4,
-                              fontWeight: 700,
-                              background: '#15171a',
-                              color: '#b59876',
-                              border: '1px solid #b59876',
-                            }}
+                            className="pill neutral"
+                            style={{ fontSize: 11, padding: '1px 6px', fontWeight: 600 }}
                           >
-                            + {r.alat.length} Alat
+                            {isAlat ? 'Alat' : 'Ruangan'}
                           </span>
-                        )}
-                      </div>
-                      <div style={{ fontSize: 13, color: '#6B7280' }}>
-                        {fac?.type || (isAlat ? 'Alat' : 'Ruangan')}
-                      </div>
+                          {!isAlat && r.alat && r.alat.length > 0 && (
+                            <span
+                              style={{
+                                fontSize: 11,
+                                padding: '2px 6px',
+                                borderRadius: 4,
+                                fontWeight: 700,
+                                background: '#15171a',
+                                color: '#b59876',
+                                border: '1px solid #b59876',
+                              }}
+                            >
+                              + {r.alat.length} Alat
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: 13, color: '#6B7280', marginTop: 3, lineHeight: 1.35, wordBreak: 'break-word' }}>
+                          {fac?.type || '-'} • {fac?.loc || '-'}
+                        </div>
                       {!isAlat && r.alat && r.alat.length > 0 && (
                         <div
                           style={{
@@ -574,7 +606,7 @@ function PetugasReservasiContent() {
                     {/* JADWAL */}
                     <td style={{ whiteSpace: 'nowrap', fontSize: 13 }}>
                       <div>{formatDateIndo(r.tanggal)}</div>
-                      <div style={{ color: '#6B7280', fontSize: 14 }}>{r.start} - {r.end}</div>
+                      <div style={{ color: '#6B7280', fontSize: 14 }}>{r.start} - {r.end} WIB</div>
                     </td>
 
                     {/* STATUS */}
@@ -592,12 +624,12 @@ function PetugasReservasiContent() {
                     {/* TINDAKAN */}
                     <td style={{ textAlign: 'left', minWidth: 160 }} onClick={(e) => e.stopPropagation()}>
                       {r.status === 'menunggu' && (
-                        <div style={{ display: 'flex', gap: 6, whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', gap: 6, whiteSpace: 'nowrap', flexWrap: 'wrap' }}>
                           <button
                             type="button"
                             className="btn primary"
                             style={{ padding: '5px 12px', fontSize: 13 }}
-                            onClick={() => handleApprove(r.id, facilityName, r.pemohon, formatAlatInfo(r.alat))}
+                            onClick={() => handleApprove(r.id, facilityName, r.pemohon, formatAlatInfo(r.alat), fac?.status)}
                           >
                             Setujui
                           </button>
@@ -608,6 +640,21 @@ function PetugasReservasiContent() {
                             onClick={() => handleReject(r.id, facilityName, r.pemohon, formatAlatInfo(r.alat))}
                           >
                             Tolak
+                          </button>
+                          <button
+                            type="button"
+                            className="btn ghost-danger"
+                            style={{ padding: '5px 12px', fontSize: 13 }}
+                            onClick={() => handleCancelEmergency(
+                              r.id,
+                              facilityName,
+                              r.pemohon,
+                              formatAlatInfo(r.alat),
+                              true,
+                              fac?.status === 'repair' || fac?.status === 'nonaktif'
+                            )}
+                          >
+                            Batalkan
                           </button>
                         </div>
                       )}
@@ -648,6 +695,18 @@ function PetugasReservasiContent() {
             )}
           </tbody>
         </table>
+        </div>
+
+        {/* Paginasi Data */}
+        <div style={{ padding: '0 20px 16px 20px' }}>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filtered.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </div>
 
       <ActionPromptModal config={modalConfig} onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))} />

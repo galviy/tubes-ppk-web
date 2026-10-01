@@ -22,7 +22,9 @@ func ConnectDB() {
 	dbIP := os.Getenv("DB_IPADDRESS")
 	dbPort := os.Getenv("DB_PORT")
 
-	dsn := dbUser + ":" + password + "@tcp(" + dbIP + ":" + dbPort + ")/" + dbName + "?parseTime=true"
+	// DATETIME audit timestamps are stored as UTC; reservation schedule values
+	// are formatted as strings and treated as WIB wall-clock times.
+	dsn := dbUser + ":" + password + "@tcp(" + dbIP + ":" + dbPort + ")/" + dbName + "?parseTime=true&loc=UTC&time_zone=%27%2B00%3A00%27"
 
 	var err error
 	DB, err = sql.Open("mysql", dsn)

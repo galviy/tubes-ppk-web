@@ -116,7 +116,7 @@ function KelolaFasilitasContent() {
       setModalConfig({
         isOpen: true,
         title: 'Data Tidak Lengkap',
-        subtitle: `Data "${f.name}" tidak memiliki referensi backend sehingga tidak bisa diubah.`,
+        subtitle: `Data "${f.name}" tidak memiliki referensi ID sehingga tidak bisa diubah.`,
         confirmText: 'Mengerti',
         confirmVariant: 'warning',
         showInput: false,
@@ -237,9 +237,10 @@ function KelolaFasilitasContent() {
         setModalConfig({
           isOpen: true,
           title: 'Fasilitas Diperbarui',
-          subtitle: `"${payload.name}" tersimpan di database backend.`,
+          subtitle: `"${payload.name}" berhasil diperbarui.`,
           confirmText: 'Selesai',
           confirmVariant: 'primary',
+          badgeVariant: 'success',
           showInput: false,
           onConfirm: () => {},
         });
@@ -249,7 +250,7 @@ function KelolaFasilitasContent() {
       }
       return;
     }
-    // Tambah via backend (desc/amenities/image tidak punya kolom backend).
+    // Tambah via backend
     setIsSubmitting(true);
     try {
       const res = await addFacility({ ...payload, tipeSarana: form.tipeSarana });
@@ -268,9 +269,10 @@ function KelolaFasilitasContent() {
       setModalConfig({
         isOpen: true,
         title: 'Fasilitas Ditambahkan',
-        subtitle: `"${payload.name}" tersimpan di database backend. Deskripsi, kelengkapan, dan foto tidak memiliki kolom backend sehingga hanya tampil lokal sementara.`,
+        subtitle: `"${payload.name}" berhasil ditambahkan.`,
         confirmText: 'Selesai',
         confirmVariant: 'primary',
+        badgeVariant: 'success',
         showInput: false,
         onConfirm: () => {},
       });
@@ -286,7 +288,7 @@ function KelolaFasilitasContent() {
       setModalConfig({
         isOpen: true,
         title: 'Data Tidak Lengkap',
-        subtitle: `Data "${f.name}" tidak memiliki referensi backend sehingga tidak bisa dinonaktifkan.`,
+        subtitle: `Data "${f.name}" tidak memiliki referensi ID sehingga tidak bisa dinonaktifkan.`,
         confirmText: 'Mengerti',
         confirmVariant: 'warning',
         showInput: false,
@@ -341,7 +343,7 @@ function KelolaFasilitasContent() {
         <div className="form-grid">
           {/* Nama Fasilitas */}
           <div className="fgroup">
-            <label>Nama fasilitas *</label>
+            <label>Nama fasilitas <span className="required-asterisk">*</span></label>
             <input
               placeholder="Contoh: Ruang Kuliah A101 / Studio Multimedia"
               value={form.nama}
@@ -352,7 +354,7 @@ function KelolaFasilitasContent() {
 
           {/* Jenis Sarana (menentukan endpoint backend) */}
           <div className="fgroup">
-            <label>Jenis sarana *</label>
+            <label>Jenis sarana <span className="required-asterisk">*</span></label>
             <div style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '8px 0' }}>
               {(['ruangan', 'alat'] as const).map((t) => (
                 <label key={t} style={{ display: 'inline-flex', gap: 6, alignItems: 'center', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
@@ -370,7 +372,10 @@ function KelolaFasilitasContent() {
 
           {/* Tipe Fasilitas (Kategori Ruangan vs Kategori Alat) */}
           <div className="fgroup">
-            <label>{form.tipeSarana === 'alat' ? 'Kategori Alat *' : 'Kategori Ruangan *'}</label>
+            <label>
+              {form.tipeSarana === 'alat' ? 'Kategori Alat ' : 'Kategori Ruangan '}
+              <span className="required-asterisk">*</span>
+            </label>
             <select
               value={form.tipeSelect}
               onChange={(e) => setForm((f) => ({ ...f, tipeSelect: e.target.value }))}
@@ -395,7 +400,7 @@ function KelolaFasilitasContent() {
 
           {/* Lokasi / Gedung */}
           <div className="fgroup">
-            <label>Lokasi / Gedung *</label>
+            <label>Lokasi / Gedung <span className="required-asterisk">*</span></label>
             <input
               value={form.lokasi}
               onChange={(e) => setForm((f) => ({ ...f, lokasi: e.target.value }))}
@@ -406,7 +411,10 @@ function KelolaFasilitasContent() {
 
           {/* Kapasitas / Jumlah Tersedia */}
           <div className="fgroup">
-            <label>{form.tipeSarana === 'alat' ? 'Jumlah Unit Tersedia *' : 'Kapasitas Ruangan (orang) *'}</label>
+            <label>
+              {form.tipeSarana === 'alat' ? 'Jumlah Unit Tersedia ' : 'Kapasitas Ruangan (orang) '}
+              <span className="required-asterisk">*</span>
+            </label>
             <input
               type="number"
               min={1}
@@ -906,7 +914,7 @@ function KelolaFasilitasContent() {
 
                         <button
                           type="button"
-                          title="Ubah spesifikasi via backend"
+                          title="Ubah spesifikasi fasilitas"
                           onClick={() => startEdit(f)}
                           style={{
                             padding: '5px 10px',
@@ -924,7 +932,7 @@ function KelolaFasilitasContent() {
 
                         <button
                           type="button"
-                          title="Nonaktifkan via backend (soft delete)"
+                          title="Nonaktifkan fasilitas"
                           onClick={() => handleDelete(f)}
                           style={{
                             padding: '5px 10px',

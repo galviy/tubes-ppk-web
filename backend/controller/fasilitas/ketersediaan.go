@@ -19,12 +19,10 @@ func Ketersediaan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Jam operasional dan waktu reservasi disimpan sebagai waktu-naif di DB
-	// (driver memakai loc UTC), jadi tanggal diminta harus di-parse sebagai UTC
-	// agar slot sejajar dengan baris reservasi. Hari ini dihitung dari tanggal
-	// kalender lokal supaya batas "tidak boleh tanggal lampau" tetap benar.
-	sekarang := time.Now()
-	hariIni := time.Date(sekarang.Year(), sekarang.Month(), sekarang.Day(), 0, 0, 0, 0, time.UTC)
+	// Tanggal jadwal adalah tanggal kalender WIB, disimpan sebagai DATETIME
+	// naif dengan komponen tanggal yang sama.
+	sekarangWIB := time.Now().In(time.FixedZone("WIB", 7*60*60))
+	hariIni := time.Date(sekarangWIB.Year(), sekarangWIB.Month(), sekarangWIB.Day(), 0, 0, 0, 0, time.UTC)
 	tanggal := hariIni
 	if nilai := strings.TrimSpace(r.URL.Query().Get("tanggal")); nilai != "" {
 		parsed, err := time.Parse("2006-01-02", nilai)

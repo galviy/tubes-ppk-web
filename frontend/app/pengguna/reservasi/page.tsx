@@ -55,8 +55,8 @@ function DownwardDatePicker({
     if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
       return { y: parts[0], m: parts[1] - 1, d: parts[2] };
     }
-    const now = new Date();
-    return { y: now.getFullYear(), m: now.getMonth(), d: now.getDate() };
+    const [y, m, d] = getTodayDateString().split('-').map(Number);
+    return { y, m: m - 1, d };
   }, [value]);
 
   const [viewYear, setViewYear] = useState(parsed.y);
@@ -1307,11 +1307,17 @@ function AjukanReservasiContent() {
               ) : (
                 displayedFacilities.map((f) => (
                   <option key={f.id} value={f.id}>
-                    {f.name} ({f.loc}) ({isAlatFacility(f) ? `tersedia ${f.tersedia ?? f.cap} unit` : `maks. ${f.cap} orang`})
+                    {f.name} ({isAlatFacility(f) ? `tersedia ${f.tersedia ?? f.cap} unit` : `maks. ${f.cap} orang`})
                   </option>
                 ))
               )}
             </select>
+            {facility && (
+              <div style={{ marginTop: 6, fontSize: 13, color: '#4B5563' }}>
+                <span style={{ color: '#6B7280', fontWeight: 600, marginRight: 5 }}>Lokasi:</span>
+                {facility.loc || 'Belum tersedia'}
+              </div>
+            )}
           </div>
 
           {/* Date Selection (Always opens downward with full calendar size) */}
@@ -1474,15 +1480,6 @@ function AjukanReservasiContent() {
                   </div>
                 );
               })}
-
-            {/* Legend Sesuai Gambar Jadwal Ketersediaan */}
-            <div className="sched-legend" style={{ borderTop: '1px solid #EBE7DF', paddingTop: 14, marginTop: 12 }}>
-              <div className="leg"><span className="sq avail" />Tersedia untuk Reservasi</div>
-              <div className="leg"><span className="sq pending" />Menunggu Persetujuan</div>
-              <div className="leg"><span className="sq picked" />Terpilih</div>
-              <div className="leg"><span className="sq booked" />Terpakai / Sedang Dipesan</div>
-              <div className="leg"><span className="sq passed" />Waktu Lewat / Tidak Aktif</div>
-            </div>
 
             {/* Live Feedback Banner */}
             {startTime && endTime && (
@@ -1715,7 +1712,7 @@ function AjukanReservasiContent() {
                         : ` - Stok: ${stock} unit`;
                       return (
                         <option key={t.id} value={t.id} disabled={unavailable}>
-                          {t.name} ({t.loc}){suffix}
+                          {t.name}{suffix}
                         </option>
                       );
                     })}

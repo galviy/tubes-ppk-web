@@ -90,7 +90,7 @@ export default function ReservationDetailModal({
           <div><span>Lokasi</span><b>{facility?.loc || '-'}</b></div>
           <div><span>Waktu reservasi</span><b>{formatDateTimeIndo(reservation.createdAt)}</b></div>
           <div><span>Tanggal</span><b>{formatDateIndo(reservation.tanggal)}</b></div>
-          <div><span>Waktu</span><b>{reservation.start} - {reservation.end}</b></div>
+          <div><span>Waktu</span><b>{reservation.start} - {reservation.end} WIB</b></div>
           <div>
             <span>{isAlatReservation(reservation, facility) ? 'Jumlah unit' : 'Jumlah peserta'}</span>
             <b>{reservation.peserta ? `${reservation.peserta} ${isAlatReservation(reservation, facility) ? 'unit' : 'orang'}` : '-'}</b>

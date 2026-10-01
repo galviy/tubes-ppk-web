@@ -75,7 +75,7 @@ func GetAlatById(id int) (models.Alat, error) {
 func execRiwayat(e execer, idReservasi int, status string, diubahOleh *int, keterangan *string) error {
 	_, err := e.Exec(`
 		INSERT INTO reservasi_riwayat (id_reservasi, status_reservasi, diubah_oleh, keterangan, waktu)
-		VALUES (?, ?, ?, ?, NOW())`,
+		VALUES (?, ?, ?, ?, UTC_TIMESTAMP())`,
 		idReservasi, status, diubahOleh, keterangan)
 	return err
 }
@@ -102,7 +102,7 @@ func CreateReservasi(ruanganID *int, alat []ReservasiAlatRequest, userID int, mu
 			waktu_reservasi_dibuat, ruangan_reservasi, user_reservasi,
 			waktu_peminjaman, waktu_peminjaman_selesai, status_reservasi,
 			alasan_peminjaman, jumlah_peserta
-		) VALUES (NOW(), ?, ?, ?, ?, 'PENDING', ?, ?)`,
+		) VALUES (UTC_TIMESTAMP(), ?, ?, ?, ?, 'PENDING', ?, ?)`,
 		ruangan, userID, mulai, selesai, alasan, peserta)
 	if err != nil {
 		return 0, err
@@ -421,7 +421,7 @@ func ApproveReservasi(id, petugasID int) error {
 
 	if _, err := tx.Exec(`
 		UPDATE reservasi
-		SET status_reservasi = 'APPROVED', disetujui_oleh = ?, waktu_diproses = NOW()
+		SET status_reservasi = 'APPROVED', disetujui_oleh = ?, waktu_diproses = UTC_TIMESTAMP()
 		WHERE id = ?`, petugasID, id); err != nil {
 		return err
 	}
@@ -445,7 +445,7 @@ func RejectReservasi(id, petugasID int, alasan string) error {
 	}
 	if _, err := tx.Exec(`
 		UPDATE reservasi
-		SET status_reservasi = 'REJECTED', waktu_diproses = NOW()
+		SET status_reservasi = 'REJECTED', waktu_diproses = UTC_TIMESTAMP()
 		WHERE id = ?`, id); err != nil {
 		return err
 	}
@@ -465,7 +465,7 @@ func CancelReservasi(id int, olehUserID *int, alasan string) error {
 	if _, err := tx.Exec(`
 		UPDATE reservasi
 		SET status_reservasi = 'CANCELLED', alasan_pembatalan = ?, dibatalkan_oleh = ?,
-		    waktu_dibatalkan = NOW(), waktu_diproses = NOW()
+		    waktu_dibatalkan = UTC_TIMESTAMP(), waktu_diproses = UTC_TIMESTAMP()
 		WHERE id = ?`, alasan, olehUserID, id); err != nil {
 		return err
 	}
@@ -489,7 +489,7 @@ func SinkronisasiStatusReservasi() error {
 	rows, err := tx.Query(`
 		SELECT id FROM reservasi
 		WHERE status_reservasi = 'PENDING'
-		  AND DATE_SUB(waktu_peminjaman, INTERVAL 2 HOUR) <= NOW()`)
+		  AND DATE_SUB(waktu_peminjaman, INTERVAL 2 HOUR) <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 7 HOUR)`)
 	if err != nil {
 		return err
 	}
@@ -511,7 +511,7 @@ func SinkronisasiStatusReservasi() error {
 		if _, err := tx.Exec(`
 			UPDATE reservasi
 			SET status_reservasi = 'CANCELLED', alasan_pembatalan = ?, dibatalkan_oleh = NULL,
-			    waktu_dibatalkan = NOW(), waktu_diproses = NOW()
+			    waktu_dibatalkan = UTC_TIMESTAMP(), waktu_diproses = UTC_TIMESTAMP()
 			WHERE id = ?`, keteranganBatal, id); err != nil {
 			return err
 		}
@@ -524,7 +524,7 @@ func SinkronisasiStatusReservasi() error {
 	rows, err = tx.Query(`
 		SELECT id FROM reservasi
 		WHERE status_reservasi = 'APPROVED'
-		  AND waktu_peminjaman_selesai <= NOW()`)
+		  AND waktu_peminjaman_selesai <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 7 HOUR)`)
 	if err != nil {
 		return err
 	}

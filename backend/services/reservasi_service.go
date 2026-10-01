@@ -42,7 +42,19 @@ type BuatReservasiInput struct {
 
 var layoutWaktu = "2006-01-02 15:04:05"
 
-// ParseWaktu memvalidasi format "YYYY-MM-DD HH:MM:SS".
+// waktuWIBSebagaiWallUTC mengubah waktu aktual menjadi waktu dinding WIB
+// yang disimpan dalam DATETIME naif berbentuk UTC oleh database.
+func waktuWIBSebagaiWallUTC(waktu time.Time) time.Time {
+	wib := waktu.In(time.FixedZone("WIB", 7*60*60))
+	return time.Date(wib.Year(), wib.Month(), wib.Day(), wib.Hour(), wib.Minute(), wib.Second(), wib.Nanosecond(), time.UTC)
+}
+
+func waktuSekarangWIBSebagaiWallUTC() time.Time {
+	return waktuWIBSebagaiWallUTC(time.Now())
+}
+
+// ParseWaktu mem-parsing waktu jadwal WIB sebagai waktu dinding UTC-naif agar
+// kolom DATETIME jadwal tetap menyimpan jam kalender WIB tanpa konversi offset.
 func ParseWaktu(nilai string) (time.Time, error) {
 	return time.Parse(layoutWaktu, strings.TrimSpace(nilai))
 }
@@ -91,7 +103,7 @@ func BuatReservasi(userID int, in BuatReservasiInput) (int64, error) {
 	if !validasiJamOperasional(in.WaktuMulai, in.WaktuSelesai) {
 		return 0, errReservasi(http.StatusBadRequest, "Reservasi hanya dapat dilakukan pada jam 07:00 - 20:00")
 	}
-	if !validasiBatasPengajuan(in.WaktuMulai, time.Now()) {
+	if !validasiBatasPengajuan(in.WaktuMulai, waktuSekarangWIBSebagaiWallUTC()) {
 		return 0, errReservasi(http.StatusBadRequest, "Reservasi paling cepat diajukan untuk 2 hari ke depan")
 	}
 
@@ -204,6 +216,9 @@ func ApproveReservasi(id, petugasID int) error {
 	if reservasi.StatusKode != models.ReservasiPending {
 		return errReservasi(http.StatusConflict, "Hanya reservasi berstatus menunggu yang bisa disetujui")
 	}
+	if err := validasiStatusFasilitasReservasi(reservasi); err != nil {
+		return err
+	}
 
 	mulai, err := ParseWaktu(reservasi.WaktuPeminjaman)
 	if err != nil {
@@ -238,6 +253,41 @@ func ApproveReservasi(id, petugasID int) error {
 	}
 
 	return repositories.ApproveReservasi(id, petugasID)
+}
+
+func validasiStatusFasilitasReservasi(reservasi models.Reservasi) error {
+	if reservasi.RuanganId != nil {
+		ruangan, err := repositories.GetRuanganById(*reservasi.RuanganId)
+		if errors.Is(err, sql.ErrNoRows) {
+			return errReservasi(http.StatusConflict, "Ruangan reservasi sudah tidak tersedia. Reservasi ini harus dibatalkan.")
+		}
+		if err != nil {
+			return err
+		}
+		if !ruanganTersedia(ruangan.Status) {
+			status := "nonaktif"
+			if strings.Contains(strings.ToLower(ruangan.Status), "perbaik") {
+				status = "dalam perbaikan"
+			}
+			return errReservasi(http.StatusConflict,
+				"Reservasi tidak dapat disetujui karena ruangan %q sedang %s. Batalkan reservasi ini.", ruangan.Nama, status)
+		}
+	}
+
+	for _, item := range reservasi.Alat {
+		alat, err := repositories.GetAlatById(item.Id)
+		if errors.Is(err, sql.ErrNoRows) {
+			return errReservasi(http.StatusConflict, "Alat %q sudah tidak tersedia. Reservasi ini harus dibatalkan.", item.Nama)
+		}
+		if err != nil {
+			return err
+		}
+		if alat.Status == 0 {
+			return errReservasi(http.StatusConflict,
+				"Reservasi tidak dapat disetujui karena alat %q sedang nonaktif atau dalam perbaikan. Batalkan reservasi ini.", alat.Nama)
+		}
+	}
+	return nil
 }
 
 func RejectReservasi(id, petugasID int, alasan string) error {
@@ -289,7 +339,7 @@ func CancelReservasiPengguna(id, userID int, alasan string) error {
 	if err != nil {
 		return err
 	}
-	if !time.Now().Before(mulai.Add(-batasBatalSebelumMulai)) {
+	if !waktuSekarangWIBSebagaiWallUTC().Before(mulai.Add(-batasBatalSebelumMulai)) {
 		return errReservasi(http.StatusConflict, "Pembatalan paling lambat 2 jam sebelum waktu mulai")
 	}
 

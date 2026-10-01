@@ -69,10 +69,14 @@ func UpdateStatus(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		jumlah := 0
+		// Alat nonaktif/dalam perbaikan harus zeroes kolom status juga: seluruh
+		// pengecekan backend membacanya, bukan hanya jumlah_tersedia.
+		statusAlat := 0
 		if status == StatusAktif {
 			jumlah = total
+			statusAlat = 1
 		}
-		if err := repositories.UpdateAlatTersedia(id, jumlah); err != nil {
+		if err := repositories.SetStatusAlat(id, statusAlat, jumlah); err != nil {
 			utils.ResponseJSONMessage(w, "Gagal memperbarui status fasilitas", http.StatusInternalServerError, false)
 			return
 		}

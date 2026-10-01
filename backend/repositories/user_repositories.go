@@ -588,7 +588,7 @@ func CreateKategori(kategori string) error {
 	log.Printf("Successfully updated %d rows.\n", rows)
 	return nil
 }
-func CreateAlat(nama_alat string, jumlah_tersedia int, banyak_alat int, kategori string, status int) error {
+func CreateAlat(nama_alat string, jumlah_tersedia int, banyak_alat int, kategori string, status int, deskripsi, kelengkapan, foto string) error {
 	tx, err := config.DB.Begin()
 	if err != nil {
 		return err
@@ -597,14 +597,14 @@ func CreateAlat(nama_alat string, jumlah_tersedia int, banyak_alat int, kategori
 
 	result, err := tx.Exec(`
 		INSERT INTO alat ( 
-			nama_alat, jumlah_tersedia, banyak_alat, kategori, status 
+			nama_alat, jumlah_tersedia, banyak_alat, kategori, status, deskripsi, kelengkapan, foto
 		) 
 		VALUES (?, ?, ?, (
 			SELECT id  
 			FROM kategori  
 			where nama_kategori = ? 
-		),?)
-	`, nama_alat, jumlah_tersedia, banyak_alat, kategori, status)
+		), ?, ?, ?, ?)
+	`, nama_alat, jumlah_tersedia, banyak_alat, kategori, status, deskripsi, kelengkapan, foto)
 
 	if err != nil {
 		return err
@@ -621,7 +621,7 @@ func CreateAlat(nama_alat string, jumlah_tersedia int, banyak_alat int, kategori
 
 	return nil
 }
-func CreateRuangan(nama_ruangan string, status int, kapasitas int, lokasi string, kategori string) error {
+func CreateRuangan(nama_ruangan string, status int, kapasitas int, lokasi string, kategori string, deskripsi, kelengkapan, foto string) error {
 	tx, err := config.DB.Begin()
 	if err != nil {
 		return err
@@ -630,14 +630,14 @@ func CreateRuangan(nama_ruangan string, status int, kapasitas int, lokasi string
 
 	result, err := tx.Exec(`
 		INSERT INTO ruangan ( 
-			nama_ruangan, status, kapasitas, lokasi, kategori 
+			nama_ruangan, status, kapasitas, lokasi, kategori, deskripsi, kelengkapan, foto
 		) 
 		VALUES (?, ?, ?, ?, ( 
 			SELECT id  
 			FROM kategori  
 			where nama_kategori = ? 
-		)) 
-	`, nama_ruangan, status, kapasitas, lokasi, kategori)
+		), ?, ?, ?) 
+	`, nama_ruangan, status, kapasitas, lokasi, kategori, deskripsi, kelengkapan, foto)
 
 	if err != nil {
 		return err

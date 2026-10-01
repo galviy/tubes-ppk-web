@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
 import { UNIT_PETUGAS, FAKULTAS_UNDIP, PRODI_UNDIP } from '@/config/site';
+import { backendListProdi } from '@/lib/api';
 
 function DownwardSelect({
   label,
@@ -33,10 +34,14 @@ function DownwardSelect({
     typeof opt === 'string' ? { value: opt, label: opt } : opt
   );
   const selectedLabel = normalizedOptions.find((o) => o.value === value)?.label || value;
+  const required = label.endsWith(' *');
 
   return (
     <div className="fgroup" ref={dropdownRef} style={{ position: 'relative' }}>
-      <label>{label}</label>
+      <label>
+        {required ? label.slice(0, -2) : label}
+        {required && <> <span className="required-asterisk">*</span></>}
+      </label>
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
@@ -183,10 +188,19 @@ export default function KelolaAkunPage() {
   const [peran, setPeran] = useState('Petugas');
   const [unit, setUnit] = useState<string>(UNIT_PETUGAS[0]);
   const [fakultas, setFakultas] = useState<string>(FAKULTAS_UNDIP[0]);
+  const [prodiOptions, setProdiOptions] = useState<string[]>([...PRODI_UNDIP]);
   const [prodi, setProdi] = useState<string>(PRODI_UNDIP[0]);
   const [angkatan, setAngkatan] = useState('2024');
   const [password, setPassword] = useState('Sipinjam2026!');
   const [showPass, setShowPass] = useState(false);
+
+  useEffect(() => {
+    backendListProdi().then((res) => {
+      if (res.ok && res.data && res.data.length > 0) {
+        setProdiOptions(res.data.map((p) => p.nama_prodi));
+      }
+    });
+  }, []);
 
   // Search & Filter for Registered Accounts Table
   const [searchQuery, setSearchQuery] = useState('');
@@ -328,7 +342,7 @@ export default function KelolaAkunPage() {
       setModalConfig({
         isOpen: true,
         title: 'Username Tidak Valid',
-        subtitle: 'Username akun harus berukuran minimal 5 karakter sesuai spesifikasi backend sistem.',
+        subtitle: 'Username akun harus berukuran minimal 5 karakter.',
         confirmText: 'Perbaiki',
         confirmVariant: 'warning',
         showInput: false,
@@ -341,7 +355,7 @@ export default function KelolaAkunPage() {
       setModalConfig({
         isOpen: true,
         title: 'Kata Sandi Belum Memenuhi Syarat',
-        subtitle: 'Kata sandi harus minimal 5 karakter, serta wajib mengandung minimal 1 huruf kapital (A-Z) dan 1 simbol (@, !, #, dll) sesuai standar keamanan backend.',
+        subtitle: 'Kata sandi harus minimal 5 karakter, serta wajib mengandung minimal 1 huruf kapital (A-Z) dan 1 simbol (@, !, #, dll).',
         confirmText: 'Perbaiki Sandi',
         confirmVariant: 'warning',
         showInput: false,
@@ -355,7 +369,7 @@ export default function KelolaAkunPage() {
         setModalConfig({
           isOpen: true,
           title: 'NIDN Dosen Tidak Valid',
-          subtitle: 'NIDN Dosen wajib tepat 10 digit karakter angka (contoh: 0012058001) sesuai validasi backend.',
+          subtitle: 'NIDN Dosen wajib tepat 10 digit karakter angka (contoh: 0012058001).',
           confirmText: 'Perbaiki',
           confirmVariant: 'warning',
           showInput: false,
@@ -690,7 +704,7 @@ export default function KelolaAkunPage() {
               <div className="form-grid">
                 {/* Username Akun (Wajib di semua endpoint backend) */}
                 <div className="fgroup">
-                  <label>Username Akun *</label>
+                  <label>Username Akun <span className="required-asterisk">*</span></label>
                   <input
                     placeholder={
                       targetTipe === 'petugas'
@@ -707,13 +721,13 @@ export default function KelolaAkunPage() {
                     minLength={5}
                   />
                   <span style={{ fontSize: 13.5, color: '#6B7280', marginTop: 3 }}>
-                    Minimal 5 karakter (sinkron dengan kontrak otentikasi backend).
+                    Minimal 5 karakter alfanumerik.
                   </span>
                 </div>
 
                 {/* Nama Lengkap */}
                 <div className="fgroup">
-                  <label>Nama Lengkap *</label>
+                  <label>Nama Lengkap <span className="required-asterisk">*</span></label>
                   <input
                     placeholder={
                       targetTipe === 'petugas'
@@ -732,7 +746,7 @@ export default function KelolaAkunPage() {
 
                 {/* Email Resmi */}
                 <div className="fgroup">
-                  <label>Email Resmi Undip *</label>
+                  <label>Email Resmi Undip <span className="required-asterisk">*</span></label>
                   <input
                     type="email"
                     placeholder={
@@ -797,7 +811,7 @@ export default function KelolaAkunPage() {
                   <>
                     {/* NIM */}
                     <div className="fgroup">
-                      <label>NIM (Nomor Induk Mahasiswa) *</label>
+                      <label>NIM (Nomor Induk Mahasiswa) <span className="required-asterisk">*</span></label>
                       <input
                         placeholder="Contoh: 24060122140123"
                         value={nip}
@@ -808,7 +822,7 @@ export default function KelolaAkunPage() {
 
                     {/* Angkatan */}
                     <div className="fgroup">
-                      <label>Tahun Angkatan *</label>
+                      <label>Tahun Angkatan <span className="required-asterisk">*</span></label>
                       <input
                         type="number"
                         placeholder="Contoh: 2024"
@@ -823,7 +837,7 @@ export default function KelolaAkunPage() {
                       label="Program Studi *"
                       value={prodi}
                       onChange={setProdi}
-                      options={PRODI_UNDIP as unknown as string[]}
+                      options={prodiOptions}
                     />
 
                     {/* Fakultas */}
@@ -838,7 +852,7 @@ export default function KelolaAkunPage() {
                   <>
                     {/* NIDN */}
                     <div className="fgroup">
-                      <label>NIDN (Nomor Induk Dosen Nasional) *</label>
+                      <label>NIDN (Nomor Induk Dosen Nasional) <span className="required-asterisk">*</span></label>
                       <input
                         placeholder="Contoh: 0012058001 (10 digit)"
                         value={nip}
@@ -847,7 +861,7 @@ export default function KelolaAkunPage() {
                         required
                       />
                       <span style={{ fontSize: 13.5, color: '#6B7280', marginTop: 3 }}>
-                        Tepat 10 digit karakter angka sesuai validasi backend dosen.
+                        Tepat 10 digit angka NIDN dosen.
                       </span>
                     </div>
 
@@ -856,7 +870,7 @@ export default function KelolaAkunPage() {
                       label="Homebase Program Studi *"
                       value={prodi}
                       onChange={setProdi}
-                      options={PRODI_UNDIP as unknown as string[]}
+                      options={prodiOptions}
                     />
 
                     {/* Fakultas */}
@@ -871,7 +885,7 @@ export default function KelolaAkunPage() {
                   <>
                     {/* NIP Staf */}
                     <div className="fgroup">
-                      <label>NIP (Nomor Induk Pegawai) *</label>
+                      <label>NIP (Nomor Induk Pegawai) <span className="required-asterisk">*</span></label>
                       <input
                         placeholder="Contoh: 198001012345"
                         value={nip}
@@ -902,7 +916,7 @@ export default function KelolaAkunPage() {
 
                 {/* Kata Sandi */}
                 <div className="fgroup full">
-                  <label>Kata Sandi *</label>
+                  <label>Kata Sandi <span className="required-asterisk">*</span></label>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                     <div style={{ position: 'relative', flex: '1 1 240px' }}>
                       <input

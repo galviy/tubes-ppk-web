@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
 import { FAKULTAS_UNDIP, PRODI_UNDIP } from '@/config/site';
+import { backendListProdi } from '@/lib/api';
 
 function DownwardUnderlineSelect({
   label,
@@ -164,9 +165,18 @@ export default function RegisterPage() {
   const [regAngkatan, setRegAngkatan] = useState('2024'); // for Mahasiswa (number)
   const [regNidn, setRegNidn] = useState(''); // for Dosen (exact 10 digits)
   const [regNip, setRegNip] = useState(''); // for Staf
+  const [prodiOptions, setProdiOptions] = useState<string[]>([...PRODI_UNDIP]);
   const [regProdi, setRegProdi] = useState<string>(PRODI_UNDIP[0]); // for Mahasiswa & Dosen
   const [regFakultas, setRegFakultas] = useState<string>(FAKULTAS_UNDIP[0]);
   const [regPhone, setRegPhone] = useState('');
+
+  useEffect(() => {
+    backendListProdi().then((res) => {
+      if (res.ok && res.data && res.data.length > 0) {
+        setProdiOptions(res.data.map((p) => p.nama_prodi));
+      }
+    });
+  }, []);
 
   // Status & Feedback State
   const [regError, setRegError] = useState('');
@@ -457,7 +467,7 @@ export default function RegisterPage() {
                       label="PROGRAM STUDI (PRODI)"
                       value={regProdi}
                       onChange={setRegProdi}
-                      options={PRODI_UNDIP}
+                      options={prodiOptions}
                     />
                   ) : (
                     <div className="ochoco-underline-field">

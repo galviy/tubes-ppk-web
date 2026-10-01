@@ -5,7 +5,7 @@ import { useAppData } from '@/context/AppDataContext';
 import { Report, ReportStatus } from '@/models/report';
 import ReportDetailModal from '@/components/ReportDetailModal';
 import ReportFoto from '@/components/ReportFoto';
-import { formatDateIndo } from '@/lib/slots';
+import { formatDateTimeIndo } from '@/lib/slots';
 
 const STATUS_PILL: Record<ReportStatus, [string, string]> = {
   baru: ['busy', 'Baru'],
@@ -76,7 +76,7 @@ export default function StatusLaporanPage() {
                   <div className="item-meta-row" style={{ fontSize: 13 }}>
                     <span className="meta-item">ID: rp{r.id}</span>
                     <span className="meta-item">·</span>
-                    <span className="meta-item">Diajukan: {r.createdAt ? formatDateIndo(r.createdAt) : 'Tanggal tidak tersedia'}</span>
+                    <span className="meta-item">Dilaporkan: {r.createdAt ? formatDateTimeIndo(r.createdAt) : 'Waktu tidak tersedia'}</span>
                   </div>
                 </div>
               </div>
