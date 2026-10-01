@@ -4,7 +4,7 @@ import { Reservation } from '@/models/reservation';
 export const CANCEL_HOURS_BEFORE = 2;
 
 export function getStartDateTime(r: Reservation): Date {
-  return new Date(`${r.tanggal}T${r.start}:00`);
+  return new Date(`${r.tanggal}T${r.start}:00+07:00`);
 }
 
 export function getCancellationDeadline(r: Reservation): Date {
@@ -18,5 +18,13 @@ export function canSelfCancel(r: Reservation): boolean {
 }
 
 export function formatDeadline(d: Date): string {
-  return d.toLocaleString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' WIB';
+  return d.toLocaleString('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }) + ' WIB';
 }

@@ -34,10 +34,14 @@ function DownwardSelect({
     typeof opt === 'string' ? { value: opt, label: opt } : opt
   );
   const selectedLabel = normalizedOptions.find((o) => o.value === value)?.label || value;
+  const required = label.endsWith(' *');
 
   return (
     <div className="fgroup" ref={dropdownRef} style={{ position: 'relative' }}>
-      <label>{label}</label>
+      <label>
+        {required ? label.slice(0, -2) : label}
+        {required && <> <span className="required-asterisk">*</span></>}
+      </label>
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
@@ -700,7 +704,7 @@ export default function KelolaAkunPage() {
               <div className="form-grid">
                 {/* Username Akun (Wajib di semua endpoint backend) */}
                 <div className="fgroup">
-                  <label>Username Akun *</label>
+                  <label>Username Akun <span className="required-asterisk">*</span></label>
                   <input
                     placeholder={
                       targetTipe === 'petugas'
@@ -723,7 +727,7 @@ export default function KelolaAkunPage() {
 
                 {/* Nama Lengkap */}
                 <div className="fgroup">
-                  <label>Nama Lengkap *</label>
+                  <label>Nama Lengkap <span className="required-asterisk">*</span></label>
                   <input
                     placeholder={
                       targetTipe === 'petugas'
@@ -742,7 +746,7 @@ export default function KelolaAkunPage() {
 
                 {/* Email Resmi */}
                 <div className="fgroup">
-                  <label>Email Resmi Undip *</label>
+                  <label>Email Resmi Undip <span className="required-asterisk">*</span></label>
                   <input
                     type="email"
                     placeholder={
@@ -807,7 +811,7 @@ export default function KelolaAkunPage() {
                   <>
                     {/* NIM */}
                     <div className="fgroup">
-                      <label>NIM (Nomor Induk Mahasiswa) *</label>
+                      <label>NIM (Nomor Induk Mahasiswa) <span className="required-asterisk">*</span></label>
                       <input
                         placeholder="Contoh: 24060122140123"
                         value={nip}
@@ -818,7 +822,7 @@ export default function KelolaAkunPage() {
 
                     {/* Angkatan */}
                     <div className="fgroup">
-                      <label>Tahun Angkatan *</label>
+                      <label>Tahun Angkatan <span className="required-asterisk">*</span></label>
                       <input
                         type="number"
                         placeholder="Contoh: 2024"
@@ -848,7 +852,7 @@ export default function KelolaAkunPage() {
                   <>
                     {/* NIDN */}
                     <div className="fgroup">
-                      <label>NIDN (Nomor Induk Dosen Nasional) *</label>
+                      <label>NIDN (Nomor Induk Dosen Nasional) <span className="required-asterisk">*</span></label>
                       <input
                         placeholder="Contoh: 0012058001 (10 digit)"
                         value={nip}
@@ -881,7 +885,7 @@ export default function KelolaAkunPage() {
                   <>
                     {/* NIP Staf */}
                     <div className="fgroup">
-                      <label>NIP (Nomor Induk Pegawai) *</label>
+                      <label>NIP (Nomor Induk Pegawai) <span className="required-asterisk">*</span></label>
                       <input
                         placeholder="Contoh: 198001012345"
                         value={nip}
@@ -912,7 +916,7 @@ export default function KelolaAkunPage() {
 
                 {/* Kata Sandi */}
                 <div className="fgroup full">
-                  <label>Kata Sandi *</label>
+                  <label>Kata Sandi <span className="required-asterisk">*</span></label>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                     <div style={{ position: 'relative', flex: '1 1 240px' }}>
                       <input

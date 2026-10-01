@@ -5,7 +5,6 @@ import (
 	"backend-ppk/models"
 	"database/sql"
 	"log"
-	"time"
 )
 
 func InsertReport(r models.Report) error {
@@ -14,7 +13,7 @@ func InsertReport(r models.Report) error {
 		return err
 	}
 	defer tx.Rollback()
-	_, err = tx.Exec(`INSERT into report (user_report, alasan, kategori_laporan, foto, status_laporan, report_ruangan, report_alat) VALUES(?,?,?,?,?,?,?)`, r.User_report, r.Alasan, r.Kategori_laporan, r.Foto, r.Status_laporan, r.Report_ruangan, r.Report_alat)
+	_, err = tx.Exec(`INSERT into report (waktu_dibuat, user_report, alasan, kategori_laporan, foto, status_laporan, report_ruangan, report_alat) VALUES(UTC_TIMESTAMP(),?,?,?,?,?,?,?)`, r.User_report, r.Alasan, r.Kategori_laporan, r.Foto, r.Status_laporan, r.Report_ruangan, r.Report_alat)
 
 	if err != nil {
 		log.Printf("Failed to insert report: %v\n", err)
@@ -169,13 +168,15 @@ func ListAllReports() ([]models.ReportDetail, error) {
 }
 
 func UpdateReportStatus(id int, status string, catatan sql.NullString, resolved bool) error {
-	var resolvedAt any
 	if resolved {
-		resolvedAt = time.Now()
+		_, err := config.DB.Exec(
+			`UPDATE report SET status_laporan = ?, catatan_resolusi = ?, resolved_at = UTC_TIMESTAMP() WHERE id = ?`,
+			status, catatan, id)
+		return err
 	}
 	_, err := config.DB.Exec(
-		`UPDATE report SET status_laporan = ?, catatan_resolusi = ?, resolved_at = ? WHERE id = ?`,
-		status, catatan, resolvedAt, id)
+		`UPDATE report SET status_laporan = ?, catatan_resolusi = ?, resolved_at = NULL WHERE id = ?`,
+		status, catatan, id)
 	return err
 }
 
@@ -192,12 +193,6 @@ func GetAlatBanyak(id int) (total int, ok bool) {
 		return 0, false
 	}
 	return total, true
-}
-
-func UpdateAlatTersedia(id, jumlah int) error {
-	_, err := config.DB.Exec(
-		`UPDATE alat SET jumlah_tersedia = ? WHERE id = ?`, jumlah, id)
-	return err
 }
 
 func CheckAlatById(id int) bool {

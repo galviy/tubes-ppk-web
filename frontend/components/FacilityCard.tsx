@@ -43,7 +43,11 @@ export default function FacilityCard({ facility, onOpenDetail }: FacilityCardPro
 
       <div className="card-body">
         <h3>{facility.name}</h3>
-        <div className="card-loc">{facility.type} · {facility.loc}</div>
+        <div className="card-type">{facility.type}</div>
+        <div className="card-loc">
+          <span className="card-loc-label">Lokasi</span>
+          {facility.loc || 'Lokasi belum tersedia'}
+        </div>
         <div className="amenities">
           {facility.amenities.map((a) => (
             <span key={a} className="amenity">{a}</span>

@@ -63,6 +63,15 @@ func UpdateAlat(id int, nama string, jumlahTersedia int, banyakAlat int, kategor
 	return err
 }
 
+// SetStatusAlat menyimpan status operasional alat sekaligus stok yang tampil.
+// Alat nonaktif atau dalam perbaikan dibersihkan dari stok supaya tidak muncul
+// di daftar equipment yang bisa dipinjam.
+func SetStatusAlat(id int, status int, jumlahTersedia int) error {
+	_, err := config.DB.Exec(
+		`UPDATE alat SET status = ?, jumlah_tersedia = ? WHERE id = ?`, status, jumlahTersedia, id)
+	return err
+}
+
 // SoftDeleteRuangan menonaktifkan (bukan hapus fisik, FK reservasi/report
 // mengikat). sql.ErrNoRows bila tidak ada.
 func SoftDeleteRuangan(id int) error {

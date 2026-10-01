@@ -4,8 +4,9 @@ import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
 import { ReservationStatus } from '@/models/reservation';
-import { formatDateIndo, formatDateTimeIndo } from '@/lib/slots';
+import { dateKeyInJakarta, formatDateIndo, formatDateTimeIndo } from '@/lib/slots';
 import Pagination from '@/components/Pagination';
+import DateRangeFilter from '@/components/DateRangeFilter';
 import {
   isAlatReservation,
   isRuanganFacility,
@@ -36,6 +37,8 @@ function AdminReservasiContent() {
   const [filterCategory, setFilterCategory] = useState<string>('semua');
   const [filterFacility, setFilterFacility] = useState<string>('semua');
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const countRuangan = reservations.filter((r) => !isAlatReservation(r, facilityById(r.facilityId))).length;
   const countAlat = reservations.filter((r) => isAlatReservation(r, facilityById(r.facilityId))).length;
@@ -79,6 +82,9 @@ function AdminReservasiContent() {
     if (filterStatus !== 'semua' && r.status !== filterStatus) return false;
     if (filterCategory !== 'semua' && fac?.type !== filterCategory) return false;
     if (filterFacility !== 'semua' && r.facilityId !== filterFacility) return false;
+    const submittedDate = dateKeyInJakarta(r.createdAt);
+    if (dateFrom && submittedDate < dateFrom) return false;
+    if (dateTo && submittedDate > dateTo) return false;
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -97,7 +103,7 @@ function AdminReservasiContent() {
   // Reset ke halaman 1 saat filter atau pencarian berubah
   useEffect(() => {
     setCurrentPage(1);
-  }, [tabType, filterStatus, filterCategory, filterFacility, searchQuery]);
+  }, [tabType, filterStatus, filterCategory, filterFacility, searchQuery, dateFrom, dateTo]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
   const paginatedReservations = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -264,6 +270,16 @@ function AdminReservasiContent() {
         </div>
       </div>
 
+      <DateRangeFilter
+        contextLabel="pengajuan reservasi"
+        from={dateFrom}
+        to={dateTo}
+        onChange={({ from, to }) => {
+          setDateFrom(from);
+          setDateTo(to);
+        }}
+      />
+
       {/* Table Reservasi */}
       <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="table-scroll" style={{ overflowX: 'auto' }}>
@@ -339,11 +355,6 @@ function AdminReservasiContent() {
                       </div>
                       <div style={{ fontSize: 13, color: '#6B7280', marginTop: 2, wordBreak: 'break-word' }}>
                         {fac?.type || '-'} • {fac?.loc || '-'}
-                        {fac?.status === 'repair' && (
-                          <span style={{ color: '#d97706', fontWeight: 600, marginLeft: 6 }}>
-                            [Perbaikan]
-                          </span>
-                        )}
                       </div>
                       {!isAlat && r.alat && r.alat.length > 0 && (
                         <div

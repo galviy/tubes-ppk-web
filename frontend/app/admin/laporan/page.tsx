@@ -5,8 +5,9 @@ import { useAppData } from '@/context/AppDataContext';
 import { ReportStatus } from '@/models/report';
 import ReportFoto from '@/components/ReportFoto';
 import Pagination from '@/components/Pagination';
+import DateRangeFilter from '@/components/DateRangeFilter';
 import { reportFotoUrl } from '@/lib/api';
-import { formatDateIndo } from '@/lib/slots';
+import { dateKeyInJakarta, formatDateIndo, formatDateTimeIndo } from '@/lib/slots';
 
 const STATUS_CONFIG: Record<ReportStatus, { pillClass: string; label: string }> = {
   baru: { pillClass: 'busy', label: 'Baru' },
@@ -20,6 +21,8 @@ export default function AdminSemuaLaporanPage() {
   const [filterStatus, setFilterStatus] = useState<string>('semua');
   const [filterKategori, setFilterKategori] = useState<string>('semua');
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
 
   // Extract unique categories
@@ -29,6 +32,9 @@ export default function AdminSemuaLaporanPage() {
   const filtered = reports.filter((r) => {
     if (filterStatus !== 'semua' && r.status !== filterStatus) return false;
     if (filterKategori !== 'semua' && r.kategori !== filterKategori) return false;
+    const reportDate = dateKeyInJakarta(r.createdAt);
+    if (dateFrom && reportDate < dateFrom) return false;
+    if (dateTo && reportDate > dateTo) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const fac = facilityById(r.facilityId);
@@ -48,7 +54,7 @@ export default function AdminSemuaLaporanPage() {
   // Reset ke halaman 1 saat filter berubah
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterStatus, filterKategori, searchQuery]);
+  }, [filterStatus, filterKategori, searchQuery, dateFrom, dateTo]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
   const paginatedReports = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -115,6 +121,16 @@ export default function AdminSemuaLaporanPage() {
         </div>
       </div>
 
+      <DateRangeFilter
+        contextLabel="laporan"
+        from={dateFrom}
+        to={dateTo}
+        onChange={({ from, to }) => {
+          setDateFrom(from);
+          setDateTo(to);
+        }}
+      />
+
       {/* Table Laporan */}
       <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="table-scroll" style={{ overflowX: 'auto' }}>
@@ -126,14 +142,16 @@ export default function AdminSemuaLaporanPage() {
               <th>Status</th>
               <th>Pelapor</th>
               <th>Deskripsi &amp; Resolusi</th>
-              <th>Tanggal</th>
+              <th>Waktu Lapor</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={6} style={{ textAlign: 'center', color: '#6B7280', padding: 24 }}>
-                  Tidak ada laporan yang sesuai dengan filter pencarian.
+                  {dateFrom || dateTo
+                    ? `Tidak ada laporan pada rentang tanggal yang dipilih${dateFrom && dateTo ? ` (${formatDateIndo(dateFrom)} sampai ${formatDateIndo(dateTo)})` : ''}. Ubah atau hapus filter tanggal untuk melihat laporan lainnya.`
+                    : 'Tidak ada laporan yang sesuai dengan filter pencarian.'}
                 </td>
               </tr>
             ) : (
@@ -150,11 +168,6 @@ export default function AdminSemuaLaporanPage() {
                       </div>
                       <div style={{ fontSize: 13, color: '#6B7280', marginTop: 2, wordBreak: 'break-word' }}>
                         {fac?.type} • {fac?.loc}
-                        {fac?.status === 'repair' && (
-                          <span style={{ color: '#d97706', fontWeight: 600, marginLeft: 6 }}>
-                            [Perbaikan]
-                          </span>
-                        )}
                       </div>
                     </td>
 
@@ -232,7 +245,7 @@ export default function AdminSemuaLaporanPage() {
 
                     {/* TANGGAL */}
                     <td style={{ whiteSpace: 'nowrap', fontSize: 14, color: '#6B7280' }}>
-                      {formatDateIndo(r.createdAt || '2026-09-18')}
+                      {formatDateTimeIndo(r.createdAt)}
                     </td>
                   </tr>
                 );

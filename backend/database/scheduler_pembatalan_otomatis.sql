@@ -2,13 +2,13 @@
 -- Scheduler Pembatalan Otomatis Reservasi (Belum Diapprove Petugas)
 -- ========================================================================
 -- Logika:
--- Jika pengguna sudah reservasi tapi status masih 'PENDING' (belum di-approve petugas)
--- hingga 2 jam sebelum waktu reservasi dia (waktu_peminjaman <= NOW() + INTERVAL 2 HOUR),
+-- Jika status masih 'PENDING' hingga dua jam sebelum jadwal (waktu jadwal disimpan sebagai WIB),
 -- maka sistem akan membatalkan reservasi tersebut secara otomatis (status -> 'CANCELLED').
 -- ========================================================================
 
 -- 1. Mengaktifkan Event Scheduler di MySQL / MariaDB (jika belum aktif)
 SET GLOBAL event_scheduler = ON;
+SET time_zone = '+00:00';
 
 -- 2. Hapus event lama jika sudah ada
 DROP EVENT IF EXISTS `auto_cancel_unapproved_reservasi`;
@@ -25,11 +25,11 @@ BEGIN
     UPDATE `reservasi`
     SET `status_reservasi` = 'CANCELLED',
         `alasan_pembatalan` = 'Dibatalkan otomatis: tidak diproses sebelum 2 jam sebelum jadwal',
-        `waktu_dibatalkan` = NOW(),
-        `waktu_diproses` = NOW(),
+        `waktu_dibatalkan` = UTC_TIMESTAMP(),
+        `waktu_diproses` = UTC_TIMESTAMP(),
         `dibatalkan_oleh` = NULL
     WHERE `status_reservasi` = 'PENDING'
-      AND `waktu_peminjaman` <= NOW() + INTERVAL 2 HOUR;
+      AND `waktu_peminjaman` <= DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 7 HOUR), INTERVAL 2 HOUR);
 END $$
 
 DELIMITER ;

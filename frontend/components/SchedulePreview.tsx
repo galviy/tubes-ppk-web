@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext';
-import { generateTimeSlots, getSlotState, getTodayDateString, formatDateIndo } from '@/lib/slots';
-import { SlotState } from '@/models/facility';
+import { generateTimeSlots, getSlotState, getTodayDateString, formatDateIndo, formatTimeInJakarta } from '@/lib/slots';
+import { Facility, SlotState } from '@/models/facility';
 import { backendJadwalFasilitas, mapJadwalStatus, SlotStatusBackend } from '@/lib/api';
 import {
   isRuanganFacility,
@@ -19,24 +19,19 @@ const DAY_NAMES = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu
 function formatFullDate(dateStr: string) {
   const parts = dateStr.split('-').map(Number);
   if (parts.length !== 3) return dateStr;
-  const dt = new Date(parts[0], parts[1] - 1, parts[2]);
-  const dayName = DAY_NAMES[dt.getDay()] || '';
+  const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+  const dayName = DAY_NAMES[dt.getUTCDay()] || '';
   return `${dayName}, ${formatDateIndo(dateStr)}`;
 }
 
 function shiftDay(dateStr: string, delta: number): string {
   const parts = dateStr.split('-').map(Number);
   if (parts.length !== 3) return dateStr;
-  const dt = new Date(parts[0], parts[1] - 1, parts[2]);
-  dt.setDate(dt.getDate() + delta);
-  const y = dt.getFullYear();
-  const m = String(dt.getMonth() + 1).padStart(2, '0');
-  const d = String(dt.getDate()).padStart(2, '0');
+  const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] + delta));
+  const y = dt.getUTCFullYear();
+  const m = String(dt.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(dt.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
-}
-
-function pad(n: number) {
-  return n.toString().padStart(2, '0');
 }
 
 const STATUS_LABEL: Record<SlotState, string> = {
@@ -45,6 +40,13 @@ const STATUS_LABEL: Record<SlotState, string> = {
   pending: 'Menunggu Persetujuan',
   booked: 'Terpakai',
   maint: 'Tidak Aktif',
+};
+
+const FACILITY_STATUS_LABEL: Record<Facility['status'], { label: string; color: string }> = {
+  avail: { label: 'Tersedia', color: '#15803D' },
+  busy: { label: 'Digunakan', color: '#B45309' },
+  repair: { label: 'Perbaikan', color: '#B91C1C' },
+  nonaktif: { label: 'Nonaktif', color: '#991B1B' },
 };
 
 // Slot dikelompokkan per periode waktu supaya lebih cepat dipindai
@@ -77,8 +79,8 @@ function DownwardDatePicker({
     if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
       return { y: parts[0], m: parts[1] - 1, d: parts[2] };
     }
-    const now = new Date();
-    return { y: now.getFullYear(), m: now.getMonth(), d: now.getDate() };
+    const [y, m, d] = getTodayDateString().split('-').map(Number);
+    return { y, m: m - 1, d };
   }, [value]);
 
   const [viewYear, setViewYear] = useState(parsed.y);
@@ -555,7 +557,7 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
         </div>
         <div className="server-clock-badge">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" /><path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
-          {now ? `${pad(now.getHours())}:${pad(now.getMinutes())}` : '--:--'} WIB
+          {now ? formatTimeInJakarta(now) : '--:--'} WIB
         </div>
       </div>
 
@@ -796,7 +798,7 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           >
             {tabFacilities.map((f) => (
               <option key={f.id} value={f.id}>
-                {f.name} ({f.loc}) • {f.status === 'repair' ? 'Perbaikan' : f.status === 'nonaktif' ? 'Nonaktif' : 'Tersedia'}
+                {f.name}
               </option>
             ))}
           </select>
@@ -852,6 +854,16 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           <b>{facility.name}</b>
         </div>
         <div className="sched-info-cell">
+          <span className="lbl-sm">Lokasi</span>
+          <b>{facility.loc || 'Belum tersedia'}</b>
+        </div>
+        <div className="sched-info-cell">
+          <span className="lbl-sm">Status Fasilitas</span>
+          <b style={{ color: FACILITY_STATUS_LABEL[facility.status]?.color, fontWeight: 700 }}>
+            {FACILITY_STATUS_LABEL[facility.status]?.label ?? facility.status}
+          </b>
+        </div>
+        <div className="sched-info-cell">
           <span className="lbl-sm">{isAlatFacility(facility) ? 'Jumlah Tersedia' : 'Kapasitas'}</span>
           <b>{isAlatFacility(facility) ? facility.tersedia ?? facility.cap : facility.cap} {isAlatFacility(facility) ? 'unit' : 'orang'}</b>
         </div>
@@ -894,13 +906,6 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           </div>
         );
       })}
-
-      <div className="sched-legend">
-        <div className="leg"><span className="sq avail" />Tersedia untuk Reservasi</div>
-        <div className="leg"><span className="sq pending" />Menunggu Persetujuan</div>
-        <div className="leg"><span className="sq booked" />Terpakai / Sedang Dipesan</div>
-        <div className="leg"><span className="sq passed" />Waktu Lewat / Tidak Aktif</div>
-      </div>
 
       <div className="privacy-box">
         <div className="icon">

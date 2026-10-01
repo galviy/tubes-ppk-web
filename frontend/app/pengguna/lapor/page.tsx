@@ -205,10 +205,14 @@ function LaporKerusakanContent() {
             <select value={facilityId} onChange={(e) => setFacilityId(e.target.value)}>
               {facilities.map((f) => (
                 <option key={f.id} value={f.id}>
-                  {f.name} ({f.loc})
+                  {f.name}
                 </option>
               ))}
             </select>
+            <div style={{ marginTop: 6, fontSize: 13, color: '#4B5563' }}>
+              <span style={{ color: '#6B7280', fontWeight: 600, marginRight: 5 }}>Lokasi:</span>
+              {facilities.find((f) => f.id === facilityId)?.loc || 'Belum tersedia'}
+            </div>
           </div>
           <div className="fgroup full">
             <label>Kategori kerusakan</label>

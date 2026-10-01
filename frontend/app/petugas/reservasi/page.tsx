@@ -149,7 +149,16 @@ function PetugasReservasiContent() {
     return ` beserta alat (${alat.map((a) => `${a.nama}: ${a.jumlah} unit`).join(', ')})`;
   }
 
-  function handleApprove(id: number, facilityName: string, pemohon: string, alatInfo = '') {
+  function handleApprove(id: number, facilityName: string, pemohon: string, alatInfo = '', facilityStatus?: string) {
+    if (facilityStatus === 'repair' || facilityStatus === 'nonaktif') {
+      const statusText = facilityStatus === 'repair' ? 'dalam perbaikan' : 'nonaktif';
+      setFeedback({
+        type: 'error',
+        message: `Reservasi tidak dapat disetujui karena ${facilityName} sedang ${statusText}. Petugas harus membatalkan reservasi ini.`,
+      });
+      return;
+    }
+
     setModalConfig({
       isOpen: true,
       title: 'Setujui Permohonan Reservasi',
@@ -190,13 +199,19 @@ function PetugasReservasiContent() {
     });
   }
 
-  function handleCancelEmergency(id: number, facilityName: string, pemohon: string, alatInfo = '') {
+  function handleCancelEmergency(id: number, facilityName: string, pemohon: string, alatInfo = '', pending = false, facilityUnavailable = false) {
     setModalConfig({
       isOpen: true,
-      title: 'Batalkan Reservasi (Kondisi Mendesak)',
-      subtitle: `Membatalkan reservasi ${facilityName}${alatInfo} milik ${pemohon} yang telah disetujui sebelumnya.`,
+      title: pending ? 'Batalkan Reservasi Menunggu' : 'Batalkan Reservasi (Kondisi Mendesak)',
+      subtitle: pending && facilityUnavailable
+        ? `Fasilitas ${facilityName}${alatInfo} sedang tidak tersedia. Batalkan reservasi milik ${pemohon} dan sertakan alasannya.`
+        : pending
+        ? `Batalkan reservasi yang masih menunggu milik ${pemohon} untuk ${facilityName}${alatInfo}. Sertakan alasan pembatalan.`
+        : `Membatalkan reservasi ${facilityName}${alatInfo} milik ${pemohon} yang telah disetujui sebelumnya.`,
       label: 'Alasan Pembatalan',
-      placeholder: 'Contoh: Terjadi gangguan kelistrikan atau perbaikan darurat...',
+      placeholder: pending && facilityUnavailable
+        ? 'Contoh: Fasilitas sedang dalam perbaikan.'
+        : 'Contoh: Terjadi gangguan kelistrikan atau perbaikan darurat...',
       confirmText: 'Batalkan Reservasi',
       confirmVariant: 'danger',
       showInput: true,
@@ -591,7 +606,7 @@ function PetugasReservasiContent() {
                     {/* JADWAL */}
                     <td style={{ whiteSpace: 'nowrap', fontSize: 13 }}>
                       <div>{formatDateIndo(r.tanggal)}</div>
-                      <div style={{ color: '#6B7280', fontSize: 14 }}>{r.start} - {r.end}</div>
+                      <div style={{ color: '#6B7280', fontSize: 14 }}>{r.start} - {r.end} WIB</div>
                     </td>
 
                     {/* STATUS */}
@@ -609,12 +624,12 @@ function PetugasReservasiContent() {
                     {/* TINDAKAN */}
                     <td style={{ textAlign: 'left', minWidth: 160 }} onClick={(e) => e.stopPropagation()}>
                       {r.status === 'menunggu' && (
-                        <div style={{ display: 'flex', gap: 6, whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', gap: 6, whiteSpace: 'nowrap', flexWrap: 'wrap' }}>
                           <button
                             type="button"
                             className="btn primary"
                             style={{ padding: '5px 12px', fontSize: 13 }}
-                            onClick={() => handleApprove(r.id, facilityName, r.pemohon, formatAlatInfo(r.alat))}
+                            onClick={() => handleApprove(r.id, facilityName, r.pemohon, formatAlatInfo(r.alat), fac?.status)}
                           >
                             Setujui
                           </button>
@@ -625,6 +640,21 @@ function PetugasReservasiContent() {
                             onClick={() => handleReject(r.id, facilityName, r.pemohon, formatAlatInfo(r.alat))}
                           >
                             Tolak
+                          </button>
+                          <button
+                            type="button"
+                            className="btn ghost-danger"
+                            style={{ padding: '5px 12px', fontSize: 13 }}
+                            onClick={() => handleCancelEmergency(
+                              r.id,
+                              facilityName,
+                              r.pemohon,
+                              formatAlatInfo(r.alat),
+                              true,
+                              fac?.status === 'repair' || fac?.status === 'nonaktif'
+                            )}
+                          >
+                            Batalkan
                           </button>
                         </div>
                       )}

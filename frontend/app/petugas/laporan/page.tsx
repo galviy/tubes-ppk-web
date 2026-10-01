@@ -6,7 +6,9 @@ import { ReportStatus } from '@/models/report';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
 import ReportFoto from '@/components/ReportFoto';
 import Pagination from '@/components/Pagination';
+import DateRangeFilter from '@/components/DateRangeFilter';
 import { reportFotoUrl } from '@/lib/api';
+import { dateKeyInJakarta, formatDateIndo, formatDateTimeIndo } from '@/lib/slots';
 
 const STATUS_CONFIG: Record<ReportStatus, { pillClass: string; label: string }> = {
   baru: { pillClass: 'busy', label: 'Baru' },
@@ -23,6 +25,8 @@ export default function PetugasLaporanPage() {
   }, [refreshPetugasReports]);
 
   const [filterStatus, setFilterStatus] = useState<string>('semua');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
     isOpen: false,
@@ -105,7 +109,13 @@ export default function PetugasLaporanPage() {
     return (order[a.status] || 5) - (order[b.status] || 5);
   });
 
-  const filtered = filterStatus === 'semua' ? sorted : sorted.filter((r) => r.status === filterStatus);
+  const filtered = sorted.filter((r) => {
+    if (filterStatus !== 'semua' && r.status !== filterStatus) return false;
+    const reportDate = dateKeyInJakarta(r.createdAt);
+    if (dateFrom && reportDate < dateFrom) return false;
+    if (dateTo && reportDate > dateTo) return false;
+    return true;
+  });
 
   // Paginasi: 10 data per halaman
   const ITEMS_PER_PAGE = 10;
@@ -113,7 +123,7 @@ export default function PetugasLaporanPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterStatus]);
+  }, [filterStatus, dateFrom, dateTo]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
   const paginatedReports = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -187,7 +197,7 @@ export default function PetugasLaporanPage() {
       </div>
 
       {/* Filter Chips */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
         {[
           { key: 'semua', label: `Semua (${reports.length})` },
           { key: 'baru', label: `Baru (${reports.filter((r) => r.status === 'baru').length})` },
@@ -216,6 +226,16 @@ export default function PetugasLaporanPage() {
         ))}
       </div>
 
+      <DateRangeFilter
+        contextLabel="laporan"
+        from={dateFrom}
+        to={dateTo}
+        onChange={({ from, to }) => {
+          setDateFrom(from);
+          setDateTo(to);
+        }}
+      />
+
       {/* Table matching Reference Image 4 */}
       <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="table-scroll" style={{ overflowX: 'auto' }}>
@@ -223,6 +243,7 @@ export default function PetugasLaporanPage() {
           <thead>
             <tr>
               <th>Pelapor</th>
+              <th>Waktu Lapor</th>
               <th>Fasilitas</th>
               <th>Kategori</th>
               <th>Deskripsi</th>
@@ -233,14 +254,15 @@ export default function PetugasLaporanPage() {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '36px', color: '#6B7280' }}>
-                  Tidak ada laporan dalam kategori ini.
+                <td colSpan={7} style={{ textAlign: 'center', padding: '36px', color: '#6B7280' }}>
+                  {dateFrom || dateTo
+                    ? `Tidak ada laporan pada rentang tanggal yang dipilih${dateFrom && dateTo ? ` (${formatDateIndo(dateFrom)} sampai ${formatDateIndo(dateTo)})` : ''}. Ubah atau hapus filter tanggal untuk melihat laporan lainnya.`
+                    : 'Tidak ada laporan dalam kategori ini.'}
                 </td>
               </tr>
             ) : (
               paginatedReports.map((r) => {
                 const fac = facilityById(r.facilityId);
-                const isRepair = fac?.status === 'repair';
                 const cfg = STATUS_CONFIG[r.status] || { pillClass: 'neutral', label: r.status };
 
                 return (
@@ -250,6 +272,11 @@ export default function PetugasLaporanPage() {
                       {r.pelapor}
                     </td>
 
+                    {/* WAKTU LAPOR */}
+                    <td style={{ whiteSpace: 'nowrap', fontSize: 13, color: '#4B5563' }}>
+                      {formatDateTimeIndo(r.createdAt)}
+                    </td>
+
                     {/* FASILITAS */}
                     <td style={{ maxWidth: 260 }}>
                       <div style={{ fontWeight: 600, color: '#181D24' }}>
@@ -257,11 +284,6 @@ export default function PetugasLaporanPage() {
                       </div>
                       <div style={{ fontSize: 13, color: '#6B7280', marginTop: 2, wordBreak: 'break-word' }}>
                         {fac?.type} • {fac?.loc}
-                        {isRepair && (
-                          <span style={{ color: '#d97706', fontWeight: 600, marginLeft: 6 }}>
-                            [Status: Perbaikan]
-                          </span>
-                        )}
                       </div>
                     </td>
 

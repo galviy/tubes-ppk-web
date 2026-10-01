@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, R
 import { Facility } from '@/models/facility';
 import { Reservation } from '@/models/reservation';
 import { Report, PendingAccount } from '@/models/report';
-import { isSlotBooked } from '@/lib/slots';
+import { getTodayDateString, isSlotBooked } from '@/lib/slots';
 import { AuthResult, SelfRegisterInput } from '@/models/user';
 import { UserRole, BackendAccount, mapBackendAccount } from '@/models/user';
 import {
@@ -745,7 +745,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
               email: input.email.trim(),
               password,
               nim: input.nim?.trim() || '0000000',
-              angkatan: String(input.angkatan ?? new Date().getFullYear()),
+              angkatan: String(input.angkatan ?? getTodayDateString().slice(0, 4)),
               nama_lengkap: nama,
               prodi,
             });
