@@ -1,7 +1,9 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAppData } from '@/context/AppDataContext';
+import { backendGetDashboardOverview, type BackendDashboardOverview } from '@/lib/api';
 import {
   isRuanganFacility,
   isAlatFacility,
@@ -50,13 +52,22 @@ const ICONS = {
 
 export default function AdminHomePage() {
   const { facilities, reservations, reports, pendingAccounts, registeredAccounts, currentUser, facilityById } = useAppData();
+  const [overviewData, setOverviewData] = useState<BackendDashboardOverview | null>(null);
 
-  const akunMenunggu = pendingAccounts.filter((a) => a.status === 'menunggu').length;
-  const totalPengguna = registeredAccounts.filter((a) => a.role === 'pengguna').length;
-  const petugasAktif = registeredAccounts.filter((a) => a.role === 'petugas').length;
+  useEffect(() => {
+    backendGetDashboardOverview().then((res) => {
+      if (res.ok && res.data) {
+        setOverviewData(res.data);
+      }
+    });
+  }, []);
 
-  const totalRuangan = facilities.filter(isRuanganFacility).length;
-  const totalAlat = facilities.filter(isAlatFacility).length;
+  const akunMenunggu = overviewData ? overviewData.pengguna.menunggu_verifikasi : pendingAccounts.filter((a) => a.status === 'menunggu').length;
+  const totalPengguna = overviewData ? overviewData.pengguna.total : registeredAccounts.filter((a) => a.role === 'pengguna').length;
+  const petugasAktif = overviewData ? overviewData.pengguna.petugas : registeredAccounts.filter((a) => a.role === 'petugas').length;
+
+  const totalRuangan = overviewData ? overviewData.fasilitas.ruangan : facilities.filter(isRuanganFacility).length;
+  const totalAlat = overviewData ? overviewData.fasilitas.alat : facilities.filter(isAlatFacility).length;
 
   const totalResRuangan = reservations.filter(
     (r) => !isAlatReservation(r, facilityById(r.facilityId))

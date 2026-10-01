@@ -6,7 +6,7 @@ import { ReportStatus } from '@/models/report';
 import ReportFoto from '@/components/ReportFoto';
 import Pagination from '@/components/Pagination';
 import DateRangeFilter from '@/components/DateRangeFilter';
-import { reportFotoUrl } from '@/lib/api';
+import { reportFotoUrl, backendDownloadReportsExport } from '@/lib/api';
 import { dateKeyInJakarta, formatDateIndo, formatDateTimeIndo } from '@/lib/slots';
 
 const STATUS_CONFIG: Record<ReportStatus, { pillClass: string; label: string }> = {
@@ -24,6 +24,16 @@ export default function AdminSemuaLaporanPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  async function handleExportPDF() {
+    setIsExporting(true);
+    try {
+      await backendDownloadReportsExport('pdf', filterStatus, filterKategori, searchQuery, 'laporan-kerusakan-undip.pdf');
+    } finally {
+      setIsExporting(false);
+    }
+  }
 
   // Extract unique categories
   const categories = Array.from(new Set(reports.map((r) => r.kategori).filter(Boolean)));
@@ -118,6 +128,28 @@ export default function AdminSemuaLaporanPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{ padding: '6px 12px', fontSize: 13, borderRadius: 6, border: '1px solid #D5D0C7', minWidth: 200 }}
           />
+
+          <button
+            type="button"
+            onClick={handleExportPDF}
+            disabled={isExporting}
+            className="btn secondary"
+            style={{
+              padding: '6px 12px',
+              fontSize: 13,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              cursor: 'pointer',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            {isExporting ? 'Mengunduh...' : 'Ekspor PDF'}
+          </button>
         </div>
       </div>
 
@@ -134,15 +166,15 @@ export default function AdminSemuaLaporanPage() {
       {/* Table Laporan */}
       <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="table-scroll" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%' }}>
+          <table style={{ width: '100%', tableLayout: 'auto' }}>
           <thead>
             <tr>
-              <th>Fasilitas</th>
-              <th>Kategori</th>
-              <th>Status</th>
-              <th>Pelapor</th>
-              <th>Deskripsi &amp; Resolusi</th>
-              <th>Waktu Lapor</th>
+              <th style={{ width: '24%' }}>Fasilitas</th>
+              <th style={{ width: '14%' }}>Kategori</th>
+              <th style={{ width: '12%' }}>Status</th>
+              <th style={{ width: '15%' }}>Pelapor</th>
+              <th style={{ width: '22%' }}>Deskripsi &amp; Resolusi</th>
+              <th style={{ width: '13%' }}>Waktu Lapor</th>
             </tr>
           </thead>
           <tbody>

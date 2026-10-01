@@ -12,6 +12,7 @@ import (
 	petugas_fasilitas "backend-ppk/controller/petugas/fasilitas"
 	petugas_report "backend-ppk/controller/petugas/report"
 	petugas_reservasi "backend-ppk/controller/petugas/reservasi"
+	"backend-ppk/controller/dashboard"
 	"backend-ppk/controller/report"
 	"backend-ppk/controller/reservasi"
 	"backend-ppk/controller/user"
@@ -148,11 +149,35 @@ func SetupRoutes() *http.ServeMux {
 	mux.HandleFunc("GET /fasilitas/ruangan", publik_fasilitas.ListRuangan)
 	mux.HandleFunc("GET /fasilitas/alat", publik_fasilitas.ListAlat)
 	mux.HandleFunc("GET /fasilitas/ketersediaan", publik_fasilitas.Ketersediaan)
+	mux.HandleFunc("GET /fasilitas/{id}", publik_fasilitas.DetailFasilitas)
+	mux.HandleFunc("GET /facilities", publik_fasilitas.ListFasilitas)
+	mux.HandleFunc("GET /facilities/{id}", publik_fasilitas.DetailFasilitas)
+	mux.HandleFunc("GET /facilities/{id}/availability", publik_fasilitas.Ketersediaan)
 	mux.HandleFunc("GET /jadwal", publik_fasilitas.Ketersediaan)
 
 	mux.Handle(
 		"GET /user/me",
 		middleware.Auth(http.HandlerFunc(user.Me)),
+	)
+	mux.Handle(
+		"GET /users/{id}",
+		middleware.Auth(http.HandlerFunc(user.Detail)),
+	)
+	mux.Handle(
+		"GET /user/{id}",
+		middleware.Auth(http.HandlerFunc(user.Detail)),
+	)
+	mux.Handle(
+		"PATCH /users/{id}",
+		middleware.Auth(http.HandlerFunc(user.Update)),
+	)
+	mux.Handle(
+		"PATCH /user/{id}",
+		middleware.Auth(http.HandlerFunc(user.Update)),
+	)
+	mux.Handle(
+		"PATCH /users/{id}/status",
+		middleware.AdminAuth(http.HandlerFunc(user.UpdateStatus)),
 	)
 
 	mux.Handle(
@@ -248,6 +273,37 @@ func SetupRoutes() *http.ServeMux {
 		"PATCH /petugas/facilities/{id}/status",
 		middleware.Auth(middleware.RequireRole(
 			http.HandlerFunc(petugas_fasilitas.UpdateStatus),
+			middleware.RolePetugas, middleware.RoleAdmin,
+		)),
+	)
+	mux.Handle(
+		"GET /reservations",
+		middleware.Auth(http.HandlerFunc(reservasi.ListReservasi)),
+	)
+	mux.Handle(
+		"GET /reservations/{id}",
+		middleware.Auth(http.HandlerFunc(reservasi.DetailReservasi)),
+	)
+	mux.Handle(
+		"PATCH /reservations/{id}",
+		middleware.Auth(http.HandlerFunc(reservasi.CancelReservasi)),
+	)
+	mux.Handle(
+		"GET /dashboard/overview",
+		middleware.Auth(http.HandlerFunc(dashboard.Overview)),
+	)
+	mux.HandleFunc(
+		"GET /dashboard/occupancy/export",
+		dashboard.OccupancyExport,
+	)
+	mux.HandleFunc(
+		"GET /reports/export",
+		dashboard.ReportsExport,
+	)
+	mux.Handle(
+		"GET /petugas/reports/export",
+		middleware.Auth(middleware.RequireRole(
+			http.HandlerFunc(dashboard.ReportsExport),
 			middleware.RolePetugas, middleware.RoleAdmin,
 		)),
 	)

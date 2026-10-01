@@ -911,3 +911,155 @@ export function backendListProdi() {
 export function backendListFakultas() {
   return apiFetch<BackendFakultas[]>('/fakultas');
 }
+
+// ---------- Dashboard Overview & Exports ----------
+
+export interface BackendDashboardOverview {
+  fasilitas: {
+    total: number;
+    ruangan: number;
+    alat: number;
+    aktif: number;
+    dalam_perbaikan: number;
+    nonaktif: number;
+  };
+  reservasi: {
+    total: number;
+    menunggu: number;
+    disetujui: number;
+    ditolak: number;
+    dibatalkan: number;
+    selesai: number;
+  };
+  laporan: {
+    total: number;
+    baru: number;
+    diproses: number;
+    selesai: number;
+    ditolak: number;
+  };
+  pengguna: {
+    total: number;
+    terverifikasi: number;
+    menunggu_verifikasi: number;
+    mahasiswa: number;
+    dosen: number;
+    staff: number;
+    petugas: number;
+    admin: number;
+  };
+  okupansi: {
+    total_jam_pemakaian: number;
+    total_disetujui: number;
+  };
+}
+
+export function backendGetDashboardOverview() {
+  return apiFetch<BackendDashboardOverview>('/dashboard/overview');
+}
+
+export async function backendDownloadOccupancyExport(
+  format: 'pdf' | 'excel' | 'csv',
+  mode = 'semua',
+  gedung = '',
+  fasilitasId = '',
+  filename?: string
+): Promise<boolean> {
+  const p = new URLSearchParams();
+  p.set('format', format);
+  if (mode) p.set('mode', mode);
+  if (gedung && gedung !== 'Pilih') p.set('gedung', gedung);
+  if (fasilitasId && fasilitasId !== 'Pilih') p.set('fasilitas_id', fasilitasId);
+
+  try {
+    const res = await fetch(`${API_BASE}/dashboard/occupancy/export?${p.toString()}`, {
+      credentials: 'include',
+    });
+    if (!res.ok) return false;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || `rekap-okupansi.${format === 'excel' ? 'xls' : format}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function backendDownloadReportsExport(
+  format: 'pdf' | 'csv' = 'pdf',
+  status = '',
+  kategori = '',
+  q = '',
+  filename = 'rekap-laporan.pdf'
+): Promise<boolean> {
+  const p = new URLSearchParams();
+  p.set('format', format);
+  if (status && status !== 'semua') p.set('status', status);
+  if (kategori && kategori !== 'semua') p.set('kategori', kategori);
+  if (q) p.set('q', q);
+
+  try {
+    const res = await fetch(`${API_BASE}/reports/export?${p.toString()}`, {
+      credentials: 'include',
+    });
+    if (!res.ok) return false;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ---------- User Profile & Single Facility ----------
+
+export interface BackendUserDetail {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+  is_verified: boolean;
+  tipe_user: string;
+  nama_lengkap?: string;
+  identifier?: string;
+  prodi?: string;
+  angkatan?: number;
+}
+
+export function backendGetUserById(id: number) {
+  return apiFetch<BackendUserDetail>(`/users/${id}`);
+}
+
+export function backendUpdateUser(id: number, data: { nama_lengkap?: string; email?: string; password?: string; angkatan?: number }) {
+  return apiFetch<never>(`/users/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export function backendUpdateUserStatus(id: number, isVerified: boolean) {
+  return apiFetch<never>(`/users/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ is_verified: isVerified }),
+  });
+}
+
+export function backendGetFacilityById(id: string | number) {
+  return apiFetch<BackendFasilitas>(`/fasilitas/${id}`);
+}
+

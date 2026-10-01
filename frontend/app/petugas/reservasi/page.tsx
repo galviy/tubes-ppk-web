@@ -515,16 +515,16 @@ function PetugasReservasiContent() {
       </p>
       <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="table-scroll" style={{ overflowX: 'auto' }}>
-          <table style={{ minWidth: 1180, width: '100%' }}>
+          <table style={{ width: '100%', tableLayout: 'auto' }}>
             <thead>
               <tr>
-                <th style={{ minWidth: 130 }}>Pemohon</th>
-                <th style={{ minWidth: 180 }}>Fasilitas</th>
-                <th style={{ minWidth: 130 }}>Waktu Reservasi</th>
-                <th style={{ minWidth: 120 }}>Jadwal</th>
-                <th style={{ minWidth: 90 }}>Status</th>
-                <th style={{ minWidth: 130 }}>Waktu Pembatalan</th>
-                <th style={{ textAlign: 'left', minWidth: 150 }}>Tindakan</th>
+                <th style={{ width: '16%' }}>Pemohon</th>
+                <th style={{ width: '24%' }}>Fasilitas</th>
+                <th style={{ width: '13%' }}>Waktu Reservasi</th>
+                <th style={{ width: '14%' }}>Jadwal</th>
+                <th style={{ width: '11%' }}>Status</th>
+                <th style={{ width: '8%' }}>Batal</th>
+                <th style={{ textAlign: 'left', width: '14%' }}>Tindakan</th>
               </tr>
             </thead>
             <tbody>

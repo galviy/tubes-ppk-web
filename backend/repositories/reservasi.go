@@ -52,23 +52,33 @@ func intPtr(n sql.NullInt64) *int {
 
 func GetRuanganById(id int) (models.Ruangan, error) {
 	var r models.Ruangan
+	var deskripsi, kelengkapan, foto string
 	err := config.QueryRow(`
-		SELECT r.id, r.nama_ruangan, r.status, r.kapasitas, r.lokasi, COALESCE(k.nama_kategori, '')
+		SELECT r.id, r.nama_ruangan, r.status, r.kapasitas, r.lokasi, COALESCE(k.nama_kategori, ''),
+		       COALESCE(r.deskripsi, ''), COALESCE(r.kelengkapan, ''), COALESCE(r.foto, '')
 		FROM ruangan r
 		LEFT JOIN kategori k ON k.id = r.kategori
 		WHERE r.id = ?`, id).
-		Scan(&r.Id, &r.Nama, &r.Status, &r.Kapasitas, &r.Lokasi, &r.Kategori)
+		Scan(&r.Id, &r.Nama, &r.Status, &r.Kapasitas, &r.Lokasi, &r.Kategori, &deskripsi, &kelengkapan, &foto)
+	r.Deskripsi = deskripsi
+	r.Kelengkapan = kelengkapan
+	r.Foto = foto
 	return r, err
 }
 
 func GetAlatById(id int) (models.Alat, error) {
 	var a models.Alat
+	var deskripsi, kelengkapan, foto string
 	err := config.QueryRow(`
-		SELECT a.id, a.nama_alat, a.jumlah_tersedia, a.banyak_alat, a.status, COALESCE(k.nama_kategori, '')
+		SELECT a.id, a.nama_alat, a.jumlah_tersedia, a.banyak_alat, a.status, COALESCE(k.nama_kategori, ''),
+		       COALESCE(a.deskripsi, ''), COALESCE(a.kelengkapan, ''), COALESCE(a.foto, '')
 		FROM alat a
 		LEFT JOIN kategori k ON k.id = a.kategori
 		WHERE a.id = ?`, id).
-		Scan(&a.Id, &a.Nama, &a.JumlahTersedia, &a.BanyakAlat, &a.Status, &a.Kategori)
+		Scan(&a.Id, &a.Nama, &a.JumlahTersedia, &a.BanyakAlat, &a.Status, &a.Kategori, &deskripsi, &kelengkapan, &foto)
+	a.Deskripsi = deskripsi
+	a.Kelengkapan = kelengkapan
+	a.Foto = foto
 	return a, err
 }
 
