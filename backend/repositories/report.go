@@ -206,5 +206,11 @@ func CheckAlatById(id int) bool {
 		return false
 	}
 	return true
-
 }
+
+func CountLaporanBaru() (int, error) {
+	var total int
+	err := config.QueryRow(`SELECT COUNT(*) FROM report WHERE LOWER(status_laporan) = 'baru'`).Scan(&total)
+	return total, err
+}
+

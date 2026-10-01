@@ -384,11 +384,82 @@ Unauthorized
 [INFO] Waktu Total Respons: 0.000369 detik
 ```
 
-GET    /users/:id
-PATCH  /users/:id
-PATCH  /users/:id/status
+#### - GET /users/{id}
 
-> Belum terimplementasi di backend (tidak ada route tersebut di `routes/router.go`). Stub.
+Detail profil pengguna berdasarkan `id` (juga didukung alias `GET /user/{id}`). Auth: login (`middleware.Auth`). Diizinkan untuk Admin, Petugas, atau user pemilik akun (`sess.UserId == id`).
+
+```curl
+curl -i -X GET http://127.0.0.1:8080/users/25 \
+-b "session_id=USER_SESSION_ID"
+```
+
+Response sukses:
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "data": {
+    "id": 25,
+    "username": "budi01",
+    "email": "budi@undip.ac.id",
+    "role": "3",
+    "is_verified": true,
+    "tipe_user": "Dosen",
+    "nama_lengkap": "Dr. Budi Santoso",
+    "identifier": "0012345678",
+    "prodi": "Informatika"
+  },
+  "success": true
+}
+```
+
+Response gagal: `401 Unauthorized`, `403 Forbidden`, `404 User tidak ditemukan`.
+
+#### - PATCH /users/{id}
+
+Update profil pengguna (nama lengkap, email, password baru, angkatan). Auth: login. Diizinkan untuk Admin atau pemilik akun sendiri. Menerima JSON atau Form data.
+
+```curl
+curl -i -X PATCH http://127.0.0.1:8080/users/25 \
+-H "Content-Type: application/json" \
+-b "session_id=USER_SESSION_ID" \
+-d '{"nama_lengkap":"Dr. Budi Santoso M.Kom","email":"budi.new@undip.ac.id"}'
+```
+
+Response sukses:
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Profil berhasil diperbarui","success":true}
+```
+
+Response gagal: `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 User tidak ditemukan`, `409 Conflict (Email sudah terdaftar)`.
+
+#### - PATCH /users/{id}/status
+
+Suspend atau aktifkan kembali status akun (`isVerified`). Auth: Admin (`role == "1"`). Menerima JSON (`{"is_verified": true|false}`) atau form body (`is_verified=1|0`).
+
+```curl
+curl -i -X PATCH http://127.0.0.1:8080/users/25/status \
+-H "Content-Type: application/json" \
+-H "Cookie: session_id=ADMIN_SESSION_ID" \
+-d '{"is_verified": true}'
+```
+
+Response sukses:
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Berhasil memperbarui status user 25","success":true}
+```
+
+Response gagal: `400 Bad Request`, `401 Unauthorized`, `403 Forbidden (Tidak bisa menonaktifkan akun sendiri)`, `404 User tidak ditemukan`.
 
 
 ### Admin
@@ -1143,14 +1214,51 @@ Content-Type: application/json
 ```
 
 ### FACILITIES
-GET    /facilities
-GET    /facilities/:id
-GET    /facilities/:id/availability
-POST   /facilities
-PATCH  /facilities/:id
-PATCH  /petugas/facilities/:id/status
 
-> Dari daftar di atas, yang sudah terimplementasi di backend hanya `PATCH /petugas/facilities/{id}/status` (di-rename dari `PATCH /facilities/{id}/status` di `routes/router.go`). Path lama `/facilities/{id}/status` sekarang `404`. Sisanya stub.
+Endpoint katalog, detail, dan status fasilitas. Tersedia format route bahasa Indonesia (`/fasilitas/*`) maupun alias RESTful (`/facilities/*`).
+
+- `GET /fasilitas` (alias `GET /facilities`): List seluruh fasilitas dengan filter query (`q`, `lokasi`, `kapasitas_min`, `tipe=ruangan|alat`, `page`, `limit`).
+- `GET /fasilitas/{id}` (alias `GET /facilities/{id}`): Detail satu fasilitas (ruangan atau alat) berdasarkan ID (misal `1`, `ruangan-1`, atau `alat-2`).
+- `GET /fasilitas/ketersediaan` (alias `GET /facilities/{id}/availability` dan `GET /jadwal`): Ketersediaan slot waktu jadwal peminjaman.
+- `POST /admin/create_fasilitas/ruangan` & `POST /admin/create_fasilitas/alat`: Pembuatan fasilitas oleh admin.
+- `POST /admin/update_fasilitas/ruangan` & `POST /admin/update_fasilitas/alat`: Pembaruan spesifikasi fasilitas oleh admin.
+- `POST /admin/delete_fasilitas/ruangan` & `POST /admin/delete_fasilitas/alat`: Penghapusan fasilitas oleh admin.
+- `PATCH /petugas/facilities/{id}/status`: Pembaruan status operasional fasilitas (aktif, nonaktif, dalam_perbaikan).
+
+#### - GET /fasilitas/{id}
+
+Detail satu fasilitas. Tanpa auth (publik). Mendukung parameter id berupa angka (misal `1`), atau dengan prefix tipe (`ruangan-1` atau `alat-2`).
+
+```curl
+curl -i -X GET http://127.0.0.1:8080/fasilitas/1
+```
+
+Response sukses:
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "data": {
+    "id": "ruangan-1",
+    "ref_id": 1,
+    "tipe": "ruangan",
+    "name": "Ruang Kelas 101",
+    "type": "Ruang Kelas",
+    "loc": "Gedung A Lt. 1",
+    "cap": 40,
+    "jumlah_tersedia": 0,
+    "desc": "Ruang kelas perkuliahan",
+    "amenities": ["AC", "Proyektor", "Papan Tulis"],
+    "status": "avail",
+    "image": null
+  },
+  "success": true
+}
+```
+
+Response gagal: `400 Bad Request (ID tidak valid)`, `404 Not Found (Fasilitas tidak ditemukan)`.
 
 #### - PATCH /petugas/facilities/{id}/status
 
@@ -1234,12 +1342,18 @@ Forbidden
 ```
 
 ### RESERVATIONS
-GET    /reservations
-GET    /reservations/:id
-POST   /reservations
-PATCH  /reservations/:id
 
-> Dari daftar di atas, yang sudah terimplementasi di backend hanya `POST /reservasi/create_reservasi` (`controller/reservasi/create_reservasi.go` via `routes/router.go`). Sisanya stub.
+Endpoint pengajuan, daftar, detail, pembatalan, dan persetujuan reservasi fasilitas. Tersedia format route bahasa Indonesia (`/reservasi/*`) maupun alias RESTful (`/reservations/*`).
+
+- `POST /reservasi/create_reservasi/ruangan`: Pengajuan reservasi ruangan oleh pengguna.
+- `POST /reservasi/create_reservasi/alat`: Pengajuan peminjaman alat oleh pengguna.
+- `GET /reservasi` (alias `GET /reservations`): Riwayat reservasi milik pengguna login.
+- `GET /reservasi/{id}` (alias `GET /reservations/{id}`): Detail satu reservasi.
+- `PATCH /reservasi/{id}/cancel` (alias `PATCH /reservations/{id}`): Pembatalan mandiri oleh pengguna (minimal 2 jam sebelum jadwal).
+- `GET /petugas/reservasi`: Antrean seluruh pengajuan reservasi untuk ditinjau petugas/admin.
+- `PATCH /petugas/reservasi/{id}`: Persetujuan (*approve*) atau penolakan (*reject*) reservasi oleh petugas.
+- `PATCH /petugas/reservasi/{id}/cancel`: Pembatalan reservasi oleh petugas disertai alasan.
+- `GET /petugas/dashboard/count`: Hitungan antrean reservasi pending & laporan baru untuk dashboard petugas.
 
 #### - POST /reservasi/create_reservasi
 
@@ -1654,8 +1768,135 @@ Content-Type: application/json
 {"message":"Laporan sudah ditutup dan tidak bisa diubah lagi","success":false}
 ```
 
-### DASHBOARD
-GET    /dashboard/overview
-GET    /dashboard/occupancy/export
+### DASHBOARD & EKSPOR LAPORAN
 
-> Belum terimplementasi di backend (tidak ada route dashboard di `routes/router.go`). Stub.
+#### - GET /dashboard/overview
+
+Mengambil ringkasan statistik dan metrik komprehensif sistem (fasilitas, reservasi, laporan pengaduan, pengguna, okupansi). Auth: login (`middleware.Auth`).
+
+```curl
+curl -i -X GET http://127.0.0.1:8080/dashboard/overview \
+-b "session_id=ADMIN_SESSION_ID"
+```
+
+Response sukses:
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "data": {
+    "fasilitas": {
+      "total": 24,
+      "ruangan": 15,
+      "alat": 9,
+      "aktif": 20,
+      "dalam_perbaikan": 3,
+      "nonaktif": 1
+    },
+    "reservasi": {
+      "total": 120,
+      "menunggu": 8,
+      "disetujui": 95,
+      "ditolak": 10,
+      "dibatalkan": 7,
+      "selesai": 0
+    },
+    "laporan": {
+      "total": 35,
+      "baru": 5,
+      "diproses": 12,
+      "selesai": 15,
+      "ditolak": 3
+    },
+    "pengguna": {
+      "total": 340,
+      "terverifikasi": 320,
+      "menunggu_verifikasi": 20,
+      "mahasiswa": 280,
+      "dosen": 35,
+      "staff": 15,
+      "petugas": 8,
+      "admin": 2
+    },
+    "okupansi": {
+      "total_jam_pemakaian": 248.5,
+      "total_disetujui": 95
+    }
+  },
+  "success": true
+}
+```
+
+Response gagal: `401 Unauthorized`.
+
+#### - GET /dashboard/occupancy/export
+
+Mengekspor rekap okupansi dan utilisasi fasilitas beserta jumlah pengaduan kerusakan ke file dokumen resmi (asli **PDF binary**, **Excel**, atau **CSV**). Menghasilkan file unduhan langsung (`Content-Disposition: attachment`), bukan mencetak tampilan halaman browser (`window.print()`).
+
+Query parameters:
+
+| Parameter | Tipe | Default | Keterangan |
+|---|---|---|---|
+| `format` | string | `pdf` | Format ekspor: `pdf`, `excel` / `xls`, atau `csv` |
+| `mode` | string | `semua` | Mode filter: `semua`, `gedung`, atau `fasilitas` |
+| `gedung` | string | - | Nama gedung / lokasi fasilitas jika `mode=gedung` |
+| `fasilitas_id` | string | - | ID fasilitas spesifik (misal `ruangan-1` atau `1`) jika `mode=fasilitas` |
+
+```curl
+# Ekspor PDF Resmi
+curl -i -X GET "http://127.0.0.1:8080/dashboard/occupancy/export?format=pdf&mode=semua" \
+-b "session_id=ADMIN_SESSION_ID" \
+-o rekap-okupansi.pdf
+
+# Ekspor Excel
+curl -i -X GET "http://127.0.0.1:8080/dashboard/occupancy/export?format=excel&mode=semua" \
+-b "session_id=ADMIN_SESSION_ID" \
+-o rekap-okupansi.xls
+
+# Ekspor CSV
+curl -i -X GET "http://127.0.0.1:8080/dashboard/occupancy/export?format=csv&mode=semua" \
+-b "session_id=ADMIN_SESSION_ID" \
+-o rekap-okupansi.csv
+```
+
+Response sukses (PDF):
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="rekap-okupansi.pdf"
+
+[PDF Binary Data]
+```
+
+#### - GET /reports/export
+
+Mengekspor daftar laporan kerusakan fasilitas ke file PDF dokumen resmi atau CSV. Auth: login (`middleware.Auth`), juga tersedia di `/petugas/reports/export`.
+
+Query parameters:
+
+| Parameter | Tipe | Default | Keterangan |
+|---|---|---|---|
+| `format` | string | `pdf` | Format: `pdf` atau `csv` |
+| `status` | string | `semua` | Filter status: `baru`, `diproses`, `selesai`, `ditolak` |
+| `kategori` | string | `semua` | Filter kategori |
+| `q` | string | - | Kata kunci pencarian nama fasilitas / pelapor / keluhan |
+
+```curl
+curl -i -X GET "http://127.0.0.1:8080/reports/export?format=pdf" \
+-b "session_id=PETUGAS_SESSION_ID" \
+-o laporan-kerusakan.pdf
+```
+
+Response sukses:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="rekap-laporan.pdf"
+
+[PDF Binary Data]
+```
+

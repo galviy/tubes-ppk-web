@@ -3,7 +3,9 @@ package services
 import (
 	"backend-ppk/models"
 	"backend-ppk/repositories"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"strconv"
 	"strings"
 )
@@ -185,4 +187,52 @@ func ListFasilitasFiltered(tipe, q, lokasi string, kapasitasMin, page, limit int
 	}
 
 	return filtered, total, nil
+}
+
+func GetFasilitasById(rawId string) (*models.Fasilitas, error) {
+	rawId = strings.TrimSpace(rawId)
+	if strings.HasPrefix(strings.ToLower(rawId), "alat-") {
+		id, err := strconv.Atoi(strings.TrimPrefix(strings.ToLower(rawId), "alat-"))
+		if err != nil {
+			return nil, errors.New("id tidak valid")
+		}
+		alat, err := repositories.GetAlatById(id)
+		if err != nil {
+			return nil, err
+		}
+		f := toFasilitasAlat(alat)
+		return &f, nil
+	}
+
+	if strings.HasPrefix(strings.ToLower(rawId), "ruangan-") {
+		id, err := strconv.Atoi(strings.TrimPrefix(strings.ToLower(rawId), "ruangan-"))
+		if err != nil {
+			return nil, errors.New("id tidak valid")
+		}
+		ruangan, err := repositories.GetRuanganById(id)
+		if err != nil {
+			return nil, err
+		}
+		f := toFasilitasRuangan(ruangan)
+		return &f, nil
+	}
+
+	id, err := strconv.Atoi(rawId)
+	if err != nil {
+		return nil, errors.New("id tidak valid")
+	}
+
+	ruangan, err := repositories.GetRuanganById(id)
+	if err == nil {
+		f := toFasilitasRuangan(ruangan)
+		return &f, nil
+	}
+
+	alat, err := repositories.GetAlatById(id)
+	if err == nil {
+		f := toFasilitasAlat(alat)
+		return &f, nil
+	}
+
+	return nil, sql.ErrNoRows
 }

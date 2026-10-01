@@ -283,17 +283,17 @@ function AdminReservasiContent() {
       {/* Table Reservasi */}
       <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="table-scroll" style={{ overflowX: 'auto' }}>
-          <table style={{ minWidth: 1320, width: '100%' }}>
+          <table style={{ width: '100%', tableLayout: 'auto' }}>
             <thead>
               <tr>
-                <th style={{ minWidth: 90 }}>Tipe</th>
-                <th style={{ minWidth: 180 }}>Fasilitas &amp; Lokasi</th>
-                <th style={{ minWidth: 130 }}>Waktu Reservasi</th>
-                <th style={{ minWidth: 140 }}>Pemohon</th>
-                <th style={{ minWidth: 130 }}>Jadwal Reservasi</th>
-                <th style={{ minWidth: 160 }}>Keperluan Kegiatan</th>
-                <th style={{ minWidth: 90 }}>Status</th>
-                <th style={{ minWidth: 130 }}>Waktu Pembatalan</th>
+                <th style={{ width: '7%' }}>Tipe</th>
+                <th style={{ width: '23%' }}>Fasilitas &amp; Lokasi</th>
+                <th style={{ width: '13%' }}>Waktu Reservasi</th>
+                <th style={{ width: '15%' }}>Pemohon</th>
+                <th style={{ width: '13%' }}>Jadwal Reservasi</th>
+                <th style={{ width: '14%' }}>Keperluan Kegiatan</th>
+                <th style={{ width: '9%' }}>Status</th>
+                <th style={{ width: '6%' }}>Batal</th>
               </tr>
             </thead>
             <tbody>
