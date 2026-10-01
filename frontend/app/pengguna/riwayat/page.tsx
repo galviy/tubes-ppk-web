@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { Reservation, ReservationStatus } from '@/models/reservation';
 import ReservationDetailModal from '@/components/ReservationDetailModal';
+import DateRangeFilter from '@/components/DateRangeFilter';
 import { formatDateIndo, formatDateTimeIndo } from '@/lib/slots';
 import { isAlatReservation } from '@/models/facilities-data';
 
@@ -32,6 +33,8 @@ export default function RiwayatReservasiPage() {
   );
   const [detailFor, setDetailFor] = useState<Reservation | null>(null);
   const [filterType, setFilterType] = useState<'semua' | 'ruangan' | 'alat'>('semua');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const countRuangan = mine.filter((r) => !isAlatReservation(r, facilityById(r.facilityId))).length;
   const countAlat = mine.filter((r) => isAlatReservation(r, facilityById(r.facilityId))).length;
@@ -41,6 +44,10 @@ export default function RiwayatReservasiPage() {
     const isAlat = isAlatReservation(r, fac);
     if (filterType === 'ruangan' && isAlat) return false;
     if (filterType === 'alat' && !isAlat) return false;
+    // r.tanggal sudah berupa tanggal kalender WIB (YYYY-MM-DD), jadi bisa
+    // dibandingkan langsung tanpa konversi zona waktu.
+    if (dateFrom && r.tanggal < dateFrom) return false;
+    if (dateTo && r.tanggal > dateTo) return false;
     return true;
   });
 
@@ -83,10 +90,28 @@ export default function RiwayatReservasiPage() {
         ))}
       </div>
 
+      <DateRangeFilter
+        contextLabel="jadwal reservasi"
+        from={dateFrom}
+        to={dateTo}
+        onChange={({ from, to }) => {
+          setDateFrom(from);
+          setDateTo(to);
+        }}
+      />
+
       <div className="card-list">
         {filteredMine.length === 0 && (
           <div className="panel" style={{ textAlign: 'center', color: 'var(--ink-soft)' }}>
-            Belum ada data reservasi {filterType === 'ruangan' ? 'ruangan' : filterType === 'alat' ? 'alat' : ''}.
+            {dateFrom || dateTo ? (
+              <>
+                Tidak ada reservasi pada rentang tanggal yang dipilih
+                {dateFrom && dateTo ? ` (${formatDateIndo(dateFrom)} sampai ${formatDateIndo(dateTo)})` : ''}. Ubah
+                atau hapus filter tanggal untuk melihat reservasi lainnya.
+              </>
+            ) : (
+              `Belum ada data reservasi ${filterType === 'ruangan' ? 'ruangan' : filterType === 'alat' ? 'alat' : ''}.`
+            )}
           </div>
         )}
         {filteredMine.map((r) => {

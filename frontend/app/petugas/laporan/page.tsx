@@ -12,7 +12,7 @@ import { dateKeyInJakarta, formatDateIndo, formatDateTimeIndo } from '@/lib/slot
 
 const STATUS_CONFIG: Record<ReportStatus, { pillClass: string; label: string }> = {
   baru: { pillClass: 'busy', label: 'Baru' },
-  diproses: { pillClass: 'avail', label: 'Diproses' },
+  diproses: { pillClass: 'busy', label: 'Diproses' },
   selesai: { pillClass: 'avail', label: 'Selesai' },
   ditolak: { pillClass: 'danger', label: 'Ditolak' },
 };

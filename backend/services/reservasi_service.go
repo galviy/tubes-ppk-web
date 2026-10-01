@@ -259,7 +259,7 @@ func validasiStatusFasilitasReservasi(reservasi models.Reservasi) error {
 	if reservasi.RuanganId != nil {
 		ruangan, err := repositories.GetRuanganById(*reservasi.RuanganId)
 		if errors.Is(err, sql.ErrNoRows) {
-			return errReservasi(http.StatusConflict, "Ruangan reservasi sudah tidak tersedia. Reservasi ini harus dibatalkan.")
+			return errReservasi(http.StatusConflict, "Ruangan reservasi sudah tidak tersedia. Tolak reservasi ini.")
 		}
 		if err != nil {
 			return err
@@ -270,21 +270,21 @@ func validasiStatusFasilitasReservasi(reservasi models.Reservasi) error {
 				status = "dalam perbaikan"
 			}
 			return errReservasi(http.StatusConflict,
-				"Reservasi tidak dapat disetujui karena ruangan %q sedang %s. Batalkan reservasi ini.", ruangan.Nama, status)
+				"Reservasi tidak dapat disetujui karena ruangan %q sedang %s. Tolak reservasi ini dan jelaskan alasannya.", ruangan.Nama, status)
 		}
 	}
 
 	for _, item := range reservasi.Alat {
 		alat, err := repositories.GetAlatById(item.Id)
 		if errors.Is(err, sql.ErrNoRows) {
-			return errReservasi(http.StatusConflict, "Alat %q sudah tidak tersedia. Reservasi ini harus dibatalkan.", item.Nama)
+			return errReservasi(http.StatusConflict, "Alat %q sudah tidak tersedia. Tolak reservasi ini.", item.Nama)
 		}
 		if err != nil {
 			return err
 		}
 		if alat.Status == 0 {
 			return errReservasi(http.StatusConflict,
-				"Reservasi tidak dapat disetujui karena alat %q sedang nonaktif atau dalam perbaikan. Batalkan reservasi ini.", alat.Nama)
+				"Reservasi tidak dapat disetujui karena alat %q sedang nonaktif atau dalam perbaikan. Tolak reservasi ini.", alat.Nama)
 		}
 	}
 	return nil
@@ -314,6 +314,23 @@ func RejectReservasi(id, petugasID int, alasan string) error {
 	return repositories.RejectReservasi(id, petugasID, alasan)
 }
 
+// validasiBatasPembatalan menolak pembatalan yang lewat batasBatalSebelumMulai
+// sebelum waktu mulai. Berlaku untuk pembatalan oleh pengguna maupun petugas.
+func validasiBatasPembatalan(reservasi models.Reservasi) error {
+	return validasiBatasPembatalanPada(reservasi, waktuSekarangWIBSebagaiWallUTC())
+}
+
+func validasiBatasPembatalanPada(reservasi models.Reservasi, sekarang time.Time) error {
+	mulai, err := ParseWaktu(reservasi.WaktuPeminjaman)
+	if err != nil {
+		return err
+	}
+	if !sekarang.Before(mulai.Add(-batasBatalSebelumMulai)) {
+		return errReservasi(http.StatusConflict, "Pembatalan paling lambat 2 jam sebelum waktu mulai")
+	}
+	return nil
+}
+
 func CancelReservasiPengguna(id, userID int, alasan string) error {
 	if err := repositories.SinkronisasiStatusReservasi(); err != nil {
 		return err
@@ -335,12 +352,8 @@ func CancelReservasiPengguna(id, userID int, alasan string) error {
 		return errReservasi(http.StatusConflict, "Reservasi sudah tidak bisa dibatalkan")
 	}
 
-	mulai, err := ParseWaktu(reservasi.WaktuPeminjaman)
-	if err != nil {
+	if err := validasiBatasPembatalan(reservasi); err != nil {
 		return err
-	}
-	if !waktuSekarangWIBSebagaiWallUTC().Before(mulai.Add(-batasBatalSebelumMulai)) {
-		return errReservasi(http.StatusConflict, "Pembatalan paling lambat 2 jam sebelum waktu mulai")
 	}
 
 	return repositories.CancelReservasi(id, &userID, alasan)
@@ -365,6 +378,12 @@ func CancelReservasiPetugas(id, petugasID int, alasan string) error {
 	}
 	if reservasi.StatusKode != models.ReservasiPending && reservasi.StatusKode != models.ReservasiApproved {
 		return errReservasi(http.StatusConflict, "Reservasi sudah tidak bisa dibatalkan")
+	}
+
+	// Petugas mengikuti batas yang sama dengan pemohon: tidak ada pembatalan
+	// dua jam terakhir sebelum jadwal, termasuk untuk batal darurat.
+	if err := validasiBatasPembatalan(reservasi); err != nil {
+		return err
 	}
 
 	return repositories.CancelReservasi(id, &petugasID, alasan)
