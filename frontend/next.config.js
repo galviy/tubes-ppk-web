@@ -19,6 +19,25 @@ const nextConfig = {
     ];
   },
 
+  async redirects() {
+    return [
+      { source: '/facilities', destination: '/fasilitas', permanent: true },
+      { source: '/facilities/:id', destination: '/fasilitas/:id', permanent: true },
+      { source: '/reservations', destination: '/pengguna/riwayat', permanent: false },
+      { source: '/reservations/create', destination: '/pengguna/reservasi', permanent: false },
+      { source: '/reports', destination: '/pengguna/status-laporan', permanent: false },
+      { source: '/reports/create', destination: '/pengguna/lapor', permanent: false },
+      { source: '/officer', destination: '/petugas', permanent: false },
+      { source: '/officer/reservations', destination: '/petugas/reservasi', permanent: false },
+      { source: '/officer/reports', destination: '/petugas/laporan', permanent: false },
+      { source: '/officer/facilities', destination: '/petugas/fasilitas', permanent: false },
+      { source: '/admin/users', destination: '/admin/akun', permanent: false },
+      { source: '/admin/facilities', destination: '/admin/fasilitas', permanent: false },
+      { source: '/admin/officers', destination: '/admin/akun', permanent: false },
+      { source: '/admin/overview', destination: '/admin', permanent: false },
+    ];
+  },
+
   // PENTING (dev mode saja, tidak mempengaruhi hasil build/export):
   // Sejak Next.js 15.2.3+/16, dev server MEMBLOKIR diam-diam semua request
   // internal /_next/* kalau diakses dari origin selain localhost (mis. lewat

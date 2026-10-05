@@ -7,12 +7,12 @@ import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptM
 import ReportFoto from '@/components/ReportFoto';
 import Pagination from '@/components/Pagination';
 import DateRangeFilter from '@/components/DateRangeFilter';
-import { reportFotoUrl } from '@/lib/api';
+import { reportFotoUrl, backendDownloadReportsExport } from '@/lib/api';
 import { dateKeyInJakarta, formatDateIndo, formatDateTimeIndo } from '@/lib/slots';
 
 const STATUS_CONFIG: Record<ReportStatus, { pillClass: string; label: string }> = {
   baru: { pillClass: 'busy', label: 'Baru' },
-  diproses: { pillClass: 'avail', label: 'Diproses' },
+  diproses: { pillClass: 'busy', label: 'Diproses' },
   selesai: { pillClass: 'avail', label: 'Selesai' },
   ditolak: { pillClass: 'danger', label: 'Ditolak' },
 };
@@ -34,6 +34,16 @@ export default function PetugasLaporanPage() {
     onConfirm: () => {},
   });
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  async function handleExportPDF() {
+    setIsExporting(true);
+    try {
+      await backendDownloadReportsExport('pdf', filterStatus, '', '', 'antrian-laporan-petugas.pdf');
+    } finally {
+      setIsExporting(false);
+    }
+  }
 
   // Auto-dismiss popup notifikasi setelah 4.5 detik
   useEffect(() => {
@@ -190,10 +200,26 @@ export default function PetugasLaporanPage() {
         </div>
       )}
 
-      {/* Header Split matching Reference Image 4 */}
-      <div className="dash-split-header">
-        <h2>Antrian laporan kerusakan</h2>
-        <p>Kelola dan perbarui progres penanganan laporan kerusakan fasilitas.</p>
+      {/* Header Split */}
+      <div className="dash-split-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h2>Antrian laporan kerusakan</h2>
+          <p>Kelola dan perbarui progres penanganan laporan kerusakan fasilitas.</p>
+        </div>
+        <button
+          type="button"
+          onClick={handleExportPDF}
+          disabled={isExporting}
+          className="btn secondary"
+          style={{ padding: '7px 14px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          {isExporting ? 'Mengunduh...' : 'Ekspor PDF'}
+        </button>
       </div>
 
       {/* Filter Chips */}
@@ -239,16 +265,16 @@ export default function PetugasLaporanPage() {
       {/* Table matching Reference Image 4 */}
       <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="table-scroll" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%' }}>
+          <table style={{ width: '100%', tableLayout: 'auto' }}>
           <thead>
             <tr>
-              <th>Pelapor</th>
-              <th>Waktu Lapor</th>
-              <th>Fasilitas</th>
-              <th>Kategori</th>
-              <th>Deskripsi</th>
-              <th>Status</th>
-              <th style={{ textAlign: 'left' }}>Tindakan</th>
+              <th style={{ width: '15%' }}>Pelapor</th>
+              <th style={{ width: '12%' }}>Waktu Lapor</th>
+              <th style={{ width: '23%' }}>Fasilitas</th>
+              <th style={{ width: '12%' }}>Kategori</th>
+              <th style={{ width: '20%' }}>Deskripsi</th>
+              <th style={{ width: '10%' }}>Status</th>
+              <th style={{ textAlign: 'left', width: '8%' }}>Tindakan</th>
             </tr>
           </thead>
           <tbody>
