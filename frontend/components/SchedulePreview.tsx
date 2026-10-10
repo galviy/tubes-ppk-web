@@ -835,13 +835,23 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
                           setIsFacDropdownOpen(false);
                         }}
                       >
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                           {f.name}
                         </span>
-                        {f.loc && (
-                          <span style={{ fontSize: 11.5, color: '#9CA3AF', marginLeft: 10, flexShrink: 0 }}>
-                            {f.loc}
-                          </span>
+                        {isSelected && (
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#b59876"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{ flexShrink: 0, marginLeft: 8 }}
+                          >
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
                         )}
                       </button>
                     );

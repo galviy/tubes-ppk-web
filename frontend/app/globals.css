@@ -1284,8 +1284,9 @@ tr:hover td { background: #FAF8F5; }
   left: 0;
   width: 100%;
   min-width: 300px;
-  max-height: 280px;
+  max-height: 250px;
   overflow-y: auto;
+  overflow-x: hidden;
   background: #FFFFFF;
   border: 1px solid #D5D0C7;
   border-radius: 6px;
@@ -1293,6 +1294,25 @@ tr:hover td { background: #FAF8F5; }
   z-index: 1000;
   padding: 4px 0;
   animation: fadeIn 0.12s ease-out;
+  scrollbar-width: thin;
+  scrollbar-color: #D5D0C7 transparent;
+}
+
+.sched-quick-menu::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sched-quick-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sched-quick-menu::-webkit-scrollbar-thumb {
+  background: #D5D0C7;
+  border-radius: 4px;
+}
+
+.sched-quick-menu::-webkit-scrollbar-thumb:hover {
+  background: #b59876;
 }
 
 .sched-quick-item {
@@ -1310,6 +1330,7 @@ tr:hover td { background: #FAF8F5; }
   cursor: pointer;
   text-align: left;
   transition: background 0.1s ease;
+  box-sizing: border-box;
 }
 
 .sched-quick-item:hover {
