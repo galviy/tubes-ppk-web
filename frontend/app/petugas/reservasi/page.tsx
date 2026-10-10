@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
 import { Reservation, ReservationStatus } from '@/models/reservation';
 import { formatDateIndo, formatDateTimeIndo } from '@/lib/slots';
+import { formatDeadline, getCancellationDeadline, getStartDateTime } from '@/lib/cancellation';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
 import Pagination from '@/components/Pagination';
 import ReservationDetailModal from '@/components/ReservationDetailModal';
@@ -56,6 +57,30 @@ function PetugasReservasiContent() {
   });
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [detailFor, setDetailFor] = useState<Reservation | null>(null);
+
+  // Batas pembatalan harus ikut bergeser seiring waktu, jadi jam sekarang
+  // disegarkan berkala supaya tombol Batal tidak ikut tertinggal saat lewat batas.
+  const [nowTick, setNowTick] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  function batasPembatalan(r: Reservation): { deadline: Date; terlambat: boolean; sudahMulai: boolean } {
+    const mulai = getStartDateTime(r);
+    const deadline = getCancellationDeadline(r);
+    if (Number.isNaN(deadline.getTime())) {
+      // Jadwal tidak terbaca: biarkan server yang memutuskan.
+      return { deadline, terlambat: false, sudahMulai: false };
+    }
+    const sekarang = nowTick;
+    return {
+      deadline,
+      terlambat: deadline.getTime() <= sekarang,
+      sudahMulai: mulai.getTime() <= sekarang,
+    };
+  }
 
   // Auto-dismiss popup notifikasi setelah 4.5 detik
   useEffect(() => {
@@ -156,7 +181,7 @@ function PetugasReservasiContent() {
       const statusText = facilityStatus === 'repair' ? 'dalam perbaikan' : 'nonaktif';
       setFeedback({
         type: 'error',
-        message: `Reservasi tidak dapat disetujui karena ${facilityName} sedang ${statusText}. Petugas harus membatalkan reservasi ini.`,
+        message: `Reservasi tidak dapat disetujui karena ${facilityName} sedang ${statusText}. Tolak reservasi ini dan jelaskan alasannya ke pemohon.`,
       });
       return;
     }
@@ -201,19 +226,13 @@ function PetugasReservasiContent() {
     });
   }
 
-  function handleCancelEmergency(id: number, facilityName: string, pemohon: string, alatInfo = '', pending = false, facilityUnavailable = false) {
+  function handleCancelEmergency(id: number, facilityName: string, pemohon: string, alatInfo = '') {
     setModalConfig({
       isOpen: true,
-      title: pending ? 'Batalkan Reservasi Menunggu' : 'Batalkan Reservasi (Kondisi Mendesak)',
-      subtitle: pending && facilityUnavailable
-        ? `Fasilitas ${facilityName}${alatInfo} sedang tidak tersedia. Batalkan reservasi milik ${pemohon} dan sertakan alasannya.`
-        : pending
-        ? `Batalkan reservasi yang masih menunggu milik ${pemohon} untuk ${facilityName}${alatInfo}. Sertakan alasan pembatalan.`
-        : `Membatalkan reservasi ${facilityName}${alatInfo} milik ${pemohon} yang telah disetujui sebelumnya.`,
+      title: 'Batalkan Reservasi (Kondisi Mendesak)',
+      subtitle: `Membatalkan reservasi ${facilityName}${alatInfo} milik ${pemohon} yang telah disetujui sebelumnya. Pembatalan hanya bisa dilakukan paling lambat dua jam sebelum jadwal dimulai.`,
       label: 'Alasan Pembatalan',
-      placeholder: pending && facilityUnavailable
-        ? 'Contoh: Fasilitas sedang dalam perbaikan.'
-        : 'Contoh: Terjadi gangguan kelistrikan atau perbaikan darurat...',
+      placeholder: 'Contoh: Terjadi gangguan kelistrikan atau perbaikan darurat...',
       confirmText: 'Batalkan Reservasi',
       confirmVariant: 'danger',
       showInput: true,
@@ -523,6 +542,7 @@ function PetugasReservasiContent() {
                   const isAlat = isAlatReservation(r, fac);
                   const facilityName = fac?.name || r.ruanganNama || `Fasilitas #${r.facilityId}`;
                   const cfg = STATUS_CONFIG[r.status] || { pillClass: 'neutral', label: r.status };
+                  const { deadline, terlambat, sudahMulai } = batasPembatalan(r);
 
                   return (
                     <tr
@@ -643,25 +663,10 @@ function PetugasReservasiContent() {
                           >
                             Tolak
                           </button>
-                          <button
-                            type="button"
-                            className="btn ghost-danger"
-                            style={{ padding: '5px 12px', fontSize: 13 }}
-                            onClick={() => handleCancelEmergency(
-                              r.id,
-                              facilityName,
-                              r.pemohon,
-                              formatAlatInfo(r.alat),
-                              true,
-                              fac?.status === 'repair' || fac?.status === 'nonaktif'
-                            )}
-                          >
-                            Batalkan
-                          </button>
                         </div>
                       )}
 
-                      {r.status === 'disetujui' && (
+                      {r.status === 'disetujui' && !terlambat && (
                         <button
                           type="button"
                           className="btn ghost-danger"
@@ -671,6 +676,28 @@ function PetugasReservasiContent() {
                         >
                           Batal (Darurat)
                         </button>
+                      )}
+
+                      {r.status === 'menunggu' && (
+                        <div style={{ marginTop: 6, fontSize: 12, color: '#6B7280', lineHeight: 1.4, maxWidth: 240 }}>
+                          {terlambat
+                            ? 'Lewat batas persetujuan. Reservasi ini dibatalkan otomatis oleh sistem.'
+                            : `Batas persetujuan ${formatDeadline(deadline)}`}
+                        </div>
+                      )}
+
+                      {r.status === 'disetujui' && (
+                        <div style={{ marginTop: 6, fontSize: 12, color: '#6B7280', lineHeight: 1.4, maxWidth: 240 }}>
+                          {terlambat ? (
+                            sudahMulai ? (
+                              <>Batas pembatalan lewat. Jadwal {r.start} WIB sudah berjalan, tidak bisa dibatalkan.</>
+                            ) : (
+                              <>Batas pembatalan lewat. Tinggal dua jam terakhir sebelum jadwal {r.start} WIB.</>
+                            )
+                          ) : (
+                            <>Batas pembatalan {formatDeadline(deadline)}</>
+                          )}
+                        </div>
                       )}
 
                       {r.status === 'ditolak' && (

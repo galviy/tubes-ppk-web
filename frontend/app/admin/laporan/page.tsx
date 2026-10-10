@@ -26,10 +26,10 @@ export default function AdminSemuaLaporanPage() {
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
-  async function handleExportPDF() {
+  async function handleExportExcel() {
     setIsExporting(true);
     try {
-      await backendDownloadReportsExport('pdf', filterStatus, filterKategori, searchQuery, 'laporan-kerusakan-undip.pdf');
+      await backendDownloadReportsExport('excel', filterStatus, filterKategori, searchQuery, 'laporan-kerusakan-undip.xls');
     } finally {
       setIsExporting(false);
     }
@@ -131,7 +131,7 @@ export default function AdminSemuaLaporanPage() {
 
           <button
             type="button"
-            onClick={handleExportPDF}
+            onClick={handleExportExcel}
             disabled={isExporting}
             className="btn secondary"
             style={{
@@ -148,7 +148,7 @@ export default function AdminSemuaLaporanPage() {
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            {isExporting ? 'Mengunduh...' : 'Ekspor PDF'}
+            {isExporting ? 'Mengunduh...' : 'Ekspor Excel'}
           </button>
         </div>
       </div>

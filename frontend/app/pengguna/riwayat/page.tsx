@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { Reservation, ReservationStatus } from '@/models/reservation';
 import ReservationDetailModal from '@/components/ReservationDetailModal';
+import DateRangeFilter from '@/components/DateRangeFilter';
 import Pagination from '@/components/Pagination';
 import { formatDateIndo, formatDateTimeIndo } from '@/lib/slots';
 import { isAlatReservation } from '@/models/facilities-data';
@@ -33,29 +34,35 @@ export default function RiwayatReservasiPage() {
   );
   const [detailFor, setDetailFor] = useState<Reservation | null>(null);
   const [filterType, setFilterType] = useState<'semua' | 'ruangan' | 'alat'>('semua');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const countRuangan = mine.filter((r) => !isAlatReservation(r, facilityById(r.facilityId))).length;
   const countAlat = mine.filter((r) => isAlatReservation(r, facilityById(r.facilityId))).length;
-
-  const [page, setPage] = useState(1);
-  const PAGE_SIZE = 10;
-
-  useEffect(() => {
-    setPage(1);
-  }, [filterType]);
 
   const filteredMine = mine.filter((r) => {
     const fac = facilityById(r.facilityId);
     const isAlat = isAlatReservation(r, fac);
     if (filterType === 'ruangan' && isAlat) return false;
     if (filterType === 'alat' && !isAlat) return false;
+    if (dateFrom && r.tanggal < dateFrom) return false;
+    if (dateTo && r.tanggal > dateTo) return false;
     return true;
   });
 
-  const totalPages = Math.max(1, Math.ceil(filteredMine.length / PAGE_SIZE));
+  // Paginasi: 10 data per halaman
+  const ITEMS_PER_PAGE = 10;
+
+  // Reset ke halaman 1 saat filter berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterType, dateFrom, dateTo]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredMine.length / ITEMS_PER_PAGE));
   const paginatedMine = useMemo(() => {
-    return filteredMine.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  }, [filteredMine, page]);
+    return filteredMine.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  }, [filteredMine, currentPage]);
 
   return (
     <div>
@@ -96,10 +103,28 @@ export default function RiwayatReservasiPage() {
         ))}
       </div>
 
+      <DateRangeFilter
+        contextLabel="jadwal reservasi"
+        from={dateFrom}
+        to={dateTo}
+        onChange={({ from, to }) => {
+          setDateFrom(from);
+          setDateTo(to);
+        }}
+      />
+
       <div className="card-list">
         {filteredMine.length === 0 && (
           <div className="panel" style={{ textAlign: 'center', color: 'var(--ink-soft)' }}>
-            Belum ada data reservasi {filterType === 'ruangan' ? 'ruangan' : filterType === 'alat' ? 'alat' : ''}.
+            {dateFrom || dateTo ? (
+              <>
+                Tidak ada reservasi pada rentang tanggal yang dipilih
+                {dateFrom && dateTo ? ` (${formatDateIndo(dateFrom)} sampai ${formatDateIndo(dateTo)})` : ''}. Ubah
+                atau hapus filter tanggal untuk melihat reservasi lainnya.
+              </>
+            ) : (
+              `Belum ada data reservasi ${filterType === 'ruangan' ? 'ruangan' : filterType === 'alat' ? 'alat' : ''}.`
+            )}
           </div>
         )}
         {paginatedMine.map((r) => {
@@ -216,11 +241,11 @@ export default function RiwayatReservasiPage() {
       </div>
 
       <Pagination
-        currentPage={page}
+        currentPage={currentPage}
         totalPages={totalPages}
         totalItems={filteredMine.length}
-        itemsPerPage={PAGE_SIZE}
-        onPageChange={setPage}
+        itemsPerPage={ITEMS_PER_PAGE}
+        onPageChange={setCurrentPage}
       />
 
       {detailFor && (

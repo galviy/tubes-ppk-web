@@ -23,22 +23,20 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	email := r.FormValue("email")
+	// Satu field untuk dua maksud: nilainya boleh email atau username.
+	// Nama field tetap "email" agar tidak merusak klien yang sudah ada.
+	identifier := r.FormValue("email")
 	password := r.FormValue("password")
-	if email == "" || password == "" {
-		utils.ResponseJSONMessage(w, "Email and Password are required to fill!", http.StatusUnauthorized, false)
+	if identifier == "" || password == "" {
+		utils.ResponseJSONMessage(w, "Email atau username dan kata sandi wajib diisi!", http.StatusUnauthorized, false)
 		return
 	}
 	if !utils.IsPasswordValid(password) {
 		utils.ResponseJSONMessage(w, "Password tidak valid! Harus minimal 5 karakter, mengandung 1 huruf besar, dan 1 simbol!", http.StatusUnauthorized, false)
 		return
 	}
-	if !utils.IsEmailValid(email) {
-		utils.ResponseJSONMessage(w, "Email tidak sesuai dengan standar format email!", http.StatusUnauthorized, false)
-		return
-	}
 
-	user_login, isCorrect := services.VerifyLogin(email, password)
+	user_login, isCorrect := services.VerifyLogin(identifier, password)
 	if !isCorrect {
 		utils.ResponseJSONMessage(w, "Make sure your account has been verified or you type a invalid username or password", http.StatusUnauthorized, false)
 		return
@@ -62,5 +60,5 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	utils.ResponseJSONMessage(w, "successfully logged in to "+email, 200, true)
+	utils.ResponseJSONMessage(w, "successfully logged in to "+identifier, 200, true)
 }

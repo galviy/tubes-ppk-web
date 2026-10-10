@@ -10,7 +10,7 @@ import { formatDateTimeIndo } from '@/lib/slots';
 
 const STATUS_PILL: Record<ReportStatus, [string, string]> = {
   baru: ['busy', 'Baru'],
-  diproses: ['avail', 'Diproses'],
+  diproses: ['busy', 'Diproses'],
   selesai: ['avail', 'Selesai'],
   ditolak: ['danger', 'Ditolak'],
 };
@@ -31,12 +31,13 @@ export default function StatusLaporanPage() {
       (currentIdent && r.pelapor.toLowerCase() === currentIdent.toLowerCase()),
   );
   const [detailFor, setDetailFor] = useState<Report | null>(null);
-  const [page, setPage] = useState(1);
-  const PAGE_SIZE = 10;
-  const totalPages = Math.max(1, Math.ceil(mine.length / PAGE_SIZE));
-  const paginatedMine = useMemo(() => {
-    return mine.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  }, [mine, page]);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const ITEMS_PER_PAGE = 10;
+  const totalPages = Math.max(1, Math.ceil(mine.length / ITEMS_PER_PAGE));
+  const paginatedReports = useMemo(() => {
+    return mine.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  }, [mine, currentPage]);
 
   return (
     <div>
@@ -51,7 +52,7 @@ export default function StatusLaporanPage() {
             Belum ada laporan.
           </div>
         )}
-        {paginatedMine.map((r) => {
+        {paginatedReports.map((r) => {
           const facility = facilityById(r.facilityId);
           const [cls, label] = STATUS_PILL[r.status];
           return (
@@ -93,11 +94,11 @@ export default function StatusLaporanPage() {
       </div>
 
       <Pagination
-        currentPage={page}
+        currentPage={currentPage}
         totalPages={totalPages}
         totalItems={mine.length}
-        itemsPerPage={PAGE_SIZE}
-        onPageChange={setPage}
+        itemsPerPage={ITEMS_PER_PAGE}
+        onPageChange={setCurrentPage}
       />
 
       {detailFor && (

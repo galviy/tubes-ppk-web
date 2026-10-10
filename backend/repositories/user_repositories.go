@@ -65,6 +65,38 @@ func GetUserByEmail(email string) (*User, error) {
 	return &user, nil
 }
 
+// GetUserByUsername mengembalikan user berdasarkan username, atau nil bila
+// tidak ada. Verifikasi password dan status akun dilakukan di service.
+func GetUserByUsername(username string) (*User, error) {
+	var (
+		user       User
+		isVerified int
+	)
+
+	err := config.QueryRow(`
+		SELECT id, username, email, user_role, password, isVerified
+		FROM user
+		WHERE username = ?
+	`, username).Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.Role,
+		&user.Password,
+		&isVerified,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	user.IsVerified = isVerified == 1
+	return &user, nil
+}
+
 func IsNamaAlatExist(kategori string) bool {
 	var hasilAngka int
 	err := config.QueryRow(`
