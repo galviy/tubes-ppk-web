@@ -300,13 +300,13 @@ func SetupRoutes() *http.ServeMux {
 		"GET /users/export",
 		middleware.AdminAuth(http.HandlerFunc(dashboard.UsersExport)),
 	)
-	mux.HandleFunc(
+	mux.Handle(
 		"GET /dashboard/occupancy/export",
-		dashboard.OccupancyExport,
+		middleware.AdminAuth(http.HandlerFunc(dashboard.OccupancyExport)),
 	)
-	mux.HandleFunc(
+	mux.Handle(
 		"GET /reports/export",
-		dashboard.ReportsExport,
+		middleware.AdminAuth(http.HandlerFunc(dashboard.OccupancyExport)),
 	)
 	mux.Handle(
 		"GET /petugas/reports/export",
