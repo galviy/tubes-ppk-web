@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { Report, ReportStatus } from '@/models/report';
 import ReportDetailModal from '@/components/ReportDetailModal';
 import ReportFoto from '@/components/ReportFoto';
+import Pagination from '@/components/Pagination';
 import { formatDateTimeIndo } from '@/lib/slots';
 
 const STATUS_PILL: Record<ReportStatus, [string, string]> = {
@@ -30,6 +31,12 @@ export default function StatusLaporanPage() {
       (currentIdent && r.pelapor.toLowerCase() === currentIdent.toLowerCase()),
   );
   const [detailFor, setDetailFor] = useState<Report | null>(null);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
+  const totalPages = Math.max(1, Math.ceil(mine.length / PAGE_SIZE));
+  const paginatedMine = useMemo(() => {
+    return mine.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  }, [mine, page]);
 
   return (
     <div>
@@ -44,7 +51,7 @@ export default function StatusLaporanPage() {
             Belum ada laporan.
           </div>
         )}
-        {mine.map((r) => {
+        {paginatedMine.map((r) => {
           const facility = facilityById(r.facilityId);
           const [cls, label] = STATUS_PILL[r.status];
           return (
@@ -84,6 +91,14 @@ export default function StatusLaporanPage() {
           );
         })}
       </div>
+
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalItems={mine.length}
+        itemsPerPage={PAGE_SIZE}
+        onPageChange={setPage}
+      />
 
       {detailFor && (
         <ReportDetailModal

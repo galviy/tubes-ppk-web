@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
+import Pagination from '@/components/Pagination';
 import { UNIT_PETUGAS, FAKULTAS_UNDIP, PRODI_UNDIP } from '@/config/site';
 import { backendListProdi } from '@/lib/api';
 
@@ -205,6 +206,12 @@ export default function KelolaAkunPage() {
   // Search & Filter for Registered Accounts Table
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState<'semua' | 'pengguna' | 'mahasiswa' | 'dosen' | 'staf' | 'petugas' | 'admin'>('semua');
+  const [userPage, setUserPage] = useState(1);
+  const USER_PAGE_SIZE = 10;
+
+  useEffect(() => {
+    setUserPage(1);
+  }, [searchQuery, filterRole, tab]);
 
   // Modal State
   const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
@@ -474,6 +481,11 @@ export default function KelolaAkunPage() {
     }
     return true;
   });
+
+  const totalUserPages = Math.max(1, Math.ceil(filteredAccounts.length / USER_PAGE_SIZE));
+  const paginatedAccounts = useMemo(() => {
+    return filteredAccounts.slice((userPage - 1) * USER_PAGE_SIZE, userPage * USER_PAGE_SIZE);
+  }, [filteredAccounts, userPage]);
 
   return (
     <div>
@@ -1052,7 +1064,7 @@ export default function KelolaAkunPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredAccounts.map((acc) => {
+                  paginatedAccounts.map((acc) => {
                     const aktif = acc.isVerified !== false;
                     const isSelf = Boolean(
                       currentUser &&
@@ -1143,6 +1155,14 @@ export default function KelolaAkunPage() {
               </tbody>
             </table>
           </div>
+
+          <Pagination
+            currentPage={userPage}
+            totalPages={totalUserPages}
+            totalItems={filteredAccounts.length}
+            itemsPerPage={USER_PAGE_SIZE}
+            onPageChange={setUserPage}
+          />
         </div>
       ) : (
         /* Tab 2: Verifikasi Registrasi Mandiri */

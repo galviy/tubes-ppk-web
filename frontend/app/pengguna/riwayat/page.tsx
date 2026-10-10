@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { Reservation, ReservationStatus } from '@/models/reservation';
 import ReservationDetailModal from '@/components/ReservationDetailModal';
+import Pagination from '@/components/Pagination';
 import { formatDateIndo, formatDateTimeIndo } from '@/lib/slots';
 import { isAlatReservation } from '@/models/facilities-data';
 
@@ -36,6 +37,13 @@ export default function RiwayatReservasiPage() {
   const countRuangan = mine.filter((r) => !isAlatReservation(r, facilityById(r.facilityId))).length;
   const countAlat = mine.filter((r) => isAlatReservation(r, facilityById(r.facilityId))).length;
 
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
+
+  useEffect(() => {
+    setPage(1);
+  }, [filterType]);
+
   const filteredMine = mine.filter((r) => {
     const fac = facilityById(r.facilityId);
     const isAlat = isAlatReservation(r, fac);
@@ -43,6 +51,11 @@ export default function RiwayatReservasiPage() {
     if (filterType === 'alat' && !isAlat) return false;
     return true;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredMine.length / PAGE_SIZE));
+  const paginatedMine = useMemo(() => {
+    return filteredMine.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  }, [filteredMine, page]);
 
   return (
     <div>
@@ -89,7 +102,7 @@ export default function RiwayatReservasiPage() {
             Belum ada data reservasi {filterType === 'ruangan' ? 'ruangan' : filterType === 'alat' ? 'alat' : ''}.
           </div>
         )}
-        {filteredMine.map((r) => {
+        {paginatedMine.map((r) => {
           const facility = facilityById(r.facilityId);
           const isAlat = isAlatReservation(r, facility);
           const [cls, label] = STATUS_PILL[r.status] || ['neutral', r.status];
@@ -201,6 +214,14 @@ export default function RiwayatReservasiPage() {
           );
         })}
       </div>
+
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalItems={filteredMine.length}
+        itemsPerPage={PAGE_SIZE}
+        onPageChange={setPage}
+      />
 
       {detailFor && (
         <ReservationDetailModal
