@@ -106,7 +106,12 @@ function FasilitasContent() {
               type="button"
               onClick={() => {
                 setTabType('semua');
-                setFilters((prev) => ({ ...prev, category: 'Semua Jenis' }));
+                setFilters((prev) => ({
+                  ...prev,
+                  category: 'Semua Jenis',
+                  lokasi: 'Semua Gedung',
+                  kapasitas: 'Semua Kapasitas / Jumlah',
+                }));
               }}
               style={{
                 padding: '8px 18px',
@@ -126,7 +131,12 @@ function FasilitasContent() {
               type="button"
               onClick={() => {
                 setTabType('ruangan');
-                setFilters((prev) => ({ ...prev, category: 'Semua Jenis' }));
+                setFilters((prev) => ({
+                  ...prev,
+                  category: 'Semua Jenis',
+                  lokasi: 'Semua Gedung',
+                  kapasitas: 'Semua Kapasitas',
+                }));
               }}
               style={{
                 padding: '8px 18px',
@@ -149,7 +159,12 @@ function FasilitasContent() {
               type="button"
               onClick={() => {
                 setTabType('alat');
-                setFilters((prev) => ({ ...prev, category: 'Semua Jenis' }));
+                setFilters((prev) => ({
+                  ...prev,
+                  category: 'Semua Jenis',
+                  lokasi: 'Semua Gedung',
+                  kapasitas: 'Semua Jumlah',
+                }));
               }}
               style={{
                 padding: '8px 18px',

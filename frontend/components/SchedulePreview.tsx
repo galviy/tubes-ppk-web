@@ -9,7 +9,6 @@ import {
   isRuanganFacility,
   isAlatFacility,
   DEFAULT_ROOM_CATEGORIES,
-  DEFAULT_ALAT_CATEGORIES,
 } from '@/models/facilities-data';
 
 const SLOTS = generateTimeSlots();
@@ -418,8 +417,6 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
   const [backendSlots, setBackendSlots] = useState<
     Record<string, Record<string, { status: SlotStatusBackend; tersedia: boolean }>>
   >({});
-  const tabsRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 30_000);
@@ -454,25 +451,6 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
     };
   }, [selectedDate, reservations]);
 
-  // Auto-scroll active chip into view horizontally when active facility changes
-  useEffect(() => {
-    if (tabsRef.current) {
-      const activeEl = tabsRef.current.querySelector('.sched-fac-tab.active') as HTMLElement | null;
-      if (activeEl) {
-        activeEl.scrollIntoView({ inline: 'nearest', behavior: 'smooth', block: 'nearest' });
-      }
-    }
-  }, [activeFacilityId]);
-
-  const scrollTabs = (direction: 'left' | 'right') => {
-    if (tabsRef.current) {
-      tabsRef.current.scrollBy({
-        left: direction === 'left' ? -220 : 220,
-        behavior: 'smooth',
-      });
-    }
-  };
-
   const countRuangan = useMemo(() => facilities.filter(isRuanganFacility).length, [facilities]);
   const countAlat = useMemo(() => facilities.filter(isAlatFacility).length, [facilities]);
 
@@ -487,8 +465,7 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
       return ['Semua', ...all];
     } else {
       const existing = Array.from(new Set(facilities.filter(isAlatFacility).map((f) => f.type))).filter(Boolean);
-      const all = Array.from(new Set([...DEFAULT_ALAT_CATEGORIES, ...existing]));
-      return ['Semua', ...all];
+      return ['Semua', ...existing];
     }
   }, [facilities, tabType]);
 
@@ -497,14 +474,14 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
     return tabFacilities.filter((f) => f.type === selectedCategory);
   }, [tabFacilities, selectedCategory]);
 
-  const facility = tabFacilities.find((f) => f.id === activeFacilityId) ?? tabFacilities[0] ?? facilities[0];
+  const facility = filteredFacilities.find((f) => f.id === activeFacilityId) ?? filteredFacilities[0] ?? tabFacilities[0] ?? facilities[0];
 
-  // Pastikan fasilitas aktif sesuai dengan tab yang sedang aktif
+  // Pastikan fasilitas aktif sesuai dengan kategori dan tab yang sedang aktif
   useEffect(() => {
-    if (tabFacilities.length > 0 && !tabFacilities.some((f) => f.id === activeFacilityId)) {
-      onSelectFacility(tabFacilities[0].id);
+    if (filteredFacilities.length > 0 && !filteredFacilities.some((f) => f.id === activeFacilityId)) {
+      onSelectFacility(filteredFacilities[0].id);
     }
-  }, [tabFacilities, activeFacilityId, onSelectFacility]);
+  }, [filteredFacilities, activeFacilityId, onSelectFacility]);
 
   const slotStates = useMemo(() => {
     if (!now || !facility) return SLOTS.map(() => 'passed' as SlotState);
@@ -707,7 +684,7 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
                 fontFamily: 'inherit',
               }}
             >
-              Kembali ke Hari Ini
+              Hari Ini
             </button>
           )}
         </div>
@@ -743,7 +720,7 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
                 borderRadius: 4,
               }}
             >
-              Riwayat Lalu
+              Sudah Lewat
             </span>
           ) : (
             <span
@@ -757,13 +734,13 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
                 borderRadius: 4,
               }}
             >
-              Jadwal Mendatang
+              Mendatang
             </span>
           )}
         </div>
       </div>
 
-      {/* Toolbar: Category filter + Quick Select dropdown for large datasets */}
+      {/* Toolbar: Category filter + Quick Select dropdown */}
       <div className="sched-toolbar">
         <div className="sched-cat-filter">
           {categories.map((cat) => {
@@ -774,7 +751,13 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
                 key={cat}
                 type="button"
                 className={`sched-cat-btn ${isActive ? 'active' : ''}`}
-                onClick={() => setSelectedCategory(cat)}
+                onClick={() => {
+                  setSelectedCategory(cat);
+                  const matching = cat === 'Semua' ? tabFacilities : tabFacilities.filter((f) => f.type === cat);
+                  if (matching.length > 0 && !matching.some((f) => f.id === activeFacilityId)) {
+                    onSelectFacility(matching[0].id);
+                  }
+                }}
               >
                 {cat} ({count})
               </button>
@@ -786,126 +769,94 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           <label className="sched-quick-label">Pilih {tabType === 'ruangan' ? 'Ruangan' : 'Alat'}:</label>
           <select
             className="sched-quick-select"
-            value={activeFacilityId}
+            value={filteredFacilities.some((f) => f.id === activeFacilityId) ? activeFacilityId : (filteredFacilities[0]?.id || '')}
             onChange={(e) => {
               const nextId = e.target.value;
+              if (!nextId) return;
               onSelectFacility(nextId);
-              const targetFac = tabFacilities.find((f) => f.id === nextId);
-              if (targetFac && selectedCategory !== 'Semua' && targetFac.type !== selectedCategory) {
-                setSelectedCategory('Semua');
-              }
             }}
           >
-            {tabFacilities.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name}
+            {filteredFacilities.length === 0 ? (
+              <option disabled value="">
+                Tidak ada {tabType === 'ruangan' ? 'ruangan' : 'alat'} untuk kategori ini
               </option>
-            ))}
+            ) : (
+              filteredFacilities.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))
+            )}
           </select>
         </div>
       </div>
 
-      {/* Facility selector chips - horizontally scrollable */}
-      <div className="sched-fac-tabs-wrapper">
-        <button
-          type="button"
-          className="sched-fac-scroll-btn left"
-          onClick={() => scrollTabs('left')}
-          aria-label="Scroll kiri"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </button>
-        <div className="sched-fac-tabs" ref={tabsRef}>
-          {filteredFacilities.length === 0 ? (
-            <div style={{ padding: '8px 16px', fontSize: 13, color: '#6B7280' }}>
-              Tidak ada {tabType === 'ruangan' ? 'ruangan' : 'alat'} untuk kategori ini.
+      {filteredFacilities.length === 0 ? (
+        <div style={{ padding: '36px 16px', textAlign: 'center', color: '#6B7280', fontSize: 14 }}>
+          Tidak ada {tabType === 'ruangan' ? 'ruangan' : 'alat'} untuk kategori &quot;{selectedCategory}&quot;.
+        </div>
+      ) : (
+        <>
+          <div className="sched-info-row">
+            <div className="sched-info-cell">
+              <span className="lbl-sm">Fasilitas</span>
+              <b>{facility.name}</b>
             </div>
-          ) : (
-            filteredFacilities.map((f) => {
-              const isActive = f.id === activeFacilityId;
-              const isRepair = f.status === 'repair' || f.status === 'nonaktif';
-              return (
-                <button
-                  key={f.id}
-                  type="button"
-                  className={`sched-fac-tab ${isActive ? 'active' : ''}`}
-                  onClick={() => onSelectFacility(f.id)}
-                >
-                  <span className={`fac-dot ${isRepair ? 'repair' : 'avail'}`} />
-                  <span className="sched-fac-name">{f.name}</span>
-                </button>
-              );
-            })
-          )}
-        </div>
-        <button
-          type="button"
-          className="sched-fac-scroll-btn right"
-          onClick={() => scrollTabs('right')}
-          aria-label="Scroll kanan"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </button>
-      </div>
-
-      <div className="sched-info-row">
-        <div className="sched-info-cell">
-          <span className="lbl-sm">Fasilitas</span>
-          <b>{facility.name}</b>
-        </div>
-        <div className="sched-info-cell">
-          <span className="lbl-sm">Lokasi</span>
-          <b>{facility.loc || 'Belum tersedia'}</b>
-        </div>
-        <div className="sched-info-cell">
-          <span className="lbl-sm">Status Fasilitas</span>
-          <b style={{ color: FACILITY_STATUS_LABEL[facility.status]?.color, fontWeight: 700 }}>
-            {FACILITY_STATUS_LABEL[facility.status]?.label ?? facility.status}
-          </b>
-        </div>
-        <div className="sched-info-cell">
-          <span className="lbl-sm">{isAlatFacility(facility) ? 'Jumlah Tersedia' : 'Kapasitas'}</span>
-          <b>{isAlatFacility(facility) ? facility.tersedia ?? facility.cap : facility.cap} {isAlatFacility(facility) ? 'unit' : 'orang'}</b>
-        </div>
-        <div className="sched-info-cell">
-          <span className="lbl-sm">Zona Operasional</span>
-          <b>07.00 - 20.00 WIB</b>
-        </div>
-        <div className="sched-info-cell sched-avail-meter">
-          <span className="lbl-sm">
-            {selectedDate === getTodayDateString()
-              ? 'Slot Tersedia Hari Ini'
-              : `Slot Tersedia (${formatDateIndo(selectedDate)})`}
-          </span>
-          <div className="meter-row">
-            <div className="meter-track"><div className="meter-fill" style={{ width: `${availablePct}%` }} /></div>
-            <b>{availableCount}/{SLOTS.length}</b>
+            <div className="sched-info-cell">
+              <span className="lbl-sm">Lokasi</span>
+              <b>{facility.loc || 'Belum tersedia'}</b>
+            </div>
+            <div className="sched-info-cell">
+              <span className="lbl-sm">Status Fasilitas</span>
+              <b style={{ color: FACILITY_STATUS_LABEL[facility.status]?.color, fontWeight: 700 }}>
+                {FACILITY_STATUS_LABEL[facility.status]?.label ?? facility.status}
+              </b>
+            </div>
+            <div className="sched-info-cell">
+              <span className="lbl-sm">{isAlatFacility(facility) ? 'Jumlah Tersedia' : 'Kapasitas'}</span>
+              <b>{isAlatFacility(facility) ? facility.tersedia ?? facility.cap : facility.cap} {isAlatFacility(facility) ? 'unit' : 'orang'}</b>
+            </div>
+            <div className="sched-info-cell">
+              <span className="lbl-sm">Zona Operasional</span>
+              <b>07.00 - 20.00 WIB</b>
+            </div>
+            <div className="sched-info-cell sched-avail-meter">
+              <span className="lbl-sm">
+                {selectedDate === getTodayDateString()
+                  ? 'Slot Tersedia Hari Ini'
+                  : `Slot Tersedia (${formatDateIndo(selectedDate)})`}
+              </span>
+              <div className="meter-row">
+                <div className="meter-track"><div className="meter-fill" style={{ width: `${availablePct}%` }} /></div>
+                <b>{availableCount}/{SLOTS.length}</b>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {PERIODS.map((period) => {
-        const periodSlots = SLOTS.map((slot, i) => ({ slot, state: slotStates[i] })).filter(
-          ({ slot }) => slot.start >= period.from && slot.start < period.to
-        );
-        if (periodSlots.length === 0) return null;
-        return (
-          <div key={period.label} className="sched-period">
-            <div className="sched-period-head">{period.label}</div>
-            <div className="slot-grid-lg">
-              {periodSlots.map(({ slot, state }) => (
-                <div key={slot.start} className={`slot-lg ${state}`}>
-                  <span className="slot-bar" />
-                  <div className="slot-lg-body">
-                    <div className="t">{slot.start} - {slot.end}</div>
-                    <div className="s">{STATUS_LABEL[state]}</div>
-                  </div>
+          {PERIODS.map((period) => {
+            const periodSlots = SLOTS.map((slot, i) => ({ slot, state: slotStates[i] })).filter(
+              ({ slot }) => slot.start >= period.from && slot.start < period.to
+            );
+            if (periodSlots.length === 0) return null;
+            return (
+              <div key={period.label} className="sched-period">
+                <div className="sched-period-head">{period.label}</div>
+                <div className="slot-grid-lg">
+                  {periodSlots.map(({ slot, state }) => (
+                    <div key={slot.start} className={`slot-lg ${state}`}>
+                      <span className="slot-bar" />
+                      <div className="slot-lg-body">
+                        <div className="t">{slot.start} - {slot.end}</div>
+                        <div className="s">{STATUS_LABEL[state]}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
+              </div>
+            );
+          })}
+        </>
+      )}
 
       <div className="privacy-box">
         <div className="icon">

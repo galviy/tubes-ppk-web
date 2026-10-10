@@ -681,10 +681,9 @@ function AjukanReservasiContent() {
       const fromData = Array.from(
         new Set(availableFacilities.filter(isAlatFacility).map((f) => f.type))
       ).filter(Boolean);
-      const combined = Array.from(new Set([...DEFAULT_ALAT_CATEGORIES, ...fromData]));
       return [
         { value: 'semua', label: 'Semua Kategori Alat' },
-        ...combined.map((c) => ({ value: c, label: c })),
+        ...fromData.map((c) => ({ value: c, label: c })),
       ];
     }
   }, [availableFacilities, activeTab]);

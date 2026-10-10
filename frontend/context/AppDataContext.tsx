@@ -988,8 +988,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           return { ok: false, message: 'Hanya admin yang dapat menambah fasilitas.' };
         }
         const kategori = input.type.trim();
-        if (kategori.length < 5 || kategori.length > 100) {
-          return { ok: false, message: 'Nama kategori 5-100 karakter.' };
+        if (kategori.length < 3 || kategori.length > 100) {
+          return { ok: false, message: 'Nama kategori 3-100 karakter.' };
         }
         const cap = Number.isInteger(input.cap) && input.cap > 0 ? input.cap : 1;
         const deskripsi = (input.desc || '').trim();

@@ -55,20 +55,21 @@ function AdminReservasiContent() {
 
   // Category options based on active tab
   const categoryOptions = useMemo(() => {
+    const dynamicRuangan = Array.from(
+      new Set(facilities.filter(isRuanganFacility).map((f) => f.type))
+    ).filter(Boolean);
+    const dynamicAlat = Array.from(
+      new Set(facilities.filter(isAlatFacility).map((f) => f.type))
+    ).filter(Boolean);
+    const roomCats = Array.from(new Set([...DEFAULT_ROOM_CATEGORIES, ...dynamicRuangan]));
+
     if (tabType === 'ruangan') {
-      const fromFac = Array.from(
-        new Set(facilities.filter(isRuanganFacility).map((f) => f.type))
-      ).filter(Boolean);
-      const list = Array.from(new Set([...DEFAULT_ROOM_CATEGORIES, ...fromFac]));
-      return [{ value: 'semua', label: 'Semua Kategori Ruangan' }, ...list.map((c) => ({ value: c, label: c }))];
+      return [{ value: 'semua', label: 'Semua Kategori Ruangan' }, ...roomCats.map((c) => ({ value: c, label: c }))];
     } else if (tabType === 'alat') {
-      const fromFac = Array.from(
-        new Set(facilities.filter(isAlatFacility).map((f) => f.type))
-      ).filter(Boolean);
-      const list = Array.from(new Set([...DEFAULT_ALAT_CATEGORIES, ...fromFac]));
-      return [{ value: 'semua', label: 'Semua Kategori Alat' }, ...list.map((c) => ({ value: c, label: c }))];
+      return [{ value: 'semua', label: 'Semua Kategori Alat' }, ...dynamicAlat.map((c) => ({ value: c, label: c }))];
     }
-    return [{ value: 'semua', label: 'Semua Kategori' }];
+    const all = Array.from(new Set([...roomCats, ...dynamicAlat]));
+    return [{ value: 'semua', label: 'Semua Kategori' }, ...all.map((c) => ({ value: c, label: c }))];
   }, [facilities, tabType]);
 
   // Filtered reservations

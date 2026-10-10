@@ -1,10 +1,13 @@
 'use client';
 
+import { useMemo } from 'react';
+import { useAppData } from '@/context/AppDataContext';
 import {
   DEFAULT_ROOM_CATEGORIES,
-  DEFAULT_ALAT_CATEGORIES,
   FacilityCategory,
   isAlatCategory,
+  isRuanganFacility,
+  isAlatFacility,
 } from '@/models/facilities-data';
 import { FacilityFilters } from '@/lib/filter-facilities';
 
@@ -15,7 +18,27 @@ interface SearchWidgetProps {
 }
 
 export default function SearchWidget({ filters, onChange, onSearch }: SearchWidgetProps) {
+  const { facilities } = useAppData();
   const isSelectedAlat = isAlatCategory(filters.category);
+
+  const roomCategories = useMemo(() => {
+    const fromFac = Array.from(new Set(facilities.filter(isRuanganFacility).map((f) => f.type))).filter(Boolean);
+    return Array.from(new Set([...DEFAULT_ROOM_CATEGORIES, ...fromFac]));
+  }, [facilities]);
+
+  const alatCategories = useMemo(() => {
+    return Array.from(new Set(facilities.filter(isAlatFacility).map((f) => f.type))).filter(Boolean);
+  }, [facilities]);
+
+  const buildingOptions = useMemo(() => {
+    const list = isSelectedAlat
+      ? facilities.filter(isAlatFacility)
+      : filters.category !== 'Semua Jenis'
+      ? facilities.filter((f) => f.type === filters.category)
+      : facilities;
+    const dynamic = Array.from(new Set(list.map((f) => f.loc))).filter(Boolean);
+    return ['Semua Gedung', ...dynamic];
+  }, [facilities, filters.category, isSelectedAlat]);
 
   return (
     <div className="search-float">
@@ -37,26 +60,28 @@ export default function SearchWidget({ filters, onChange, onSearch }: SearchWidg
           >
             <option value="Semua Jenis">Semua Jenis</option>
             <optgroup label="Kategori Ruangan">
-              {DEFAULT_ROOM_CATEGORIES.map((cat) => (
+              {roomCategories.map((cat) => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </optgroup>
-            <optgroup label="Kategori Alat">
-              {DEFAULT_ALAT_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </optgroup>
+            {alatCategories.length > 0 && (
+              <optgroup label="Kategori Alat">
+                {alatCategories.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </div>
         <div className="field">
           <span>Tipe gedung</span>
-          <select value={filters.lokasi} onChange={(e) => onChange({ ...filters, lokasi: e.target.value })}>
-            <option>Semua Gedung</option>
-            <option>Area Timur</option>
-            <option>Gedung A</option>
-            <option>Gedung B</option>
-            <option>Gedung C</option>
-            <option>Unit AV</option>
+          <select
+            value={buildingOptions.includes(filters.lokasi) ? filters.lokasi : 'Semua Gedung'}
+            onChange={(e) => onChange({ ...filters, lokasi: e.target.value })}
+          >
+            {buildingOptions.map((b) => (
+              <option key={b} value={b}>{b}</option>
+            ))}
           </select>
         </div>
         <div className="field">

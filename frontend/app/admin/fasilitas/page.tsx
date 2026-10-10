@@ -69,6 +69,10 @@ function KelolaFasilitasContent() {
     return Array.from(new Set([...DEFAULT_ALAT_CATEGORIES, ...existing]));
   }, [facilities]);
 
+  const alatFilterOptions = useMemo(() => {
+    return Array.from(new Set(facilities.filter(isAlatFacility).map((f) => f.type))).filter(Boolean);
+  }, [facilities]);
+
   const currentTypeOptions = form.tipeSarana === 'alat' ? alatTypeOptions : roomTypeOptions;
 
   function handleTipeSaranaChange(newTipe: 'ruangan' | 'alat') {
@@ -89,11 +93,11 @@ function KelolaFasilitasContent() {
     if (tabType === 'ruangan') {
       return [{ value: 'semua', label: 'Semua Kategori Ruangan' }, ...roomTypeOptions.map((c) => ({ value: c, label: c }))];
     } else if (tabType === 'alat') {
-      return [{ value: 'semua', label: 'Semua Kategori Alat' }, ...alatTypeOptions.map((c) => ({ value: c, label: c }))];
+      return [{ value: 'semua', label: 'Semua Kategori Alat' }, ...alatFilterOptions.map((c) => ({ value: c, label: c }))];
     }
-    const all = Array.from(new Set([...roomTypeOptions, ...alatTypeOptions]));
+    const all = Array.from(new Set([...roomTypeOptions, ...alatFilterOptions]));
     return [{ value: 'semua', label: 'Semua Kategori' }, ...all.map((c) => ({ value: c, label: c }))];
-  }, [tabType, roomTypeOptions, alatTypeOptions]);
+  }, [tabType, roomTypeOptions, alatFilterOptions]);
 
   // Filtered facilities for master table
   const filteredFacilities = facilities.filter((f) => {
