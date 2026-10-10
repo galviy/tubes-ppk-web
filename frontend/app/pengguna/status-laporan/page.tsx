@@ -5,6 +5,7 @@ import { useAppData } from '@/context/AppDataContext';
 import { Report, ReportStatus } from '@/models/report';
 import ReportDetailModal from '@/components/ReportDetailModal';
 import ReportFoto from '@/components/ReportFoto';
+import Pagination from '@/components/Pagination';
 import { formatDateTimeIndo } from '@/lib/slots';
 
 const STATUS_PILL: Record<ReportStatus, [string, string]> = {
@@ -30,6 +31,12 @@ export default function StatusLaporanPage() {
       (currentIdent && r.pelapor.toLowerCase() === currentIdent.toLowerCase()),
   );
   const [detailFor, setDetailFor] = useState<Report | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Paginasi: 10 data per halaman
+  const ITEMS_PER_PAGE = 10;
+  const totalPages = Math.ceil(mine.length / ITEMS_PER_PAGE) || 1;
+  const paginatedReports = mine.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
     <div>
@@ -44,7 +51,7 @@ export default function StatusLaporanPage() {
             Belum ada laporan.
           </div>
         )}
-        {mine.map((r) => {
+        {paginatedReports.map((r) => {
           const facility = facilityById(r.facilityId);
           const [cls, label] = STATUS_PILL[r.status];
           return (
@@ -83,6 +90,14 @@ export default function StatusLaporanPage() {
             </div>
           );
         })}
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={mine.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {detailFor && (
