@@ -417,6 +417,20 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
   const [backendSlots, setBackendSlots] = useState<
     Record<string, Record<string, { status: SlotStatusBackend; tersedia: boolean }>>
   >({});
+  const [isFacDropdownOpen, setIsFacDropdownOpen] = useState(false);
+  const facDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isFacDropdownOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (facDropdownRef.current && !facDropdownRef.current.contains(e.target as Node)) {
+        setIsFacDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isFacDropdownOpen]);
+
   useEffect(() => {
     setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 30_000);
@@ -554,6 +568,7 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           onClick={() => {
             setTabType('ruangan');
             setSelectedCategory('Semua');
+            setIsFacDropdownOpen(false);
           }}
           style={{
             padding: '8px 18px',
@@ -577,6 +592,7 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           onClick={() => {
             setTabType('alat');
             setSelectedCategory('Semua');
+            setIsFacDropdownOpen(false);
           }}
           style={{
             padding: '8px 18px',
@@ -753,6 +769,7 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
                 className={`sched-cat-btn ${isActive ? 'active' : ''}`}
                 onClick={() => {
                   setSelectedCategory(cat);
+                  setIsFacDropdownOpen(false);
                   const matching = cat === 'Semua' ? tabFacilities : tabFacilities.filter((f) => f.type === cat);
                   if (matching.length > 0 && !matching.some((f) => f.id === activeFacilityId)) {
                     onSelectFacility(matching[0].id);
@@ -767,27 +784,72 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
 
         <div className="sched-quick-select-wrap">
           <label className="sched-quick-label">Pilih {tabType === 'ruangan' ? 'Ruangan' : 'Alat'}:</label>
-          <select
-            className="sched-quick-select"
-            value={filteredFacilities.some((f) => f.id === activeFacilityId) ? activeFacilityId : (filteredFacilities[0]?.id || '')}
-            onChange={(e) => {
-              const nextId = e.target.value;
-              if (!nextId) return;
-              onSelectFacility(nextId);
-            }}
-          >
-            {filteredFacilities.length === 0 ? (
-              <option disabled value="">
-                Tidak ada {tabType === 'ruangan' ? 'ruangan' : 'alat'} untuk kategori ini
-              </option>
-            ) : (
-              filteredFacilities.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))
+          <div ref={facDropdownRef} style={{ position: 'relative', display: 'inline-block', minWidth: 300, maxWidth: '100%' }}>
+            <button
+              type="button"
+              onClick={() => setIsFacDropdownOpen((v) => !v)}
+              className={`sched-quick-dropdown-btn ${isFacDropdownOpen ? 'open' : ''}`}
+              aria-haspopup="listbox"
+              aria-expanded={isFacDropdownOpen}
+            >
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {facility?.name || (filteredFacilities.length === 0 ? `Tidak ada ${tabType === 'ruangan' ? 'ruangan' : 'alat'}` : `Pilih ${tabType === 'ruangan' ? 'Ruangan' : 'Alat'}`)}
+              </span>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#726C64"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  transform: isFacDropdownOpen ? 'rotate(180deg)' : 'none',
+                  transition: 'transform 0.15s ease',
+                  flexShrink: 0,
+                }}
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+
+            {isFacDropdownOpen && (
+              <div className="sched-quick-menu" role="listbox">
+                {filteredFacilities.length === 0 ? (
+                  <div style={{ padding: '12px 14px', fontSize: 13, color: '#6B7280' }}>
+                    Tidak ada {tabType === 'ruangan' ? 'ruangan' : 'alat'} untuk kategori ini
+                  </div>
+                ) : (
+                  filteredFacilities.map((f) => {
+                    const isSelected = f.id === facility?.id;
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        className={`sched-quick-item ${isSelected ? 'active' : ''}`}
+                        onClick={() => {
+                          onSelectFacility(f.id);
+                          setIsFacDropdownOpen(false);
+                        }}
+                      >
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {f.name}
+                        </span>
+                        {f.loc && (
+                          <span style={{ fontSize: 11.5, color: '#9CA3AF', marginLeft: 10, flexShrink: 0 }}>
+                            {f.loc}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
             )}
-          </select>
+          </div>
         </div>
       </div>
 
