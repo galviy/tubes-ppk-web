@@ -374,11 +374,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         rows.sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
 
         // Jika ada permohonan 'menunggu' yang bertabrakan dengan permohonan 'disetujui' di fasilitas & tanggal sama,
-        // otomatis batalkan pada backend karena jadwal sudah terpakai
+        // otomatis batalkan pada backend karena jadwal sudah terpakai.
+        // Khusus ruangan (eksklusif). Alat berbasis sisa stok (backend yang
+        // menentukan saat approve), jadi tidak di-auto-cancel di sini.
         if (isOfficer) {
-          const approved = rows.filter((r) => r.status === 'disetujui');
+          const approved = rows.filter((r) => r.status === 'disetujui' && !r.facilityId.startsWith('alat-'));
           const conflictsToCancel = rows.filter((r) => {
             if (r.status !== 'menunggu') return false;
+            if (r.facilityId.startsWith('alat-')) return false;
             return approved.some(
               (a) =>
                 a.id !== r.id &&
@@ -644,13 +647,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           const fac = facilities.find((f) => f.id === facilityId);
           if (fac?.refId && fac?.tipe && dateMap[`${fac.tipe}-${fac.refId}`]?.has(slotStart)) return true;
         }
+        // Alat quantity-aware: slot dianggap penuh hanya jika sisa stok habis.
+        const fac = facilities.find((f) => f.id === facilityId);
+        const stokTotal = fac && isAlatFacility(fac) ? (fac.tersedia ?? fac.cap) : undefined;
         return isSlotBooked(
           reservations,
           facilityId,
           slotStart,
           excludeId,
           tanggal,
-          currentUserIdentifier || currentUser?.nama || currentUser?.email
+          currentUserIdentifier || currentUser?.nama || currentUser?.email,
+          undefined,
+          stokTotal
         );
       },
       fetchSlotAvailability,
@@ -851,11 +859,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
         // Jika disetujui, batalkan otomatis semua permohonan lain yang statusnya masih 'menunggu'
         // pada fasilitas dan tanggal yang sama dengan rentang waktu yang bertabrakan (jadwal terpakai).
-        if (status === 'disetujui' && target) {
+        // Khusus ruangan (eksklusif); alat berbasis sisa stok via backend.
+        if (status === 'disetujui' && target && !target.facilityId.startsWith('alat-')) {
           const conflicting = reservations.filter(
             (r) =>
               r.id !== target.id &&
               r.status === 'menunggu' &&
+              !r.facilityId.startsWith('alat-') &&
               r.facilityId === target.facilityId &&
               r.tanggal === target.tanggal &&
               r.start < target.end &&

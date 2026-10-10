@@ -220,6 +220,99 @@ export function reservationsShareFacility(r1: Reservation, r2: Reservation): boo
   return false;
 }
 
+// ----- Alat quantity-aware (selaras backend TotalAlatTerpakai) -----
+// Backend hanya mengunci stok oleh APPROVED (disetujui); PENDING tidak
+// mengurangi kuota. Cek existence ("ada yang pinjam langsung terpakai")
+// salah untuk alat dengan stok > 1. Contoh: stok 5, dipakai 2, sisa 3
+// masih boleh dipinjam.
+
+export function isAlatFacilityId(facilityId?: string): boolean {
+  if (!facilityId) return false;
+  const id = facilityId.toLowerCase();
+  return id.startsWith('alat-') || id.startsWith('a-');
+}
+
+export function getAlatNumericId(facilityId?: string): number | null {
+  if (!facilityId) return null;
+  const m = facilityId.match(/^(?:alat|a)-(\d+)/i);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  return Number.isNaN(n) ? null : n;
+}
+
+// Jumlah unit alat yang sudah DISETUJUI dan overlap dengan rentang.
+// Mencakup reservasi alat primer (facilityId alat-X) maupun alat
+// pendukung pada reservasi ruangan (r.alat[]).
+export function totalAlatApprovedPadaRange(
+  reservations: Reservation[],
+  facilityId: string,
+  tanggal: string,
+  start: string,
+  end: string,
+  excludeId?: number,
+): number {
+  const alatId = getAlatNumericId(facilityId);
+  if (alatId === null) return 0;
+  let total = 0;
+  for (const r of reservations) {
+    if (r.id === excludeId) continue;
+    if (r.status !== 'disetujui') continue;
+    if (r.tanggal !== tanggal) continue;
+    if (!(start < r.end && end > r.start)) continue;
+    if (matchesFacility(r.facilityId, facilityId)) {
+      // Reservasi alat primer: jumlah ada di r.alat[0] atau r.peserta.
+      const item = Array.isArray(r.alat) ? r.alat.find((a) => a.id === alatId) : undefined;
+      total += item?.jumlah ?? r.peserta ?? 1;
+    } else if (Array.isArray(r.alat)) {
+      for (const item of r.alat) {
+        if (item && item.id === alatId) total += item.jumlah || 1;
+      }
+    }
+  }
+  return total;
+}
+
+export function totalAlatApprovedPadaSlot(
+  reservations: Reservation[],
+  facilityId: string,
+  slotStart: string,
+  tanggal: string,
+  excludeId?: number,
+): number {
+  // Slot 30 menit: cek overlap [slotStart, +30mnt) via range semu.
+  // Karena format HH:MM string comparable, pakai end = slotStart + 30 mnt.
+  const [h, m] = slotStart.split(':').map(Number);
+  const endTotal = h * 60 + m + 30;
+  const end = `${String(Math.floor(endTotal / 60)).padStart(2, '0')}:${String(endTotal % 60).padStart(2, '0')}`;
+  return totalAlatApprovedPadaRange(reservations, facilityId, tanggal, slotStart, end, excludeId);
+}
+
+export function sisaStokAlatPadaRange(
+  reservations: Reservation[],
+  facilityId: string,
+  tanggal: string,
+  start: string,
+  end: string,
+  stokTotal: number,
+  excludeId?: number,
+): number {
+  return stokTotal - totalAlatApprovedPadaRange(reservations, facilityId, tanggal, start, end, excludeId);
+}
+
+// True jika permintaan `diminta` unit melebihi sisa stok APPROVED.
+export function hasAlatStockConflict(
+  reservations: Reservation[],
+  facilityId: string,
+  tanggal: string,
+  start: string,
+  end: string,
+  diminta: number,
+  stokTotal: number,
+  excludeId?: number,
+): boolean {
+  return totalAlatApprovedPadaRange(reservations, facilityId, tanggal, start, end, excludeId) + diminta > stokTotal;
+}
+
 export type SlotBooking = 'avail' | 'pending' | 'booked';
 
 /**
@@ -235,7 +328,8 @@ export function getSlotBooking(
   excludeId?: number,
   tanggal?: string,
   currentUserIdentifier?: string,
-  userRole?: string
+  userRole?: string,
+  stokTotal?: number
 ): SlotBooking {
   const active = reservations.filter(
     (r) =>
@@ -250,7 +344,16 @@ export function getSlotBooking(
 
   if (active.length === 0) return 'avail';
 
-  // 1. Sudah disetujui -> 'booked' (terkunci bagi semua orang)
+  // 1. Alat quantity-aware: hanya 'booked' jika stok APPROVED habis.
+  // PENDING tidak mengunci (selaras backend); own-pending tidak memblokir
+  // supaya sisa stok tetap bisa dipesan.
+  if (stokTotal !== undefined && isAlatFacilityId(facilityId)) {
+    const terpakai = totalAlatApprovedPadaSlot(reservations, facilityId, slotStart, tanggal ?? '', excludeId);
+    if (terpakai >= stokTotal) return 'booked';
+    return 'avail';
+  }
+
+  // 1b. Ruangan (eksklusif): sudah disetujui -> 'booked' (terkunci bagi semua orang)
   if (active.some((r) => r.status === 'disetujui')) return 'booked';
 
   // 2. Role dashboard: Petugas & Admin berhak melihat status 'pending' (menunggu persetujuan)
@@ -281,10 +384,11 @@ export function isSlotBooked(
   excludeId?: number,
   tanggal?: string,
   currentUserIdentifier?: string,
-  userRole?: string
+  userRole?: string,
+  stokTotal?: number
 ): boolean {
   return (
-    getSlotBooking(reservations, facilityId, slotStart, excludeId, tanggal, currentUserIdentifier, userRole) !==
+    getSlotBooking(reservations, facilityId, slotStart, excludeId, tanggal, currentUserIdentifier, userRole, stokTotal) !==
     'avail'
   );
 }
@@ -301,7 +405,9 @@ export function hasRangeConflict(
   start: string,
   end: string,
   excludeId?: number,
-  currentUserIdentifier?: string
+  currentUserIdentifier?: string,
+  diminta?: number,
+  stokTotal?: number
 ): Reservation | undefined {
   const overlaps = reservations.filter(
     (r) =>
@@ -316,7 +422,17 @@ export function hasRangeConflict(
 
   if (overlaps.length === 0) return undefined;
 
-  // 1. Yang sudah disetujui mutlak bentrok untuk semua orang
+  // 1. Alat quantity-aware: bentrok hanya jika sisa stok tidak cukup.
+  // PENDING/own-pending tidak memblokir (selaras backend BuatReservasi).
+  if (stokTotal !== undefined && isAlatFacilityId(facilityId)) {
+    const minta = diminta ?? 1;
+    if (hasAlatStockConflict(reservations, facilityId, tanggal, start, end, minta, stokTotal, excludeId)) {
+      return overlaps.find((r) => r.status === 'disetujui');
+    }
+    return undefined;
+  }
+
+  // 1b. Ruangan (eksklusif): yang sudah disetujui mutlak bentrok untuk semua orang
   const approved = overlaps.find((r) => r.status === 'disetujui');
   if (approved) return approved;
 
@@ -360,11 +476,16 @@ export function getSlotState(
   tanggal?: string,
   currentUserIdentifier?: string,
   backend?: { status: string; tersedia: boolean },
-  userRole?: string
+  userRole?: string,
+  stokTotal?: number
 ): SlotState {
   if (facility.status === 'repair' || facility.status === 'nonaktif') return 'maint';
 
   let state: SlotState = 'avail';
+
+  // Stok alat untuk cek quantity-aware (tersedia ?? cap). Ruangan: undefined (eksklusif).
+  const isAlat = facility.tipe === 'alat' || isAlatFacilityId(facility.id);
+  const stok = stokTotal ?? (isAlat ? (facility.tersedia ?? facility.cap) : undefined);
 
   // 1. Cek dari reservasi lokal terlebih dahulu (lebih kaya konteks user & sinkron ruangan + alat)
   const localBooking = getSlotBooking(
@@ -374,7 +495,8 @@ export function getSlotState(
     undefined,
     tanggal,
     currentUserIdentifier,
-    userRole
+    userRole,
+    stok
   );
 
   if (localBooking === 'booked') {
