@@ -1829,16 +1829,18 @@ button.slot-lg:disabled {
   background-size: cover;
   background-position: center 30%;
   z-index: 1;
+  overflow: hidden;
 }
 .ochoco-hero-overlay {
   position: absolute;
   inset: 0;
   background: linear-gradient(
     to bottom,
-    rgba(15, 18, 22, 0.65) 0%,
-    rgba(15, 18, 22, 0.35) 45%,
-    rgba(15, 18, 22, 0.8) 100%
+    rgba(15, 18, 22, 0.45) 0%,
+    rgba(15, 18, 22, 0.2) 45%,
+    rgba(15, 18, 22, 0.65) 100%
   );
+  z-index: 2;
 }
 
 .ochoco-hero-badge {
