@@ -158,7 +158,7 @@ export default function RegisterPage() {
   const [regNama, setRegNama] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPass, setRegPass] = useState('');
-  const [regConfirmPass, setRegConfirmPass] = useState('');
+  const [showRegPass, setShowRegPass] = useState(false);
 
   // Role-Specific Backend Fields
   const [regNim, setRegNim] = useState(''); // for Mahasiswa
@@ -251,10 +251,6 @@ export default function RegisterPage() {
     const passErr = validateBackendPassword(regPass, regPeran);
     if (passErr) {
       setRegError(passErr);
-      return;
-    }
-    if (regPass !== regConfirmPass) {
-      setRegError('Konfirmasi kata sandi tidak cocok.');
       return;
     }
 
@@ -509,30 +505,40 @@ export default function RegisterPage() {
                   />
                 </div>
 
-                {/* Password & Confirm Password (Backend Rule: 1 Uppercase, 1 Symbol) */}
-                <div className="ochoco-field-grid">
-                  <div className="ochoco-underline-field">
-                    <label htmlFor="reg-pass">KATA SANDI</label>
+                {/* Kata Sandi (Backend Rule: 1 Uppercase, 1 Symbol) */}
+                <div className="ochoco-underline-field">
+                  <label htmlFor="reg-pass">KATA SANDI</label>
+                  <div style={{ position: 'relative' }}>
                     <input
                       id="reg-pass"
-                      type="password"
+                      type={showRegPass ? 'text' : 'password'}
+                      style={{ paddingRight: 64, fontFamily: showRegPass ? 'inherit' : 'monospace' }}
                       placeholder="Min. 1 huruf besar & 1 simbol"
                       value={regPass}
                       onChange={(e) => setRegPass(e.target.value)}
                       required
+                      autoComplete="new-password"
                     />
-                  </div>
-
-                  <div className="ochoco-underline-field">
-                    <label htmlFor="reg-confirm-pass">KONFIRMASI KATA SANDI</label>
-                    <input
-                      id="reg-confirm-pass"
-                      type="password"
-                      placeholder="Ulangi kata sandi"
-                      value={regConfirmPass}
-                      onChange={(e) => setRegConfirmPass(e.target.value)}
-                      required
-                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegPass(!showRegPass)}
+                      aria-label={showRegPass ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                      style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: 12.5,
+                        fontWeight: 700,
+                        color: '#6B7280',
+                        padding: '4px 6px',
+                      }}
+                    >
+                      {showRegPass ? 'Sembunyikan' : 'Lihat'}
+                    </button>
                   </div>
                 </div>
                 <div style={{ fontSize: 13.5, color: '#6B7280', marginTop: -8, marginBottom: 12 }}>
