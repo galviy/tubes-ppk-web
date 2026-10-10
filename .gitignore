@@ -4,3 +4,5 @@ backend/cookies.txt
 backend/tmp/
 example.env
 AGENTS.md
+*.exe
+backend/*.exe

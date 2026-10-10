@@ -43,7 +43,7 @@ func Create_ruangan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(kategori) < 5 || len(kategori) > 100 {
+	if len(kategori) < 3 || len(kategori) > 100 {
 		utils.ResponseJSONMessage(w, "Username minimal 5 Huruf dan tidak boleh lebih dari 100 huruf!", http.StatusUnauthorized, false)
 		return
 	}

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import { Reservation, ReservationStatus } from '@/models/reservation';
 import ReservationDetailModal from '@/components/ReservationDetailModal';
 import DateRangeFilter from '@/components/DateRangeFilter';
+import Pagination from '@/components/Pagination';
 import { formatDateIndo, formatDateTimeIndo } from '@/lib/slots';
 import { isAlatReservation } from '@/models/facilities-data';
 
@@ -35,6 +36,7 @@ export default function RiwayatReservasiPage() {
   const [filterType, setFilterType] = useState<'semua' | 'ruangan' | 'alat'>('semua');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const countRuangan = mine.filter((r) => !isAlatReservation(r, facilityById(r.facilityId))).length;
   const countAlat = mine.filter((r) => isAlatReservation(r, facilityById(r.facilityId))).length;
@@ -44,12 +46,23 @@ export default function RiwayatReservasiPage() {
     const isAlat = isAlatReservation(r, fac);
     if (filterType === 'ruangan' && isAlat) return false;
     if (filterType === 'alat' && !isAlat) return false;
-    // r.tanggal sudah berupa tanggal kalender WIB (YYYY-MM-DD), jadi bisa
-    // dibandingkan langsung tanpa konversi zona waktu.
     if (dateFrom && r.tanggal < dateFrom) return false;
     if (dateTo && r.tanggal > dateTo) return false;
     return true;
   });
+
+  // Paginasi: 10 data per halaman
+  const ITEMS_PER_PAGE = 10;
+
+  // Reset ke halaman 1 saat filter berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterType, dateFrom, dateTo]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredMine.length / ITEMS_PER_PAGE));
+  const paginatedMine = useMemo(() => {
+    return filteredMine.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  }, [filteredMine, currentPage]);
 
   return (
     <div>
@@ -114,7 +127,7 @@ export default function RiwayatReservasiPage() {
             )}
           </div>
         )}
-        {filteredMine.map((r) => {
+        {paginatedMine.map((r) => {
           const facility = facilityById(r.facilityId);
           const isAlat = isAlatReservation(r, facility);
           const [cls, label] = STATUS_PILL[r.status] || ['neutral', r.status];
@@ -226,6 +239,14 @@ export default function RiwayatReservasiPage() {
           );
         })}
       </div>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={filteredMine.length}
+        itemsPerPage={ITEMS_PER_PAGE}
+        onPageChange={setCurrentPage}
+      />
 
       {detailFor && (
         <ReservationDetailModal

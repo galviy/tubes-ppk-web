@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
 import { Facility } from '@/models/facility';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
+import Pagination from '@/components/Pagination';
 import {
   DEFAULT_ROOM_CATEGORIES,
   DEFAULT_ALAT_CATEGORIES,
@@ -48,6 +49,12 @@ function KelolaFasilitasContent() {
   });
   const [filterCategory, setFilterCategory] = useState<string>('semua');
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
+
+  useEffect(() => {
+    setPage(1);
+  }, [tabType, filterCategory, searchQuery]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(BLANK_FORM);
@@ -67,6 +74,10 @@ function KelolaFasilitasContent() {
   const alatTypeOptions = useMemo(() => {
     const existing = Array.from(new Set(facilities.filter(isAlatFacility).map((f) => f.type))).filter(Boolean);
     return Array.from(new Set([...DEFAULT_ALAT_CATEGORIES, ...existing]));
+  }, [facilities]);
+
+  const alatFilterOptions = useMemo(() => {
+    return Array.from(new Set(facilities.filter(isAlatFacility).map((f) => f.type))).filter(Boolean);
   }, [facilities]);
 
   const currentTypeOptions = form.tipeSarana === 'alat' ? alatTypeOptions : roomTypeOptions;
@@ -89,27 +100,35 @@ function KelolaFasilitasContent() {
     if (tabType === 'ruangan') {
       return [{ value: 'semua', label: 'Semua Kategori Ruangan' }, ...roomTypeOptions.map((c) => ({ value: c, label: c }))];
     } else if (tabType === 'alat') {
-      return [{ value: 'semua', label: 'Semua Kategori Alat' }, ...alatTypeOptions.map((c) => ({ value: c, label: c }))];
+      return [{ value: 'semua', label: 'Semua Kategori Alat' }, ...alatFilterOptions.map((c) => ({ value: c, label: c }))];
     }
-    const all = Array.from(new Set([...roomTypeOptions, ...alatTypeOptions]));
+    const all = Array.from(new Set([...roomTypeOptions, ...alatFilterOptions]));
     return [{ value: 'semua', label: 'Semua Kategori' }, ...all.map((c) => ({ value: c, label: c }))];
-  }, [tabType, roomTypeOptions, alatTypeOptions]);
+  }, [tabType, roomTypeOptions, alatFilterOptions]);
 
   // Filtered facilities for master table
-  const filteredFacilities = facilities.filter((f) => {
-    const isAlat = isAlatFacility(f);
-    if (tabType === 'ruangan' && isAlat) return false;
-    if (tabType === 'alat' && !isAlat) return false;
-    if (filterCategory !== 'semua' && f.type !== filterCategory) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchName = f.name.toLowerCase().includes(q);
-      const matchLoc = f.loc.toLowerCase().includes(q);
-      const matchType = f.type.toLowerCase().includes(q);
-      return matchName || matchLoc || matchType;
-    }
-    return true;
-  });
+  const filteredFacilities = useMemo(() => {
+    return facilities.filter((f) => {
+      const isAlat = isAlatFacility(f);
+      if (tabType === 'ruangan' && isAlat) return false;
+      if (tabType === 'alat' && !isAlat) return false;
+      if (filterCategory !== 'semua' && f.type !== filterCategory) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchName = f.name.toLowerCase().includes(q);
+        const matchLoc = f.loc.toLowerCase().includes(q);
+        const matchType = f.type.toLowerCase().includes(q);
+        return matchName || matchLoc || matchType;
+      }
+      return true;
+    });
+  }, [facilities, tabType, filterCategory, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredFacilities.length / PAGE_SIZE));
+  const paginatedFacilities = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredFacilities.slice(start, start + PAGE_SIZE);
+  }, [filteredFacilities, page]);
 
   function startEdit(f: Facility) {
     if (f.refId === undefined || !f.tipe) {
@@ -757,7 +776,7 @@ function KelolaFasilitasContent() {
                 </td>
               </tr>
             ) : (
-              filteredFacilities.map((f) => {
+              paginatedFacilities.map((f) => {
                 const isAlat = isAlatFacility(f);
 
                 return (
@@ -956,6 +975,14 @@ function KelolaFasilitasContent() {
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalItems={filteredFacilities.length}
+        itemsPerPage={PAGE_SIZE}
+        onPageChange={setPage}
+      />
 
       <ActionPromptModal
         config={modalConfig}

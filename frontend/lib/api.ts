@@ -8,7 +8,7 @@
 //
 // Kontrak field disalin persis dari backend (jangan "dirapikan"):
 // - auth/reservasi/admin: application/x-www-form-urlencoded
-// - laporan: multipart/form-data (foto)
+// - laporan: application/json (foto berupa data-URL base64, tersimpan di DB)
 // - status petugas: application/json
 
 export const API_BASE =
@@ -95,11 +95,13 @@ function formBody(fields: Record<string, string | number | undefined>): URLSearc
 
 // ---------- Auth (controller/auth/*.go) ----------
 
-export function backendLogin(email: string, password: string) {
+// identifier dikirim lewat field backend "email"; backend login menerima
+// nilai itu sebagai email maupun username (selagi kompatibel dengan klien lama).
+export function backendLogin(identifier: string, password: string) {
   return apiFetch<never>('/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: formBody({ email, password }),
+    body: formBody({ email: identifier, password }),
   });
 }
 
@@ -737,15 +739,20 @@ export function mapBackendReport(row: Record<string, unknown>): MappedReport | n
   };
 }
 
-// URL tampil foto bukti: dinormalisasi ke slash + dilewatkan proxy /api
-// agar origin + cookie konsisten. Mendukung nama file murni, path uploads/,
-// ataupun path URL absolut.
+// URL tampil foto bukti: data-URL base64 (format baru, tersimpan di DB),
+// URL http(s) langsung, atau path legacy uploads/ via proxy /api.
+// Base64 mentah (tanpa prefix data:) juga diterima dan dianggap JPEG.
 export function reportFotoUrl(foto?: string): string | undefined {
   if (!foto || typeof foto !== 'string') return undefined;
   const trimmed = foto.trim();
   if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return undefined;
   if (trimmed.startsWith('data:') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
     return trimmed;
+  }
+  // Base64 mentah: panjang + charset base64, tanpa slash-spasi path.
+  const compact = trimmed.replace(/\s+/g, '');
+  if (compact.length > 200 && /^[A-Za-z0-9+/=_-]+$/.test(compact) && !compact.includes('/uploads')) {
+    return `data:image/jpeg;base64,${compact}`;
   }
   const clean = trimmed.replace(/\\/g, '/').replace(/^\/+/, '');
   if (!clean) return undefined;
@@ -817,17 +824,23 @@ export interface CreateLaporanInput {
   kategori: string;
   ruangan_id?: number;
   alat_id?: number;
-  foto?: File;
+  // Data-URL base64 "data:image/<jpeg|png>;base64,..." (atau base64 mentah).
+  // Disimpan langsung di kolom report.foto — tanpa upload file / folder.
+  foto?: string;
 }
 
 export function backendCreateLaporan(input: CreateLaporanInput) {
-  const fd = new FormData();
-  fd.set('alasan', input.alasan);
-  fd.set('kategori', input.kategori);
-  if (input.ruangan_id !== undefined) fd.set('ruangan_id', String(input.ruangan_id));
-  if (input.alat_id !== undefined) fd.set('alat_id', String(input.alat_id));
-  if (input.foto) fd.set('foto', input.foto);
-  return apiFetch<never>('/reports', { method: 'POST', body: fd });
+  return apiFetch<never>('/reports', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      alasan: input.alasan,
+      kategori: input.kategori,
+      ...(input.ruangan_id !== undefined ? { ruangan_id: input.ruangan_id } : {}),
+      ...(input.alat_id !== undefined ? { alat_id: input.alat_id } : {}),
+      ...(input.foto ? { foto: input.foto } : {}),
+    }),
+  });
 }
 
 export function backendListLaporanSaya() {
@@ -992,7 +1005,7 @@ export async function backendDownloadOccupancyExport(
 }
 
 export async function backendDownloadReportsExport(
-  format: 'pdf' | 'csv' = 'pdf',
+  format: 'pdf' | 'csv' | 'excel' = 'pdf',
   status = '',
   kategori = '',
   q = '',
@@ -1018,6 +1031,59 @@ export async function backendDownloadReportsExport(
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function backendDownloadAkunExport(
+  format: 'pdf' | 'csv' | 'excel' = 'pdf',
+  role = '',
+  q = '',
+  filename = 'rekap-akun.pdf'
+): Promise<boolean> {
+  const p = new URLSearchParams();
+  p.set('format', format);
+  if (role && role !== 'semua') p.set('role', role);
+  if (q) p.set('q', q);
+  return downloadBlob(`${API_BASE}/users/export?${p.toString()}`, filename);
+}
+
+export async function backendDownloadReservasiExport(
+  format: 'pdf' | 'csv' | 'excel' = 'pdf',
+  status = '',
+  tipe = '',
+  dari = '',
+  sampai = '',
+  fasilitas = '',
+  q = '',
+  filename = 'rekap-reservasi.pdf'
+): Promise<boolean> {
+  const p = new URLSearchParams();
+  p.set('format', format);
+  if (status && status !== 'semua') p.set('status', status);
+  if (tipe && tipe !== 'semua') p.set('tipe', tipe);
+  if (dari) p.set('dari', dari);
+  if (sampai) p.set('sampai', sampai);
+  if (fasilitas && fasilitas !== 'semua') p.set('fasilitas', fasilitas);
+  if (q) p.set('q', q);
+  return downloadBlob(`${API_BASE}/reservasi/export?${p.toString()}`, filename);
+}
+
+async function downloadBlob(url: string, filename: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, { credentials: 'include' });
+    if (!res.ok) return false;
+    const blob = await res.blob();
+    const urlObj = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = urlObj;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(urlObj);
     return true;
   } catch {
     return false;

@@ -26,10 +26,10 @@ export default function AdminSemuaLaporanPage() {
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
-  async function handleExportPDF() {
+  async function handleExportExcel() {
     setIsExporting(true);
     try {
-      await backendDownloadReportsExport('pdf', filterStatus, filterKategori, searchQuery, 'laporan-kerusakan-undip.pdf');
+      await backendDownloadReportsExport('excel', filterStatus, filterKategori, searchQuery, 'laporan-kerusakan-undip.xls');
     } finally {
       setIsExporting(false);
     }
@@ -131,7 +131,7 @@ export default function AdminSemuaLaporanPage() {
 
           <button
             type="button"
-            onClick={handleExportPDF}
+            onClick={handleExportExcel}
             disabled={isExporting}
             className="btn secondary"
             style={{
@@ -148,7 +148,7 @@ export default function AdminSemuaLaporanPage() {
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            {isExporting ? 'Mengunduh...' : 'Ekspor PDF'}
+            {isExporting ? 'Mengunduh...' : 'Ekspor Excel'}
           </button>
         </div>
       </div>
@@ -232,7 +232,7 @@ export default function AdminSemuaLaporanPage() {
                               target="_blank"
                               rel="noopener noreferrer"
                               className="ochoco-photo-thumb-btn"
-                              title={fotoUrl ? `Buka path foto di tab baru: ${fotoUrl}` : 'Buka foto bukti'}
+                              title="Buka foto bukti di tab baru"
                             >
                               <ReportFoto
                                 foto={r.foto}
@@ -320,9 +320,9 @@ export default function AdminSemuaLaporanPage() {
                       textDecoration: 'none',
                       fontWeight: 600,
                     }}
-                    title="Buka path file di tab baru"
+                    title="Buka foto bukti di tab baru"
                   >
-                    <span>Buka Path File</span>
+                    <span>Buka Foto</span>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                       <polyline points="15 3 21 3 21 9" />

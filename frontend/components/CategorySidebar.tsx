@@ -28,16 +28,17 @@ export default function CategorySidebar({ active, selected, onSelect, tabType = 
   }, [facilities, tabType]);
 
   const categories = useMemo(() => {
+    const dynamicRuangan = Array.from(new Set(facilities.filter(isRuanganFacility).map((f) => f.type))).filter(Boolean);
+    const dynamicAlat = Array.from(new Set(facilities.filter(isAlatFacility).map((f) => f.type))).filter(Boolean);
+    const roomCats = Array.from(new Set([...DEFAULT_ROOM_CATEGORIES, ...dynamicRuangan]));
+
     if (tabType === 'ruangan') {
-      const dynamicTypes = Array.from(new Set(facilities.filter(isRuanganFacility).map((f) => f.type))).filter(Boolean);
-      return ['Semua Jenis', ...Array.from(new Set([...DEFAULT_ROOM_CATEGORIES, ...dynamicTypes]))];
+      return ['Semua Jenis', ...roomCats];
     }
     if (tabType === 'alat') {
-      const dynamicTypes = Array.from(new Set(facilities.filter(isAlatFacility).map((f) => f.type))).filter(Boolean);
-      return ['Semua Jenis', ...Array.from(new Set([...DEFAULT_ALAT_CATEGORIES, ...dynamicTypes]))];
+      return ['Semua Jenis', ...dynamicAlat];
     }
-    const dynamicTypes = Array.from(new Set(facilities.map((f) => f.type))).filter(Boolean);
-    return ['Semua Jenis', ...dynamicTypes];
+    return ['Semua Jenis', ...Array.from(new Set([...roomCats, ...dynamicAlat]))];
   }, [facilities, tabType]);
 
   return (

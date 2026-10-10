@@ -4,15 +4,15 @@ import (
 	"backend-ppk/controller/admin"
 	createuser "backend-ppk/controller/admin/create_user"
 	fasilitas "backend-ppk/controller/admin/fasilitas"
+	tolak "backend-ppk/controller/admin/tolak"
 	"backend-ppk/controller/admin/verifikasi"
 	akademik "backend-ppk/controller/akademik"
 	"backend-ppk/controller/auth"
-	tolak "backend-ppk/controller/admin/tolak"
+	"backend-ppk/controller/dashboard"
 	publik_fasilitas "backend-ppk/controller/fasilitas"
 	petugas_fasilitas "backend-ppk/controller/petugas/fasilitas"
 	petugas_report "backend-ppk/controller/petugas/report"
 	petugas_reservasi "backend-ppk/controller/petugas/reservasi"
-	"backend-ppk/controller/dashboard"
 	"backend-ppk/controller/report"
 	"backend-ppk/controller/reservasi"
 	"backend-ppk/controller/user"
@@ -292,13 +292,21 @@ func SetupRoutes() *http.ServeMux {
 		"GET /dashboard/overview",
 		middleware.Auth(http.HandlerFunc(dashboard.Overview)),
 	)
-	mux.HandleFunc(
-		"GET /dashboard/occupancy/export",
-		dashboard.OccupancyExport,
+	mux.Handle(
+		"GET /reservasi/export",
+		middleware.AdminAuth(http.HandlerFunc(dashboard.ReservasiExport)),
 	)
-	mux.HandleFunc(
+	mux.Handle(
+		"GET /users/export",
+		middleware.AdminAuth(http.HandlerFunc(dashboard.UsersExport)),
+	)
+	mux.Handle(
+		"GET /dashboard/occupancy/export",
+		middleware.AdminAuth(http.HandlerFunc(dashboard.OccupancyExport)),
+	)
+	mux.Handle(
 		"GET /reports/export",
-		dashboard.ReportsExport,
+		middleware.AdminAuth(http.HandlerFunc(dashboard.OccupancyExport)),
 	)
 	mux.Handle(
 		"GET /petugas/reports/export",

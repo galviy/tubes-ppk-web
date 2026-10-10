@@ -7,7 +7,7 @@ import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptM
 import ReportFoto from '@/components/ReportFoto';
 import Pagination from '@/components/Pagination';
 import DateRangeFilter from '@/components/DateRangeFilter';
-import { reportFotoUrl, backendDownloadReportsExport } from '@/lib/api';
+import { reportFotoUrl } from '@/lib/api';
 import { dateKeyInJakarta, formatDateIndo, formatDateTimeIndo } from '@/lib/slots';
 
 const STATUS_CONFIG: Record<ReportStatus, { pillClass: string; label: string }> = {
@@ -34,16 +34,6 @@ export default function PetugasLaporanPage() {
     onConfirm: () => {},
   });
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
-
-  async function handleExportPDF() {
-    setIsExporting(true);
-    try {
-      await backendDownloadReportsExport('pdf', filterStatus, '', '', 'antrian-laporan-petugas.pdf');
-    } finally {
-      setIsExporting(false);
-    }
-  }
 
   // Auto-dismiss popup notifikasi setelah 4.5 detik
   useEffect(() => {
@@ -201,25 +191,11 @@ export default function PetugasLaporanPage() {
       )}
 
       {/* Header Split */}
-      <div className="dash-split-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+      <div className="dash-split-header">
         <div>
           <h2>Antrian laporan kerusakan</h2>
           <p>Kelola dan perbarui progres penanganan laporan kerusakan fasilitas.</p>
         </div>
-        <button
-          type="button"
-          onClick={handleExportPDF}
-          disabled={isExporting}
-          className="btn secondary"
-          style={{ padding: '7px 14px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          {isExporting ? 'Mengunduh...' : 'Ekspor PDF'}
-        </button>
       </div>
 
       {/* Filter Chips */}
@@ -330,7 +306,7 @@ export default function PetugasLaporanPage() {
                               target="_blank"
                               rel="noopener noreferrer"
                               className="ochoco-photo-thumb-btn"
-                              title={fotoUrl ? `Buka path foto di tab baru: ${fotoUrl}` : 'Buka foto bukti'}
+                              title="Buka foto bukti di tab baru"
                             >
                               <ReportFoto
                                 foto={r.foto}
@@ -461,9 +437,9 @@ export default function PetugasLaporanPage() {
                       textDecoration: 'none',
                       fontWeight: 600,
                     }}
-                    title="Buka path file di tab baru"
+                    title="Buka foto bukti di tab baru"
                   >
-                    <span>Buka Path File</span>
+                    <span>Buka Foto</span>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                       <polyline points="15 3 21 3 21 9" />

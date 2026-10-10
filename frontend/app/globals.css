@@ -1175,17 +1175,16 @@ tr:hover td { background: #FAF8F5; }
 
 .sched-toolbar {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
 .sched-cat-filter {
   display: flex;
   gap: 6px;
-  overflow-x: auto;
+  flex-wrap: wrap;
   align-items: center;
   padding-bottom: 2px;
 }
@@ -1220,6 +1219,7 @@ tr:hover td { background: #FAF8F5; }
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .sched-quick-label {
@@ -1242,11 +1242,105 @@ tr:hover td { background: #FAF8F5; }
   color: #181D24;
   cursor: pointer;
   min-width: 300px;
+  max-width: 100%;
   outline: none;
 }
 
 .sched-quick-select:focus {
   border-color: #b59876;
+}
+
+.sched-quick-dropdown-btn {
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 600;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid #D5D0C7;
+  background: #FFFFFF;
+  color: #181D24;
+  cursor: pointer;
+  min-width: 300px;
+  max-width: 100%;
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sched-quick-dropdown-btn:focus,
+.sched-quick-dropdown-btn.open {
+  border-color: #b59876;
+  box-shadow: 0 0 0 2px rgba(181, 152, 118, 0.2);
+}
+
+.sched-quick-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  min-width: 300px;
+  max-height: 250px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #FFFFFF;
+  border: 1px solid #D5D0C7;
+  border-radius: 6px;
+  box-shadow: 0 12px 28px -4px rgba(24, 29, 36, 0.14), 0 6px 10px -4px rgba(24, 29, 36, 0.08);
+  z-index: 1000;
+  padding: 4px 0;
+  animation: fadeIn 0.12s ease-out;
+  scrollbar-width: thin;
+  scrollbar-color: #D5D0C7 transparent;
+}
+
+.sched-quick-menu::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sched-quick-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sched-quick-menu::-webkit-scrollbar-thumb {
+  background: #D5D0C7;
+  border-radius: 4px;
+}
+
+.sched-quick-menu::-webkit-scrollbar-thumb:hover {
+  background: #b59876;
+}
+
+.sched-quick-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 14px;
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #181D24;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s ease;
+  box-sizing: border-box;
+}
+
+.sched-quick-item:hover {
+  background: #F9F8F6;
+}
+
+.sched-quick-item.active {
+  background: #FAF6F0;
+  font-weight: 700;
+  color: #b59876;
 }
 
 .sched-fac-tabs-wrapper {
@@ -1731,7 +1825,7 @@ button.slot-lg:disabled {
 .ochoco-hero-bg {
   position: absolute;
   inset: 0;
-  background-image: url('/undip-hero.jpg');
+  background-image: url('/undip-hero.png');
   background-size: cover;
   background-position: center 30%;
   z-index: 1;

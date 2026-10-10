@@ -20,18 +20,19 @@ interface FacilityFilterBarProps {
 export default function FacilityFilterBar({ filters, onChange, tabType = 'semua' }: FacilityFilterBarProps) {
   const { facilities } = useAppData();
 
-  // Dynamic types derived strictly according to tabType
+  // Dynamic types derived strictly according to tabType, synchronized with schedule and database
   const typeOptions = useMemo(() => {
+    const dynamicRuangan = Array.from(new Set(facilities.filter(isRuanganFacility).map((f) => f.type))).filter(Boolean);
+    const dynamicAlat = Array.from(new Set(facilities.filter(isAlatFacility).map((f) => f.type))).filter(Boolean);
+    const roomCats = Array.from(new Set([...DEFAULT_ROOM_CATEGORIES, ...dynamicRuangan]));
+
     if (tabType === 'ruangan') {
-      const dynamic = Array.from(new Set(facilities.filter(isRuanganFacility).map((f) => f.type))).filter(Boolean);
-      return ['Semua Jenis', ...Array.from(new Set([...DEFAULT_ROOM_CATEGORIES, ...dynamic]))];
+      return ['Semua Jenis', ...roomCats];
     }
     if (tabType === 'alat') {
-      const dynamic = Array.from(new Set(facilities.filter(isAlatFacility).map((f) => f.type))).filter(Boolean);
-      return ['Semua Jenis', ...Array.from(new Set([...DEFAULT_ALAT_CATEGORIES, ...dynamic]))];
+      return ['Semua Jenis', ...dynamicAlat];
     }
-    const dynamic = Array.from(new Set(facilities.map((f) => f.type))).filter(Boolean);
-    return ['Semua Jenis', ...dynamic];
+    return ['Semua Jenis', ...Array.from(new Set([...roomCats, ...dynamicAlat]))];
   }, [facilities, tabType]);
 
   // Dynamic buildings/locations derived from relevant facilities
@@ -64,9 +65,9 @@ export default function FacilityFilterBar({ filters, onChange, tabType = 'semua'
       </div>
 
       <div className="fgroup">
-        <label>{tabType === 'alat' ? 'Kategori Alat' : tabType === 'ruangan' ? 'Kategori Ruangan' : 'Tipe fasilitas'}</label>
+        <label>{tabType === 'alat' ? 'Kategori Alat' : tabType === 'ruangan' ? 'Kategori Ruangan' : 'Tipe Fasilitas'}</label>
         <select
-          value={filters.category}
+          value={typeOptions.includes(filters.category) ? filters.category : 'Semua Jenis'}
           onChange={(e) => {
             const nextCat = e.target.value;
             const willBeAlat = tabType === 'alat' || isAlatCategory(nextCat);
@@ -86,8 +87,11 @@ export default function FacilityFilterBar({ filters, onChange, tabType = 'semua'
       </div>
 
       <div className="fgroup">
-        <label>Lokasi / Gedung</label>
-        <select value={filters.lokasi} onChange={(e) => onChange({ ...filters, lokasi: e.target.value })}>
+        <label>{tabType === 'alat' ? 'Lokasi Penyimpanan' : 'Lokasi / Gedung'}</label>
+        <select
+          value={buildingOptions.includes(filters.lokasi) ? filters.lokasi : 'Semua Gedung'}
+          onChange={(e) => onChange({ ...filters, lokasi: e.target.value })}
+        >
           {buildingOptions.map((b) => (
             <option key={b} value={b}>{b}</option>
           ))}

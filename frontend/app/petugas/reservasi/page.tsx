@@ -112,20 +112,22 @@ function PetugasReservasiContent() {
 
   // Kategori dinamis sesuai sub-tab yang dipilih
   const categoryOptions = useMemo(() => {
+    const fromRuangan = Array.from(
+      new Set(reservations.map((r) => facilityById(r.facilityId)).filter(isRuanganFacility).map((f) => f?.type))
+    ).filter(Boolean) as string[];
+    const roomCats = Array.from(new Set([...DEFAULT_ROOM_CATEGORIES, ...fromRuangan]));
+
+    const fromAlat = Array.from(
+      new Set(reservations.map((r) => facilityById(r.facilityId)).filter(isAlatFacility).map((f) => f?.type))
+    ).filter(Boolean) as string[];
+
     if (tabType === 'ruangan') {
-      const fromFac = Array.from(
-        new Set(reservations.map((r) => facilityById(r.facilityId)).filter(isRuanganFacility).map((f) => f?.type))
-      ).filter(Boolean) as string[];
-      const list = Array.from(new Set([...DEFAULT_ROOM_CATEGORIES, ...fromFac]));
-      return [{ value: 'semua', label: 'Semua Kategori Ruangan' }, ...list.map((c) => ({ value: c, label: c }))];
+      return [{ value: 'semua', label: 'Semua Kategori Ruangan' }, ...roomCats.map((c) => ({ value: c, label: c }))];
     } else if (tabType === 'alat') {
-      const fromFac = Array.from(
-        new Set(reservations.map((r) => facilityById(r.facilityId)).filter(isAlatFacility).map((f) => f?.type))
-      ).filter(Boolean) as string[];
-      const list = Array.from(new Set([...DEFAULT_ALAT_CATEGORIES, ...fromFac]));
-      return [{ value: 'semua', label: 'Semua Kategori Alat' }, ...list.map((c) => ({ value: c, label: c }))];
+      return [{ value: 'semua', label: 'Semua Kategori Alat' }, ...fromAlat.map((c) => ({ value: c, label: c }))];
     } else {
-      return [{ value: 'semua', label: 'Semua Kategori' }];
+      const all = Array.from(new Set([...roomCats, ...fromAlat]));
+      return [{ value: 'semua', label: 'Semua Kategori' }, ...all.map((c) => ({ value: c, label: c }))];
     }
   }, [tabType, reservations, facilityById]);
 

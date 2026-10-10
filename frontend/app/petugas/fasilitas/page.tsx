@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
+import Pagination from '@/components/Pagination';
 import { FacilityStatus } from '@/models/facility';
 import {
   isRuanganFacility,
@@ -22,6 +23,12 @@ export default function PetugasFasilitasPage() {
   const { facilities, setFacilityStatus } = useAppData();
   const [tabType, setTabType] = useState<'semua' | 'ruangan' | 'alat'>('semua');
   const [filterCategory, setFilterCategory] = useState<string>('semua');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
+
+  useEffect(() => {
+    setPage(1);
+  }, [tabType, filterCategory]);
   const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
     isOpen: false,
     title: '',
@@ -32,26 +39,35 @@ export default function PetugasFasilitasPage() {
   const countAlat = facilities.filter(isAlatFacility).length;
 
   const categoryOptions = useMemo(() => {
+    const dynamicRuangan = Array.from(new Set(facilities.filter(isRuanganFacility).map((f) => f.type))).filter(Boolean);
+    const dynamicAlat = Array.from(new Set(facilities.filter(isAlatFacility).map((f) => f.type))).filter(Boolean);
+    const roomCats = Array.from(new Set([...DEFAULT_ROOM_CATEGORIES, ...dynamicRuangan]));
+
     if (tabType === 'ruangan') {
-      const fromFac = Array.from(new Set(facilities.filter(isRuanganFacility).map((f) => f.type))).filter(Boolean);
-      const list = Array.from(new Set([...DEFAULT_ROOM_CATEGORIES, ...fromFac]));
-      return [{ value: 'semua', label: 'Semua Kategori Ruangan' }, ...list.map((c) => ({ value: c, label: c }))];
+      return [{ value: 'semua', label: 'Semua Kategori Ruangan' }, ...roomCats.map((c) => ({ value: c, label: c }))];
     } else if (tabType === 'alat') {
-      const fromFac = Array.from(new Set(facilities.filter(isAlatFacility).map((f) => f.type))).filter(Boolean);
-      const list = Array.from(new Set([...DEFAULT_ALAT_CATEGORIES, ...fromFac]));
-      return [{ value: 'semua', label: 'Semua Kategori Alat' }, ...list.map((c) => ({ value: c, label: c }))];
+      return [{ value: 'semua', label: 'Semua Kategori Alat' }, ...dynamicAlat.map((c) => ({ value: c, label: c }))];
     } else {
-      return [{ value: 'semua', label: 'Semua Kategori' }];
+      const all = Array.from(new Set([...roomCats, ...dynamicAlat]));
+      return [{ value: 'semua', label: 'Semua Kategori' }, ...all.map((c) => ({ value: c, label: c }))];
     }
   }, [tabType, facilities]);
 
-  const filtered = facilities.filter((f) => {
-    const isAlat = isAlatFacility(f);
-    if (tabType === 'ruangan' && isAlat) return false;
-    if (tabType === 'alat' && !isAlat) return false;
-    if (filterCategory !== 'semua' && f.type !== filterCategory) return false;
-    return true;
-  });
+  const filtered = useMemo(() => {
+    return facilities.filter((f) => {
+      const isAlat = isAlatFacility(f);
+      if (tabType === 'ruangan' && isAlat) return false;
+      if (tabType === 'alat' && !isAlat) return false;
+      if (filterCategory !== 'semua' && f.type !== filterCategory) return false;
+      return true;
+    });
+  }, [facilities, tabType, filterCategory]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, page]);
 
   function handleStatusChange(facilityId: string, status: FacilityStatus) {
     void setFacilityStatus(facilityId, status).then((res) => {
@@ -175,7 +191,7 @@ export default function PetugasFasilitasPage() {
                 </td>
               </tr>
             ) : (
-              filtered.map((f) => {
+              paginated.map((f) => {
                 const isAlat = isAlatFacility(f);
                 return (
                   <tr key={f.id}>
@@ -236,6 +252,14 @@ export default function PetugasFasilitasPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalItems={filtered.length}
+        itemsPerPage={PAGE_SIZE}
+        onPageChange={setPage}
+      />
 
       <ActionPromptModal
         config={modalConfig}

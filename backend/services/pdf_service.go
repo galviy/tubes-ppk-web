@@ -4,6 +4,7 @@ import (
 	"backend-ppk/models"
 	"bytes"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jung-kurt/gofpdf"
@@ -231,5 +232,326 @@ func GenerateOccupancyExcel(items []models.OccupancyRekapItem) []byte {
 			it.NamaFasilitas, it.Tipe, it.Lokasi, it.Status, it.TotalDisetujui, it.TotalJamPakai, it.TotalPermohonan, it.TotalLaporan))
 	}
 	buf.WriteString("</tbody></table></body></html>")
+	return buf.Bytes()
+}
+
+func GenerateReservasiPDF(items []models.ReservasiRekapItem, filterDesc string) ([]byte, error) {
+	pdf := gofpdf.New("L", "mm", "A4", "")
+	pdf.SetMargins(15, 15, 15)
+	pdf.SetAutoPageBreak(true, 15)
+
+	pdf.SetFooterFunc(func() {
+		pdf.SetY(-12)
+		pdf.SetFont("Arial", "I", 8)
+		pdf.SetTextColor(128, 128, 128)
+		pdf.CellFormat(0, 8, fmt.Sprintf("Dicetak via SIPINJAM Universitas Diponegoro • Halaman %d/{nb}", pdf.PageNo()), "", 0, "C", false, 0, "")
+	})
+
+	pdf.AliasNbPages("{nb}")
+	pdf.AddPage()
+
+	pdf.SetFont("Arial", "B", 14)
+	pdf.SetTextColor(30, 41, 59)
+	pdf.CellFormat(0, 7, "UNIVERSITAS DIPONEGORO - SIPINJAM", "", 1, "C", false, 0, "")
+
+	pdf.SetFont("Arial", "B", 12)
+	pdf.SetTextColor(71, 85, 105)
+	pdf.CellFormat(0, 6, "LAPORAN REKAP RESERVASI FASILITAS", "", 1, "C", false, 0, "")
+
+	pdf.SetFont("Arial", "", 9)
+	pdf.SetTextColor(100, 116, 139)
+	waktuCetak := time.Now().Format("02 Jan 2006 15:04:05") + " WIB"
+	pdf.CellFormat(0, 5, fmt.Sprintf("Filter: %s • Tanggal Cetak: %s", filterDesc, waktuCetak), "", 1, "C", false, 0, "")
+	pdf.Ln(4)
+
+	pdf.SetDrawColor(203, 213, 225)
+	pdf.SetLineWidth(0.4)
+	pdf.Line(15, pdf.GetY(), 282, pdf.GetY())
+	pdf.Ln(4)
+
+	headers := []struct {
+		Title string
+		Width float64
+		Align string
+	}{
+		{"No", 9, "C"},
+		{"ID", 11, "C"},
+		{"Pemohon", 24, "L"},
+		{"Fasilitas", 38, "L"},
+		{"Tipe", 14, "C"},
+		{"Waktu Pengajuan", 30, "C"},
+		{"Tanggal Kegiatan", 21, "C"},
+		{"Jam", 19, "C"},
+		{"Status", 19, "C"},
+		{"Peserta", 12, "C"},
+		{"Tujuan / Kegiatan", 42, "L"},
+		{"Catatan", 33, "L"},
+	}
+
+	pdf.SetFillColor(30, 41, 59)
+	pdf.SetTextColor(255, 255, 255)
+	pdf.SetFont("Arial", "B", 8.5)
+
+	for _, h := range headers {
+		pdf.CellFormat(h.Width, 7, h.Title, "1", 0, h.Align, true, 0, "")
+	}
+	pdf.Ln(-1)
+
+	pdf.SetFont("Arial", "", 8)
+	pdf.SetTextColor(30, 41, 59)
+
+	for i, it := range items {
+		if i%2 == 0 {
+			pdf.SetFillColor(255, 255, 255)
+		} else {
+			pdf.SetFillColor(248, 250, 252)
+		}
+
+		peserta := "-"
+		if it.Peserta != nil {
+			peserta = fmt.Sprintf("%d", *it.Peserta)
+		}
+		catatan := "-"
+		if it.Catatan != nil && *it.Catatan != "" {
+			catatan = *it.Catatan
+		}
+		tujuan := it.Tujuan
+		if tujuan == "" {
+			tujuan = "-"
+		}
+
+		pdf.CellFormat(9, 6.5, fmt.Sprintf("%d", i+1), "1", 0, "C", true, 0, "")
+		pdf.CellFormat(11, 6.5, fmt.Sprintf("#%d", it.ID), "1", 0, "C", true, 0, "")
+		pdf.CellFormat(24, 6.5, it.Pemohon, "1", 0, "L", true, 0, "")
+		pdf.CellFormat(38, 6.5, it.Fasilitas, "1", 0, "L", true, 0, "")
+		pdf.CellFormat(14, 6.5, it.TipeFasilitas, "1", 0, "C", true, 0, "")
+		pdf.CellFormat(30, 6.5, it.WaktuDibuat, "1", 0, "C", true, 0, "")
+		pdf.CellFormat(21, 6.5, it.Tanggal, "1", 0, "C", true, 0, "")
+		pdf.CellFormat(19, 6.5, it.Jam, "1", 0, "C", true, 0, "")
+		pdf.CellFormat(19, 6.5, it.Status, "1", 0, "C", true, 0, "")
+		pdf.CellFormat(12, 6.5, peserta, "1", 0, "C", true, 0, "")
+		pdf.CellFormat(42, 6.5, tujuan, "1", 0, "L", true, 0, "")
+		pdf.CellFormat(33, 6.5, catatan, "1", 0, "L", true, 0, "")
+		pdf.Ln(-1)
+	}
+
+	var buf bytes.Buffer
+	if err := pdf.Output(&buf); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func GenerateReservasiCSV(items []models.ReservasiRekapItem) []byte {
+	var buf bytes.Buffer
+	buf.WriteString("ID,Waktu Pengajuan,Pemohon,Fasilitas,Tipe,Tanggal Kegiatan,Jam,Status,Peserta,Tujuan/Keperluan,Alat Pendukung,Catatan Batal/Tolak\n")
+	for _, it := range items {
+		tujuan := it.Tujuan
+		if tujuan == "" {
+			tujuan = "-"
+		}
+		peserta := ""
+		if it.Peserta != nil {
+			peserta = fmt.Sprintf("%d", *it.Peserta)
+		}
+		catatan := "-"
+		if it.Catatan != nil && *it.Catatan != "" {
+			catatan = *it.Catatan
+		}
+		buf.WriteString(fmt.Sprintf("%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%s,\"%s\",\"%s\",\"%s\"\n",
+			it.ID, it.WaktuDibuat, it.Pemohon, it.Fasilitas, it.TipeFasilitas, it.Tanggal, it.Jam, it.Status, peserta, tujuan, it.AlatPendukung, catatan))
+	}
+	return buf.Bytes()
+}
+
+func GenerateUsersPDF(items []models.UserRekapItem, filterDesc string) ([]byte, error) {
+	pdf := gofpdf.New("L", "mm", "A4", "")
+	pdf.SetMargins(15, 15, 15)
+	pdf.SetAutoPageBreak(true, 15)
+
+	pdf.SetFooterFunc(func() {
+		pdf.SetY(-12)
+		pdf.SetFont("Arial", "I", 8)
+		pdf.SetTextColor(128, 128, 128)
+		pdf.CellFormat(0, 8, fmt.Sprintf("Dicetak via SIPINJAM Universitas Diponegoro • Halaman %d/{nb}", pdf.PageNo()), "", 0, "C", false, 0, "")
+	})
+
+	pdf.AliasNbPages("{nb}")
+	pdf.AddPage()
+
+	pdf.SetFont("Arial", "B", 14)
+	pdf.SetTextColor(30, 41, 59)
+	pdf.CellFormat(0, 7, "UNIVERSITAS DIPONEGORO - SIPINJAM", "", 1, "C", false, 0, "")
+
+	pdf.SetFont("Arial", "B", 12)
+	pdf.SetTextColor(71, 85, 105)
+	pdf.CellFormat(0, 6, "LAPORAN REKAP AKUN PENGGUNA", "", 1, "C", false, 0, "")
+
+	pdf.SetFont("Arial", "", 9)
+	pdf.SetTextColor(100, 116, 139)
+	waktuCetak := time.Now().Format("02 Jan 2006 15:04:05") + " WIB"
+	pdf.CellFormat(0, 5, fmt.Sprintf("Filter: %s • Tanggal Cetak: %s", filterDesc, waktuCetak), "", 1, "C", false, 0, "")
+	pdf.Ln(4)
+
+	pdf.SetDrawColor(203, 213, 225)
+	pdf.SetLineWidth(0.4)
+	pdf.Line(15, pdf.GetY(), 282, pdf.GetY())
+	pdf.Ln(4)
+
+	headers := []struct {
+		Title string
+		Width float64
+		Align string
+	}{
+		{"No", 9, "C"},
+		{"ID", 10, "C"},
+		{"Username", 26, "L"},
+		{"Email", 48, "L"},
+		{"Peran", 20, "C"},
+		{"Tipe", 22, "L"},
+		{"NIM/NIDN/NIP", 34, "L"},
+		{"Prodi", 40, "L"},
+		{"Fakultas/Unit", 35, "L"},
+		{"Status", 18, "C"},
+	}
+
+	pdf.SetFillColor(30, 41, 59)
+	pdf.SetTextColor(255, 255, 255)
+	pdf.SetFont("Arial", "B", 8.5)
+
+	for _, h := range headers {
+		pdf.CellFormat(h.Width, 7, h.Title, "1", 0, h.Align, true, 0, "")
+	}
+	pdf.Ln(-1)
+
+	pdf.SetFont("Arial", "", 8)
+	pdf.SetTextColor(30, 41, 59)
+
+	for i, it := range items {
+		if i%2 == 0 {
+			pdf.SetFillColor(255, 255, 255)
+		} else {
+			pdf.SetFillColor(248, 250, 252)
+		}
+
+		pdf.CellFormat(9, 6.5, fmt.Sprintf("%d", i+1), "1", 0, "C", true, 0, "")
+		pdf.CellFormat(10, 6.5, fmt.Sprintf("%d", it.ID), "1", 0, "C", true, 0, "")
+		pdf.CellFormat(26, 6.5, it.Username, "1", 0, "L", true, 0, "")
+		pdf.CellFormat(48, 6.5, it.Email, "1", 0, "L", true, 0, "")
+		pdf.CellFormat(20, 6.5, it.Peran, "1", 0, "C", true, 0, "")
+		pdf.CellFormat(22, 6.5, it.Tipe, "1", 0, "L", true, 0, "")
+		pdf.CellFormat(34, 6.5, it.Identitas, "1", 0, "L", true, 0, "")
+		pdf.CellFormat(40, 6.5, it.Prodi, "1", 0, "L", true, 0, "")
+		pdf.CellFormat(35, 6.5, it.Fakultas, "1", 0, "L", true, 0, "")
+		pdf.CellFormat(18, 6.5, it.Status, "1", 0, "C", true, 0, "")
+		pdf.Ln(-1)
+	}
+
+	var buf bytes.Buffer
+	if err := pdf.Output(&buf); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func GenerateUsersCSV(items []models.UserRekapItem) []byte {
+	var buf bytes.Buffer
+	buf.WriteString("ID,Username,Email,Peran,Tipe,NIM/NIDN/NIP,Prodi,Fakultas/Unit,Status\n")
+	for _, it := range items {
+		buf.WriteString(fmt.Sprintf("%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n",
+			it.ID, it.Username, it.Email, it.Peran, it.Tipe, it.Identitas, it.Prodi, it.Fakultas, it.Status))
+	}
+	return buf.Bytes()
+}
+
+func GenerateReportsExcel(items []models.ReportRekapItem) []byte {
+	var buf bytes.Buffer
+	headers := []string{
+		"ID", "Waktu", "Pelapor", "Fasilitas", "Tipe", "Kategori",
+		"Status", "Alasan", "Catatan Resolusi",
+	}
+	rows := make([][]string, 0, len(items))
+	for _, it := range items {
+		catatan := "-"
+		if it.CatatanResolusi != nil && *it.CatatanResolusi != "" {
+			catatan = *it.CatatanResolusi
+		}
+		rows = append(rows, []string{
+			fmt.Sprintf("#%d", it.ID), it.WaktuDibuat, it.Pelapor, it.Fasilitas,
+			it.TipeFasilitas, it.KategoriLaporan, it.Status, it.Alasan, catatan,
+		})
+	}
+	appendExcelTable(&buf, "Rekap Laporan Kerusakan", headers, rows)
+	return buf.Bytes()
+}
+
+// appendExcelTable menulis tabel HTML sederhana yang dibaca Excel (.xls),
+// pola yang sama dengan GenerateOccupancyExcel.
+func appendExcelTable(buf *bytes.Buffer, judul string, headers []string, rows [][]string) {
+	buf.WriteString("<html><head><meta charset=\"utf-8\"><style>table, th, td { border: 1px solid #ddd; border-collapse: collapse; padding: 6px; font-family: Arial; } th { background-color: #f2f2f2; font-weight: bold; }</style></head><body>")
+	buf.WriteString("<table>")
+	if judul != "" {
+		buf.WriteString("<tr><td colspan=\"" + strconv.Itoa(len(headers)) + "\"><b>" + judul + "</b></td></tr>")
+	}
+	buf.WriteString("<thead><tr>")
+	for _, h := range headers {
+		buf.WriteString("<th>" + h + "</th>")
+	}
+	buf.WriteString("</tr></thead><tbody>")
+	for _, row := range rows {
+		buf.WriteString("<tr>")
+		for _, cell := range row {
+			buf.WriteString("<td>" + cell + "</td>")
+		}
+		buf.WriteString("</tr>")
+	}
+	buf.WriteString("</tbody></table></body></html>")
+}
+
+func GenerateReservasiExcel(items []models.ReservasiRekapItem) []byte {
+	var buf bytes.Buffer
+	headers := []string{
+		"ID", "Waktu Pengajuan", "Pemohon", "Fasilitas", "Tipe",
+		"Tanggal Kegiatan", "Jam", "Status", "Peserta", "Tujuan/Keperluan",
+		"Alat Pendukung", "Catatan Batal/Tolak",
+	}
+	rows := make([][]string, 0, len(items))
+	for _, it := range items {
+		tujuan := it.Tujuan
+		if tujuan == "" {
+			tujuan = "-"
+		}
+		peserta := ""
+		if it.Peserta != nil {
+			peserta = fmt.Sprintf("%d", *it.Peserta)
+		}
+		catatan := "-"
+		if it.Catatan != nil && *it.Catatan != "" {
+			catatan = *it.Catatan
+		}
+		rows = append(rows, []string{
+			fmt.Sprintf("#%d", it.ID), it.WaktuDibuat, it.Pemohon, it.Fasilitas,
+			it.TipeFasilitas, it.Tanggal, it.Jam, it.Status, peserta, tujuan,
+			it.AlatPendukung, catatan,
+		})
+	}
+	appendExcelTable(&buf, "Rekap Reservasi Fasilitas", headers, rows)
+	return buf.Bytes()
+}
+
+func GenerateUsersExcel(items []models.UserRekapItem) []byte {
+	var buf bytes.Buffer
+	headers := []string{
+		"ID", "Username", "Email", "Peran", "Tipe",
+		"NIM/NIDN/NIP", "Prodi", "Fakultas/Unit", "Status",
+	}
+	rows := make([][]string, 0, len(items))
+	for _, it := range items {
+		rows = append(rows, []string{
+			fmt.Sprintf("%d", it.ID), it.Username, it.Email, it.Peran, it.Tipe,
+			it.Identitas, it.Prodi, it.Fakultas, it.Status,
+		})
+	}
+	appendExcelTable(&buf, "Rekap Akun Pengguna", headers, rows)
 	return buf.Bytes()
 }

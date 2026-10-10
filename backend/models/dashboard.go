@@ -51,15 +51,15 @@ type DashboardOverview struct {
 }
 
 type OccupancyRekapItem struct {
-	FasilitasID      string  `json:"fasilitas_id"`
-	NamaFasilitas    string  `json:"nama_fasilitas"`
-	Tipe             string  `json:"tipe"`
-	Lokasi           string  `json:"lokasi"`
-	Status           string  `json:"status"`
-	TotalDisetujui   int     `json:"total_disetujui"`
-	TotalJamPakai    float64 `json:"total_jam_pakai"`
-	TotalPermohonan  int     `json:"total_permohonan"`
-	TotalLaporan     int     `json:"total_laporan"`
+	FasilitasID     string  `json:"fasilitas_id"`
+	NamaFasilitas   string  `json:"nama_fasilitas"`
+	Tipe            string  `json:"tipe"`
+	Lokasi          string  `json:"lokasi"`
+	Status          string  `json:"status"`
+	TotalDisetujui  int     `json:"total_disetujui"`
+	TotalJamPakai   float64 `json:"total_jam_pakai"`
+	TotalPermohonan int     `json:"total_permohonan"`
+	TotalLaporan    int     `json:"total_laporan"`
 }
 
 type ReportRekapItem struct {
@@ -72,4 +72,31 @@ type ReportRekapItem struct {
 	Alasan          string  `json:"alasan"`
 	Status          string  `json:"status"`
 	CatatanResolusi *string `json:"catatan_resolusi"`
+}
+
+type ReservasiRekapItem struct {
+	ID            int     `json:"id"`
+	WaktuDibuat   string  `json:"waktu_dibuat"`
+	Pemohon       string  `json:"pemohon"`
+	Fasilitas     string  `json:"fasilitas"`
+	TipeFasilitas string  `json:"tipe_fasilitas"`
+	Tanggal       string  `json:"tanggal"`
+	Jam           string  `json:"jam"`
+	Status        string  `json:"status"`
+	Peserta       *int    `json:"peserta"`
+	Tujuan        string  `json:"tujuan"`
+	AlatPendukung string  `json:"alat_pendukung"`
+	Catatan       *string `json:"catatan"`
+}
+
+type UserRekapItem struct {
+	ID        int    `json:"id"`
+	Username  string `json:"username"`
+	Email     string `json:"email"`
+	Peran     string `json:"peran"`
+	Tipe      string `json:"tipe"`
+	Identitas string `json:"identitas"`
+	Prodi     string `json:"prodi"`
+	Fakultas  string `json:"fakultas"`
+	Status    string `json:"status"`
 }

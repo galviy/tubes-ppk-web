@@ -4,8 +4,41 @@ import (
 	"backend-ppk/config"
 	"backend-ppk/models"
 	"database/sql"
+	"encoding/base64"
 	"log"
+	"net/http"
+	"os"
+	"strings"
 )
+
+// resolveFotoValue mengembalikan nilai foto yang siap dikirim ke frontend.
+//   - data-URL / http(s) URL dikembalikan apa adanya.
+//   - path legacy "uploads/..." dibaca dari disk lalu di-inline sebagai
+//     data-URL base64 (best-effort; jika file hilang, path dikembalikan apa adanya
+//     agar frontend lama tetap bisa GET /uploads/...).
+func resolveFotoValue(raw string) string {
+	v := strings.TrimSpace(raw)
+	if v == "" {
+		return v
+	}
+	if strings.HasPrefix(v, "data:") || strings.HasPrefix(v, "http://") || strings.HasPrefix(v, "https://") {
+		return v
+	}
+	clean := strings.ReplaceAll(v, "\\", "/")
+	clean = strings.TrimPrefix(strings.TrimPrefix(clean, "./"), "/")
+	if !(strings.HasPrefix(clean, "uploads/") || strings.HasPrefix(clean, "uploads\\")) {
+		return v
+	}
+	data, err := os.ReadFile(clean)
+	if err != nil {
+		return v
+	}
+	mime := http.DetectContentType(data)
+	if mime != "image/jpeg" && mime != "image/png" {
+		return v
+	}
+	return "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
+}
 
 func InsertReport(r models.Report) error {
 	tx, err := config.DB.Begin()
@@ -55,7 +88,8 @@ func scanReportDetail(row interface {
 		return d, err
 	}
 	if foto.Valid {
-		d.Foto = &foto.String
+		resolved := resolveFotoValue(foto.String)
+		d.Foto = &resolved
 	}
 	if catatan.Valid {
 		d.CatatanResolusi = &catatan.String
@@ -213,4 +247,3 @@ func CountLaporanBaru() (int, error) {
 	err := config.QueryRow(`SELECT COUNT(*) FROM report WHERE LOWER(status_laporan) = 'baru'`).Scan(&total)
 	return total, err
 }
-
