@@ -42,18 +42,18 @@ function AdminReservasiContent() {
   const [dateTo, setDateTo] = useState('');
   const [isExporting, setIsExporting] = useState(false);
 
-  async function handleExportPDF() {
+  async function handleExportExcel() {
     setIsExporting(true);
     try {
       await backendDownloadReservasiExport(
-        'pdf',
+        'excel',
         filterStatus !== 'semua' ? filterStatus : '',
         tabType,
         dateFrom,
         dateTo,
         filterFacility !== 'semua' ? filterFacility : '',
         searchQuery,
-        'rekap-reservasi-undip.pdf'
+        'rekap-reservasi-undip.xls'
       );
     } finally {
       setIsExporting(false);
@@ -290,7 +290,7 @@ function AdminReservasiContent() {
 
           <button
             type="button"
-            onClick={handleExportPDF}
+            onClick={handleExportExcel}
             disabled={isExporting}
             className="btn secondary"
             style={{
@@ -307,7 +307,7 @@ function AdminReservasiContent() {
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            {isExporting ? 'Mengunduh...' : 'Ekspor PDF'}
+            {isExporting ? 'Mengunduh...' : 'Ekspor Excel'}
           </button>
         </div>
       </div>

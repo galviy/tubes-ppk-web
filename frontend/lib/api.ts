@@ -994,7 +994,7 @@ export async function backendDownloadOccupancyExport(
 }
 
 export async function backendDownloadReportsExport(
-  format: 'pdf' | 'csv' = 'pdf',
+  format: 'pdf' | 'csv' | 'excel' = 'pdf',
   status = '',
   kategori = '',
   q = '',
@@ -1027,7 +1027,7 @@ export async function backendDownloadReportsExport(
 }
 
 export async function backendDownloadAkunExport(
-  format: 'pdf' | 'csv' = 'pdf',
+  format: 'pdf' | 'csv' | 'excel' = 'pdf',
   role = '',
   q = '',
   filename = 'rekap-akun.pdf'
@@ -1040,7 +1040,7 @@ export async function backendDownloadAkunExport(
 }
 
 export async function backendDownloadReservasiExport(
-  format: 'pdf' | 'csv' = 'pdf',
+  format: 'pdf' | 'csv' | 'excel' = 'pdf',
   status = '',
   tipe = '',
   dari = '',

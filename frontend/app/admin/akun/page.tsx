@@ -207,14 +207,14 @@ export default function KelolaAkunPage() {
   const [filterRole, setFilterRole] = useState<'semua' | 'pengguna' | 'mahasiswa' | 'dosen' | 'staf' | 'petugas' | 'admin'>('semua');
   const [isExporting, setIsExporting] = useState(false);
 
-  async function handleExportPDF() {
+  async function handleExportExcel() {
     const roleParam: string =
       filterRole === 'semua' || filterRole === 'pengguna' || filterRole === 'petugas' || filterRole === 'admin'
         ? filterRole
         : 'pengguna';
     setIsExporting(true);
     try {
-      await backendDownloadAkunExport('pdf', roleParam, searchQuery, 'rekap-akun-undip.pdf');
+      await backendDownloadAkunExport('excel', roleParam, searchQuery, 'rekap-akun-undip.xls');
     } finally {
       setIsExporting(false);
     }
@@ -1018,7 +1018,7 @@ export default function KelolaAkunPage() {
 
                   <button
                     type="button"
-                    onClick={handleExportPDF}
+                    onClick={handleExportExcel}
                     disabled={isExporting}
                     className="btn secondary"
                     style={{
@@ -1036,7 +1036,7 @@ export default function KelolaAkunPage() {
                       <polyline points="7 10 12 15 17 10" />
                       <line x1="12" y1="15" x2="12" y2="3" />
                     </svg>
-                    {isExporting ? 'Mengunduh...' : 'Ekspor PDF'}
+                    {isExporting ? 'Mengunduh...' : 'Ekspor Excel'}
                   </button>
                 </div>
               </div>

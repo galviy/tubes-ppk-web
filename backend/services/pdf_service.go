@@ -4,6 +4,7 @@ import (
 	"backend-ppk/models"
 	"bytes"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jung-kurt/gofpdf"
@@ -460,5 +461,97 @@ func GenerateUsersCSV(items []models.UserRekapItem) []byte {
 		buf.WriteString(fmt.Sprintf("%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n",
 			it.ID, it.Username, it.Email, it.Peran, it.Tipe, it.Identitas, it.Prodi, it.Fakultas, it.Status))
 	}
+	return buf.Bytes()
+}
+
+func GenerateReportsExcel(items []models.ReportRekapItem) []byte {
+	var buf bytes.Buffer
+	headers := []string{
+		"ID", "Waktu", "Pelapor", "Fasilitas", "Tipe", "Kategori",
+		"Status", "Alasan", "Catatan Resolusi",
+	}
+	rows := make([][]string, 0, len(items))
+	for _, it := range items {
+		catatan := "-"
+		if it.CatatanResolusi != nil && *it.CatatanResolusi != "" {
+			catatan = *it.CatatanResolusi
+		}
+		rows = append(rows, []string{
+			fmt.Sprintf("#%d", it.ID), it.WaktuDibuat, it.Pelapor, it.Fasilitas,
+			it.TipeFasilitas, it.KategoriLaporan, it.Status, it.Alasan, catatan,
+		})
+	}
+	appendExcelTable(&buf, "Rekap Laporan Kerusakan", headers, rows)
+	return buf.Bytes()
+}
+
+// appendExcelTable menulis tabel HTML sederhana yang dibaca Excel (.xls),
+// pola yang sama dengan GenerateOccupancyExcel.
+func appendExcelTable(buf *bytes.Buffer, judul string, headers []string, rows [][]string) {
+	buf.WriteString("<html><head><meta charset=\"utf-8\"><style>table, th, td { border: 1px solid #ddd; border-collapse: collapse; padding: 6px; font-family: Arial; } th { background-color: #f2f2f2; font-weight: bold; }</style></head><body>")
+	buf.WriteString("<table>")
+	if judul != "" {
+		buf.WriteString("<tr><td colspan=\"" + strconv.Itoa(len(headers)) + "\"><b>" + judul + "</b></td></tr>")
+	}
+	buf.WriteString("<thead><tr>")
+	for _, h := range headers {
+		buf.WriteString("<th>" + h + "</th>")
+	}
+	buf.WriteString("</tr></thead><tbody>")
+	for _, row := range rows {
+		buf.WriteString("<tr>")
+		for _, cell := range row {
+			buf.WriteString("<td>" + cell + "</td>")
+		}
+		buf.WriteString("</tr>")
+	}
+	buf.WriteString("</tbody></table></body></html>")
+}
+
+func GenerateReservasiExcel(items []models.ReservasiRekapItem) []byte {
+	var buf bytes.Buffer
+	headers := []string{
+		"ID", "Waktu Pengajuan", "Pemohon", "Fasilitas", "Tipe",
+		"Tanggal Kegiatan", "Jam", "Status", "Peserta", "Tujuan/Keperluan",
+		"Alat Pendukung", "Catatan Batal/Tolak",
+	}
+	rows := make([][]string, 0, len(items))
+	for _, it := range items {
+		tujuan := it.Tujuan
+		if tujuan == "" {
+			tujuan = "-"
+		}
+		peserta := ""
+		if it.Peserta != nil {
+			peserta = fmt.Sprintf("%d", *it.Peserta)
+		}
+		catatan := "-"
+		if it.Catatan != nil && *it.Catatan != "" {
+			catatan = *it.Catatan
+		}
+		rows = append(rows, []string{
+			fmt.Sprintf("#%d", it.ID), it.WaktuDibuat, it.Pemohon, it.Fasilitas,
+			it.TipeFasilitas, it.Tanggal, it.Jam, it.Status, peserta, tujuan,
+			it.AlatPendukung, catatan,
+		})
+	}
+	appendExcelTable(&buf, "Rekap Reservasi Fasilitas", headers, rows)
+	return buf.Bytes()
+}
+
+func GenerateUsersExcel(items []models.UserRekapItem) []byte {
+	var buf bytes.Buffer
+	headers := []string{
+		"ID", "Username", "Email", "Peran", "Tipe",
+		"NIM/NIDN/NIP", "Prodi", "Fakultas/Unit", "Status",
+	}
+	rows := make([][]string, 0, len(items))
+	for _, it := range items {
+		rows = append(rows, []string{
+			fmt.Sprintf("%d", it.ID), it.Username, it.Email, it.Peran, it.Tipe,
+			it.Identitas, it.Prodi, it.Fakultas, it.Status,
+		})
+	}
+	appendExcelTable(&buf, "Rekap Akun Pengguna", headers, rows)
 	return buf.Bytes()
 }

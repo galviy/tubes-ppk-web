@@ -130,6 +130,12 @@ func ReservasiExport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch format {
+	case "excel", "xls", "xlsx":
+		w.Header().Set("Content-Type", "application/vnd.ms-excel; charset=utf-8")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"rekap-reservasi.xls\"")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(services.GenerateReservasiExcel(items))
+
 	case "csv":
 		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 		w.Header().Set("Content-Disposition", "attachment; filename=\"rekap-reservasi.csv\"")
@@ -181,6 +187,12 @@ func UsersExport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch format {
+	case "excel", "xls", "xlsx":
+		w.Header().Set("Content-Type", "application/vnd.ms-excel; charset=utf-8")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"rekap-akun.xls\"")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(services.GenerateUsersExcel(items))
+
 	case "csv":
 		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 		w.Header().Set("Content-Disposition", "attachment; filename=\"rekap-akun.csv\"")
@@ -244,6 +256,12 @@ func ReportsExport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch format {
+	case "excel", "xls", "xlsx":
+		w.Header().Set("Content-Type", "application/vnd.ms-excel; charset=utf-8")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"rekap-laporan.xls\"")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(services.GenerateReportsExcel(items))
+
 	case "csv":
 		// Simple CSV
 		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
