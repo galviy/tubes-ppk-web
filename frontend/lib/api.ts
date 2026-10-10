@@ -1026,6 +1026,59 @@ export async function backendDownloadReportsExport(
   }
 }
 
+export async function backendDownloadAkunExport(
+  format: 'pdf' | 'csv' = 'pdf',
+  role = '',
+  q = '',
+  filename = 'rekap-akun.pdf'
+): Promise<boolean> {
+  const p = new URLSearchParams();
+  p.set('format', format);
+  if (role && role !== 'semua') p.set('role', role);
+  if (q) p.set('q', q);
+  return downloadBlob(`${API_BASE}/users/export?${p.toString()}`, filename);
+}
+
+export async function backendDownloadReservasiExport(
+  format: 'pdf' | 'csv' = 'pdf',
+  status = '',
+  tipe = '',
+  dari = '',
+  sampai = '',
+  fasilitas = '',
+  q = '',
+  filename = 'rekap-reservasi.pdf'
+): Promise<boolean> {
+  const p = new URLSearchParams();
+  p.set('format', format);
+  if (status && status !== 'semua') p.set('status', status);
+  if (tipe && tipe !== 'semua') p.set('tipe', tipe);
+  if (dari) p.set('dari', dari);
+  if (sampai) p.set('sampai', sampai);
+  if (fasilitas && fasilitas !== 'semua') p.set('fasilitas', fasilitas);
+  if (q) p.set('q', q);
+  return downloadBlob(`${API_BASE}/reservasi/export?${p.toString()}`, filename);
+}
+
+async function downloadBlob(url: string, filename: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, { credentials: 'include' });
+    if (!res.ok) return false;
+    const blob = await res.blob();
+    const urlObj = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = urlObj;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(urlObj);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ---------- User Profile & Single Facility ----------
 
 export interface BackendUserDetail {

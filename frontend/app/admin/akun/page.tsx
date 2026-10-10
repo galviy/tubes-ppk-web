@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
 import { UNIT_PETUGAS, FAKULTAS_UNDIP, PRODI_UNDIP } from '@/config/site';
-import { backendListProdi } from '@/lib/api';
+import { backendListProdi, backendDownloadAkunExport } from '@/lib/api';
 
 function DownwardSelect({
   label,
@@ -205,6 +205,20 @@ export default function KelolaAkunPage() {
   // Search & Filter for Registered Accounts Table
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState<'semua' | 'pengguna' | 'mahasiswa' | 'dosen' | 'staf' | 'petugas' | 'admin'>('semua');
+  const [isExporting, setIsExporting] = useState(false);
+
+  async function handleExportPDF() {
+    const roleParam: string =
+      filterRole === 'semua' || filterRole === 'pengguna' || filterRole === 'petugas' || filterRole === 'admin'
+        ? filterRole
+        : 'pengguna';
+    setIsExporting(true);
+    try {
+      await backendDownloadAkunExport('pdf', roleParam, searchQuery, 'rekap-akun-undip.pdf');
+    } finally {
+      setIsExporting(false);
+    }
+  }
 
   // Modal State
   const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
@@ -993,7 +1007,7 @@ export default function KelolaAkunPage() {
                   </p>
                 </div>
 
-                <div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   <input
                     type="text"
                     placeholder="Cari nama, email, NIP..."
@@ -1001,6 +1015,29 @@ export default function KelolaAkunPage() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     style={{ fontSize: 13, padding: '7px 14px', minWidth: 220, borderRadius: 6, border: '1px solid #D5D0C7' }}
                   />
+
+                  <button
+                    type="button"
+                    onClick={handleExportPDF}
+                    disabled={isExporting}
+                    className="btn secondary"
+                    style={{
+                      padding: '7px 12px',
+                      fontSize: 13,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    {isExporting ? 'Mengunduh...' : 'Ekspor PDF'}
+                  </button>
                 </div>
               </div>
 
