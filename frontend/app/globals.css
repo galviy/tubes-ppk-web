@@ -1825,7 +1825,7 @@ button.slot-lg:disabled {
 .ochoco-hero-bg {
   position: absolute;
   inset: 0;
-  background-image: url('/undip-hero.jpg');
+  background-image: url('/undip-hero.png');
   background-size: cover;
   background-position: center 30%;
   z-index: 1;

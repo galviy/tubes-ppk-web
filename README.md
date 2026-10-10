@@ -52,6 +52,11 @@ Beberapa aturan utama yang diterapkan di aplikasi ini:
 
 ---
 
+## Foto Database
+
+![Skema Database MYSQL](backend/database/db.png)
+
+
 ## Struktur Folder
 
 ```text
