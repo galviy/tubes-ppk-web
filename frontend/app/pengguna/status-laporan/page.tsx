@@ -10,7 +10,7 @@ import { formatDateTimeIndo } from '@/lib/slots';
 
 const STATUS_PILL: Record<ReportStatus, [string, string]> = {
   baru: ['busy', 'Baru'],
-  diproses: ['avail', 'Diproses'],
+  diproses: ['busy', 'Diproses'],
   selesai: ['avail', 'Selesai'],
   ditolak: ['danger', 'Ditolak'],
 };
