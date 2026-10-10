@@ -48,7 +48,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { login, logout, currentUser } = useAppData();
 
-  const [loginEmail, setLoginEmail] = useState('');
+  const [loginIdent, setLoginIdent] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [remember, setRemember] = useState(false);
   const [loginError, setLoginError] = useState('');
@@ -56,7 +56,7 @@ export default function LoginPage() {
   const [selectedDemoRole, setSelectedDemoRole] = useState<string | null>(null);
 
   function applyDemoAccount(acc: (typeof DEMO_ACCOUNTS)[number]) {
-    setLoginEmail(acc.email);
+    setLoginIdent(acc.email);
     setLoginPassword(acc.password);
     setSelectedDemoRole(acc.role);
     setLoginError('');
@@ -67,11 +67,11 @@ export default function LoginPage() {
     setLoginError('');
     setLoginLoading(true);
 
-    const result = await login(loginEmail, loginPassword);
+    const result = await login(loginIdent, loginPassword);
     setLoginLoading(false);
 
     if (!result.ok || !result.user) {
-      setLoginError(result.message || 'Email atau kata sandi tidak sesuai.');
+      setLoginError(result.message || 'Email/username atau kata sandi tidak sesuai.');
       return;
     }
 
@@ -202,7 +202,7 @@ export default function LoginPage() {
 
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {DEMO_ACCOUNTS.map((acc) => {
-                    const isSelected = selectedDemoRole === acc.role || loginEmail === acc.email;
+                    const isSelected = selectedDemoRole === acc.role || loginIdent === acc.email;
                     return (
                       <button
                         key={acc.role}
@@ -230,13 +230,15 @@ export default function LoginPage() {
 
               <form onSubmit={handleLoginSubmit} className="ochoco-waiting-form">
                 <div className="ochoco-underline-field">
-                  <label htmlFor="login-email">EMAIL KAMPUS / DINAS</label>
+                  <label htmlFor="login-ident">EMAIL ATAU USERNAME</label>
                   <input
-                    id="login-email"
-                    type="email"
-                    placeholder="nama@sipinjam.ac.id"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
+                    id="login-ident"
+                    type="text"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    placeholder="nama@sipinjam.ac.id atau username"
+                    value={loginIdent}
+                    onChange={(e) => setLoginIdent(e.target.value)}
                     required
                   />
                 </div>

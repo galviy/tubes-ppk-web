@@ -648,12 +648,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       },
       fetchSlotAvailability,
 
-      login: async (email, password) => {
-        // Hanya akun backend terverifikasi (akun demo mock dihapus).
+      login: async (identifier, password) => {
+        // identifier boleh email atau username. Hanya akun backend
+        // terverifikasi (akun demo mock dihapus).
         // POST /auth/login -> cookie session_id, lalu GET /user/me
         // untuk username + role. Pesan error backend diteruskan apa adanya.
         try {
-          const res = await backendLogin(email, password);
+          const res = await backendLogin(identifier, password);
           if (res.ok) {
             // Baca sesi dengan 1x percobaan ulang: cookie session_id kadang
             // belum tersedia / backend restart tepat di antara 2 request.
@@ -665,7 +666,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             if (me.ok && me.data && me.data.email) {
               const user: LoggedInUser = {
                 id: `backend-${me.data.email.trim().toLowerCase()}`,
-                nama: me.data.username || email,
+                nama: me.data.username || identifier,
                 email: me.data.email,
                 role: roleIdToFrontend(me.data.role || '3'),
               };

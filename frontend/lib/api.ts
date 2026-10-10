@@ -95,11 +95,13 @@ function formBody(fields: Record<string, string | number | undefined>): URLSearc
 
 // ---------- Auth (controller/auth/*.go) ----------
 
-export function backendLogin(email: string, password: string) {
+// identifier dikirim lewat field backend "email"; backend login menerima
+// nilai itu sebagai email maupun username (selagi kompatibel dengan klien lama).
+export function backendLogin(identifier: string, password: string) {
   return apiFetch<never>('/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: formBody({ email, password }),
+    body: formBody({ email: identifier, password }),
   });
 }
 
