@@ -401,7 +401,7 @@ DROP TABLE IF EXISTS `report`;
 CREATE TABLE `report` (
   `id` int NOT NULL AUTO_INCREMENT,
   `waktu_dibuat` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `foto` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `foto` mediumtext COLLATE utf8mb4_unicode_ci,
   `user_report` int NOT NULL,
   `alasan` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `kategori_laporan` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,

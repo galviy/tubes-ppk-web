@@ -178,6 +178,7 @@ interface AppDataValue {
   submitReport: (
     input: Omit<Report, 'id' | 'pelapor' | 'status' | 'catatan' | 'createdAt'> & {
       fotoFile?: File | null;
+      fotoBase64?: string | null;
     }
   ) => Promise<{ ok: boolean; message?: string }>;
 
@@ -885,9 +886,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       },
       submitReport: async (input) => {
         // API-only: hanya session backend yang bisa melapor (konsisten
-        // keputusan hapus-demo). Backend: POST /reports multipart
+        // keputusan hapus-demo). Backend: POST /reports JSON
         // (alasan 1-255, kategori enum, tepat satu ruangan_id/alat_id,
-        // foto jpg/jpeg/png <=2MB opsional).
+        // foto opsional berupa data-URL base64 jpg/png <=2MB yang
+        // disimpan langsung di kolom report.foto).
         const user = currentUser;
         if (!user || !user.id.startsWith('backend-')) {
           return {
@@ -913,8 +915,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (target.kind === 'unsupported') {
           return { ok: false, message: target.reason };
         }
-        const foto = input.fotoFile ?? null;
-        if (foto) {
+        // Prioritas: fotoBase64 (data-URL dari FileReader) > konversi fotoFile > string foto.
+        let fotoBase64: string | undefined;
+        if (input.fotoBase64 && input.fotoBase64.startsWith('data:')) {
+          fotoBase64 = input.fotoBase64;
+        } else if (input.fotoFile) {
+          const foto = input.fotoFile;
           const isImage = /^(image\/jpeg|image\/png|image\/jpg)$/.test(foto.type);
           const extOk = /\.(jpe?g|png)$/i.test(foto.name);
           if (!isImage || !extOk) {
@@ -923,12 +929,27 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           if (foto.size > 2 * 1024 * 1024) {
             return { ok: false, message: 'Ukuran foto maksimal 2MB.' };
           }
+          fotoBase64 = await new Promise<string | undefined>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              resolve(typeof reader.result === 'string' ? reader.result : undefined);
+            };
+            reader.onerror = () => resolve(undefined);
+            reader.readAsDataURL(foto);
+          });
+          if (!fotoBase64) {
+            return { ok: false, message: 'Gagal membaca foto.' };
+          }
+        } else if (input.foto && input.foto.startsWith('data:')) {
+          fotoBase64 = input.foto;
         }
+        // String foto non-base64 (nama file / URL tempel) tidak dikirim ke
+        // backend — kolom foto hanya menerima base64.
         const res = await backendCreateLaporan({
           alasan,
           kategori: input.kategori,
           ...(target.kind === 'ruangan' ? { ruangan_id: target.ruangan_id } : { alat_id: target.alat_id }),
-          ...(foto ? { foto } : {}),
+          ...(fotoBase64 ? { foto: fotoBase64 } : {}),
         });
         if (!res.ok) {
           return { ok: false, message: res.message };

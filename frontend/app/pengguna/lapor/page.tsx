@@ -122,11 +122,15 @@ function LaporKerusakanContent() {
 
     if (isSubmitting) return;
     setIsSubmitting(true);
+    // filePreview adalah data-URL base64 dari FileReader (atau URL tempel).
+    // Hanya data-URL yang dikirim ke backend (kolom report.foto = base64 di DB).
+    const fotoBase64 = filePreview.startsWith('data:') ? filePreview : undefined;
     submitReport({
       facilityId,
       kategori,
       deskripsi: deskripsi.trim(),
       foto: filePreview || fileName || undefined,
+      fotoBase64,
       fotoFile,
     }).then((result) => {
       setIsSubmitting(false);
