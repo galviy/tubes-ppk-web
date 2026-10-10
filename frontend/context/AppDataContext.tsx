@@ -432,36 +432,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return true;
   }, [sessionUser]);
 
-  const refreshReportsMine = useCallback(async (): Promise<boolean> => {
-    if (!sessionUser) return false;
-    const res = await backendListLaporanSaya();
-    if (!res.ok) return false;
-    const rawRows = Array.isArray(res.data) ? res.data : [];
-    const mappedReports = rawRows.map(mapBackendReport).filter(Boolean) as NonNullable<
-      ReturnType<typeof mapBackendReport>
-    >[];
-    if (rawRows.length > 0 && mappedReports.length === 0) {
-      console.warn('[sync] laporan diterima dari backend tetapi tidak ada baris yang dapat dipetakan', rawRows[0]);
-      return false;
-    }
-    setReports(
-      mappedReports.map((m) => ({
-        id: m.backendId,
-        backendId: m.backendId,
-        sumber: 'backend' as const,
-        facilityId: m.facilityId,
-        pelapor: sessionUser.nama,
-        kategori: m.kategori,
-        deskripsi: m.deskripsi,
-        foto: m.foto,
-        status: m.status,
-        catatan: m.catatan,
-        createdAt: m.createdAt,
-      })),
-    );
-    return true;
-  }, [sessionUser]);
-
   const refreshPetugasReports = useCallback(async (): Promise<boolean> => {
     if (!sessionUser || (sessionUser.role !== 'petugas' && sessionUser.role !== 'admin')) {
       return false;
@@ -498,6 +468,39 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setReports(mapped);
     return true;
   }, [sessionUser]);
+
+  const refreshReportsMine = useCallback(async (): Promise<boolean> => {
+    if (!sessionUser) return false;
+    if (sessionUser.role === 'petugas' || sessionUser.role === 'admin') {
+      return refreshPetugasReports();
+    }
+    const res = await backendListLaporanSaya();
+    if (!res.ok) return false;
+    const rawRows = Array.isArray(res.data) ? res.data : [];
+    const mappedReports = rawRows.map(mapBackendReport).filter(Boolean) as NonNullable<
+      ReturnType<typeof mapBackendReport>
+    >[];
+    if (rawRows.length > 0 && mappedReports.length === 0) {
+      console.warn('[sync] laporan diterima dari backend tetapi tidak ada baris yang dapat dipetakan', rawRows[0]);
+      return false;
+    }
+    setReports(
+      mappedReports.map((m) => ({
+        id: m.backendId,
+        backendId: m.backendId,
+        sumber: 'backend' as const,
+        facilityId: m.facilityId,
+        pelapor: sessionUser.nama,
+        kategori: m.kategori,
+        deskripsi: m.deskripsi,
+        foto: m.foto,
+        status: m.status,
+        catatan: m.catatan,
+        createdAt: m.createdAt,
+      })),
+    );
+    return true;
+  }, [sessionUser, refreshPetugasReports]);
 
   const refreshPendingAccounts = useCallback(async (): Promise<boolean> => {
     if (!sessionUser || sessionUser.role !== 'admin') return false;
@@ -588,7 +591,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       };
 
       const r1 = retryRefresh(refreshReservations, 'reservasi');
-      const r2 = retryRefresh(refreshReportsMine, 'laporan pengguna');
+      const r2 = sessionUser.role === 'petugas' || sessionUser.role === 'admin'
+        ? Promise.resolve(true)
+        : retryRefresh(refreshReportsMine, 'laporan pengguna');
       const r3 = sessionUser.role === 'petugas' || sessionUser.role === 'admin'
         ? retryRefresh(refreshPetugasReports, 'daftar laporan petugas')
         : Promise.resolve(true);
@@ -601,8 +606,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       const results = await Promise.all([r1, r2, r3, r4, r5]);
       if (cancelled) return;
       // Data parsial tetap dapat dipakai. Error total hanya jika kedua sumber
-      // utama, reservasi dan laporan milik pengguna, sama-sama gagal.
-      const berhasil = Number(results[0]) + Number(results[1]);
+      // utama, reservasi dan laporan milik pengguna/petugas, sama-sama gagal.
+      const laporanSuccess = sessionUser.role === 'petugas' || sessionUser.role === 'admin' ? results[2] : results[1];
+      const berhasil = Number(results[0]) + Number(laporanSuccess);
       setSyncStatus(berhasil === 2 ? 'ok' : berhasil === 1 ? 'partial' : 'error');
 
       if (berhasil === 0) {
@@ -954,9 +960,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (!res.ok) {
           return { ok: false, message: res.message };
         }
-        await refreshReportsMine();
         if (sessionUser?.role === 'petugas' || sessionUser?.role === 'admin') {
           await refreshPetugasReports();
+        } else {
+          await refreshReportsMine();
         }
         return { ok: true };
       },
@@ -973,7 +980,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           const res = await backendUpdateLaporan(row.backendId, status, catatan ?? '');
           if (!res.ok) return { ok: false, message: res.message };
           await refreshPetugasReports();
-          await refreshReportsMine();
           return { ok: true };
         }
         setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status, catatan: catatan ?? r.catatan } : r)));
