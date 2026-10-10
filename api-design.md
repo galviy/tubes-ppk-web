@@ -881,7 +881,139 @@ Content-Type: application/json
 {"message":"Internal server error!","success":false}
 ```
 
-#### - POST /admin/create_user/mhs
+#### - POST /admin/tolak_mhs
+
+Menolak pendaftaran mahasiswa pending (hapus baris `mahasiswa_pending` + user terkait). Auth: admin. Form: `id_mhs` (id di `mahasiswa_pending`).
+
+```curl
+curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
+-X POST http://127.0.0.1:8080/admin/tolak_mhs \
+-H "Content-Type: application/x-www-form-urlencoded" \
+-H "Cookie: session_id=ADMIN_SESSION_ID" \
+-d "id_mhs=1"
+```
+
+Response sukses:
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Berhasil menolak pendaftaran mahasiswa 1","success":true}
+```
+
+Response gagal: `400 Bad Request (Bad Request | You need id_mhs to peform this action! | You have to input a integer boskuh!)`, `404 Data mahasiswa pending dengan id tersebut tidak ditemukan!`, `500 Internal server error!`.
+
+#### - POST /admin/tolak_dosen
+
+Menolak pendaftaran dosen pending. Auth: admin. Form: `id_dosen` (id di `dosen_pending`).
+
+```curl
+curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
+-X POST http://127.0.0.1:8080/admin/tolak_dosen \
+-H "Content-Type: application/x-www-form-urlencoded" \
+-H "Cookie: session_id=ADMIN_SESSION_ID" \
+-d "id_dosen=1"
+```
+
+Response sukses:
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Berhasil menolak pendaftaran dosen 1","success":true}
+```
+
+Response gagal: `400 Bad Request (Bad Request | You need id_dosen to peform this action! | You have to input a integer boskuh!)`, `404 Data dosen pending dengan id tersebut tidak ditemukan!`, `500 Internal server error!`.
+
+#### - POST /admin/tolak_staff
+
+Menolak pendaftaran staff. Auth: admin. Form: `id_staff` (id di tabel `staff`).
+
+```curl
+curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
+-X POST http://127.0.0.1:8080/admin/tolak_staff \
+-H "Content-Type: application/x-www-form-urlencoded" \
+-H "Cookie: session_id=ADMIN_SESSION_ID" \
+-d "id_staff=1"
+```
+
+Response sukses:
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Berhasil menolak pendaftaran staff 1","success":true}
+```
+
+Response gagal: `400 Bad Request (Bad Request | You need id_staff to peform this action! | You have to input a integer boskuh!)`, `404 Data staff dengan id tersebut tidak ditemukan!`, `500 Internal server error!`.
+
+#### - POST /admin/users/status
+
+Suspend (`is_verified=0`, tidak bisa login) atau aktifkan kembali (`is_verified=1`) akun. Auth: admin. Berbeda dengan `PATCH /users/{id}/status` (menerima JSON): endpoint ini memakai form `application/x-www-form-urlencoded` dengan field `id` + `is_verified`. Menolak suspend akun sendiri (`403`).
+
+```curl
+curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
+-X POST http://127.0.0.1:8080/admin/users/status \
+-H "Content-Type: application/x-www-form-urlencoded" \
+-H "Cookie: session_id=ADMIN_SESSION_ID" \
+-d "id=25&is_verified=0"
+```
+
+Field form:
+
+| Field | Wajib | Validasi |
+|---|---|---|
+| `id` | ya | integer >0 |
+| `is_verified` | ya | hanya `0` atau `1` |
+
+Response sukses:
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Berhasil memperbarui status user 25","success":true}
+```
+
+Response gagal
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"Missing field! (id, is_verified)","success":false}
+```
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"ID user tidak valid","success":false}
+```
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"is_verified hanya 0 atau 1","success":false}
+```
+
+```json
+HTTP/1.1 403 Forbidden
+Content-Type: application/json
+
+{"message":"Tidak bisa menonaktifkan akun sendiri","success":false}
+```
+
+```json
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+
+{"message":"User dengan id tersebut tidak ditemukan!","success":false}
+```
 
 Admin membuat mahasiswa langsung terverifikasi (`isVerified=1` ke `mahasiswa`, bukan pending). Auth: admin. Validasi mirip register mhs, beda: `username` min 5 huruf saja, duplikat nim -> 400.
 
@@ -1213,6 +1345,168 @@ Content-Type: application/json
 {"message":"Alat dengan nama (Proyektor) sudah exist di database!","success":false}
 ```
 
+#### - POST /admin/update_fasilitas/ruangan
+
+Memperbarui spesifikasi ruangan. Auth: admin. `Content-Type: application/x-www-form-urlencoded`. Perhatikan ejaan field `kapasistas` (dengan `s`, sesuai code).
+
+```curl
+curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
+-X POST http://127.0.0.1:8080/admin/update_fasilitas/ruangan \
+-H "Content-Type: application/x-www-form-urlencoded" \
+-H "Cookie: session_id=ADMIN_SESSION_ID" \
+-d "id=1&nama_kategori=Ruang+Kelas&nama_ruangan=R101&status=1&kapasistas=40&lokasi=Gedung+A"
+```
+
+Field:
+
+| Field | Wajib | Validasi |
+|---|---|---|
+| `id` | ya | integer >0 |
+| `nama_kategori` | ya | 5-100 char, harus exist di `kategori` |
+| `nama_ruangan` | ya | non-empty, unik |
+| `status` | ya | integer `0`/`1` saja |
+| `kapasistas` | ya | integer >0 |
+| `lokasi` | ya | non-empty |
+| `deskripsi` (alias `desc`) | tidak | teks bebas |
+| `kelengkapan` (alias `amenities`) | tidak | string dipisah koma |
+| `foto` (alias `image`) | tidak | data URL base64 / path / URL foto |
+
+Response sukses:
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Successfully updated ruangan (R101)!","success":true}
+```
+
+Response gagal: `400 ID ruangan tidak valid`, `502 Missing field!`, `502 Status ruangan hanya true (1) atau false (0) pakkk!`, `502 kapasitas has to be integer pak!`, `401 Username minimal 5 Huruf dan tidak boleh lebih dari 100 huruf!` (nama kategori), `401 Kategori (...) tidak exist di database!`, `404 Ruangan dengan id tersebut tidak ditemukan!`, `409 Ruangan dengan nama (...) sudah exist di database!`, `500 Internal server error`.
+
+#### - POST /admin/update_fasilitas/alat
+
+Memperbarui spesifikasi alat. Auth: admin. `Content-Type: application/x-www-form-urlencoded`.
+
+```curl
+curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
+-X POST http://127.0.0.1:8080/admin/update_fasilitas/alat \
+-H "Content-Type: application/x-www-form-urlencoded" \
+-H "Cookie: session_id=ADMIN_SESSION_ID" \
+-d "id=2&nama_kategori=Elektronik&nama_alat=Proyektor&status=1&jumlah_tersedia=5&banyak_alat=10"
+```
+
+Field:
+
+| Field | Wajib | Validasi |
+|---|---|---|
+| `id` | ya | integer >0 |
+| `nama_kategori` | ya | 5-100 char, harus exist di `kategori` |
+| `nama_alat` | ya | non-empty, unik |
+| `status` | ya | integer `0`/`1` saja |
+| `jumlah_tersedia` | ya | integer >=0 |
+| `banyak_alat` | ya | integer >=0 |
+| `deskripsi` (alias `desc`) | tidak | teks bebas |
+| `kelengkapan` (alias `amenities`) | tidak | string dipisah koma |
+| `foto` (alias `image`) | tidak | data URL base64 / path / URL foto |
+
+Response sukses:
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Successfully updated Alat (Proyektor)!","success":true}
+```
+
+Response gagal: `400 ID alat tidak valid`, `502 Missing field!`, `502 Status alat hanya true (1) atau false (0)!`, `502 jumlah_tersedia has to be integer pak!`, `502 banyak_alat has to be integer pak!`, `401 Username minimal 5 Huruf dan tidak boleh lebih dari 100 huruf!`, `401 Kategori (...) tidak exist di database!`, `404 Alat dengan id tersebut tidak ditemukan!`, `409 Alat dengan nama (...) sudah exist di database!`, `500 Internal server error`.
+
+#### - POST /admin/delete_fasilitas/ruangan
+
+Nonaktifkan ruangan (soft delete, bukan hapus fisik karena FK reservasi/laporan). Auth: admin. Form: `id` (integer >0).
+
+```curl
+curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
+-X POST http://127.0.0.1:8080/admin/delete_fasilitas/ruangan \
+-H "Content-Type: application/x-www-form-urlencoded" \
+-H "Cookie: session_id=ADMIN_SESSION_ID" \
+-d "id=1"
+```
+
+Response sukses:
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Ruangan berhasil dinonaktifkan!","success":true}
+```
+
+Response gagal: `400 ID ruangan tidak valid`, `404 Ruangan dengan id tersebut tidak ditemukan!`, `500 Internal server error`.
+
+#### - POST /admin/delete_fasilitas/alat
+
+Nonaktifkan alat (`status=0`, stok tampil `0`). Auth: admin. Form: `id` (integer >0).
+
+```curl
+curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
+-X POST http://127.0.0.1:8080/admin/delete_fasilitas/alat \
+-H "Content-Type: application/x-www-form-urlencoded" \
+-H "Cookie: session_id=ADMIN_SESSION_ID" \
+-d "id=2"
+```
+
+Response sukses:
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Alat berhasil dinonaktifkan!","success":true}
+```
+
+Response gagal: `400 ID alat tidak valid`, `404 Alat dengan id tersebut tidak ditemukan!`, `500 Internal server error`.
+
+### AKADEMIK
+
+Referensi fakultas & prodi untuk form registrasi. Tanpa auth (publik).
+
+#### - GET /fakultas
+
+List fakultas beserta prodi di dalamnya.
+
+```curl
+curl -i -X GET http://127.0.0.1:8080/fakultas
+```
+
+Response sukses:
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"data":[...],"success":true}
+```
+
+Response gagal: `500 Gagal mengambil daftar fakultas`.
+
+#### - GET /prodi
+
+List seluruh prodi (dipakai validasi field `prodi` saat registrasi).
+
+```curl
+curl -i -X GET http://127.0.0.1:8080/prodi
+```
+
+Response sukses:
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"data":[...],"success":true}
+```
+
+Response gagal: `500 Gagal mengambil daftar prodi`.
+
 ### FACILITIES
 
 Endpoint katalog, detail, dan status fasilitas. Tersedia format route bahasa Indonesia (`/fasilitas/*`) maupun alias RESTful (`/facilities/*`).
@@ -1224,6 +1518,63 @@ Endpoint katalog, detail, dan status fasilitas. Tersedia format route bahasa Ind
 - `POST /admin/update_fasilitas/ruangan` & `POST /admin/update_fasilitas/alat`: Pembaruan spesifikasi fasilitas oleh admin.
 - `POST /admin/delete_fasilitas/ruangan` & `POST /admin/delete_fasilitas/alat`: Penghapusan fasilitas oleh admin.
 - `PATCH /petugas/facilities/{id}/status`: Pembaruan status operasional fasilitas (aktif, nonaktif, dalam_perbaikan).
+
+#### - GET /fasilitas & GET /facilities
+
+List seluruh fasilitas (ruangan + alat) dengan filter. Tanpa auth (publik). Alias `GET /facilities` memakai handler sama.
+
+```curl
+curl -i -X GET "http://127.0.0.1:8080/fasilitas?q=kelas&tipe=ruangan&page=1&limit=10"
+```
+
+Query:
+
+| Parameter | Keterangan |
+|---|---|
+| `tipe` | opsional: `ruangan` / `alat` (case-insensitive). Selain itu → `400 Tipe fasilitas harus ruangan atau alat` |
+| `q` | opsional, kata kunci nama |
+| `lokasi` | opsional, filter lokasi |
+| `kapasitas_min` | opsional, integer >=0 → `400 kapasitas_min harus angka positif` |
+| `page` | opsional, default `1`, integer >0 → `400 page harus angka positif` |
+| `limit` | opsional, default tanpa limit, integer >0 (di-clamp 100) → `400 limit harus angka positif` |
+
+Response sukses:
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"data":[...],"limit":10,"page":1,"success":true,"total":24}
+```
+
+Response gagal: `500 Gagal mengambil daftar fasilitas`.
+
+#### - GET /fasilitas/ruangan & GET /fasilitas/alat
+
+Sama seperti di atas tetapi `tipe` dipaksa (`ruangan` / `alat`). Tanpa auth (publik).
+
+```curl
+curl -i -X GET "http://127.0.0.1:8080/fasilitas/ruangan?lokasi=Gedung+A"
+curl -i -X GET "http://127.0.0.1:8080/fasilitas/alat?q=proyektor"
+```
+
+#### - GET /fasilitas/ketersediaan (& /jadwal, /facilities/{id}/availability)
+
+Ketersediaan slot waktu 30 menit per fasilitas untuk N hari ke depan. Tanpa auth (publik). Path `{id}` pada alias `facilities/{id}/availability` diabaikan — yang dipakai hanya query.
+
+```curl
+curl -i -X GET "http://127.0.0.1:8080/fasilitas/ketersediaan?tanggal=2026-10-12&hari=7&tipe=ruangan"
+```
+
+Query:
+
+| Parameter | Default | Keterangan |
+|---|---|---|
+| `tanggal` | hari ini (WIB) | format `YYYY-MM-DD`. Mundur ke masa lalu → `400 Jadwal hanya tersedia untuk hari ini dan tanggal berikutnya` |
+| `hari` | `7` | integer >0, di-clamp 30 → `400 hari harus angka positif` |
+| `tipe` | semua | `ruangan` / `alat` → `400 Tipe fasilitas harus ruangan atau alat` |
+
+Response sukses: `200 {"data":[...],"success":true}`. Response gagal: `400 Format tanggal tidak valid! Gunakan YYYY-MM-DD`, `500 Gagal mengambil ketersediaan fasilitas`.
 
 #### - GET /fasilitas/{id}
 
@@ -1355,122 +1706,157 @@ Endpoint pengajuan, daftar, detail, pembatalan, dan persetujuan reservasi fasili
 - `PATCH /petugas/reservasi/{id}/cancel`: Pembatalan reservasi oleh petugas disertai alasan.
 - `GET /petugas/dashboard/count`: Hitungan antrean reservasi pending & laporan baru untuk dashboard petugas.
 
-#### - POST /reservasi/create_reservasi
+#### - POST /reservasi/create_reservasi/ruangan
 
-Buat reservasi ruangan. Auth: login semua role (`middleware.Auth`, `user_reservasi` diambil dari session `session_id`). `Content-Type: application/x-www-form-urlencoded`. Status awal selalu `PENDING`. Cek bentrok hanya terhadap reservasi berstatus `APPROVED` (`repositories.IsReservasiBentrok`).
+Buat reservasi ruangan (+ alat tambahan opsional). Auth: login semua role (`middleware.Auth`, `user_reservasi` diambil dari session `session_id`). `Content-Type: application/x-www-form-urlencoded`. Status awal selalu `PENDING`.
 
 ```curl
 curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
--X POST http://127.0.0.1:8080/reservasi/create_reservasi \
+-X POST http://127.0.0.1:8080/reservasi/create_reservasi/ruangan \
 -H "Content-Type: application/x-www-form-urlencoded" \
 -H "Cookie: session_id=USER_SESSION_ID" \
--d "ruangan_reservasi=1&waktu_peminjaman=2026-09-23+08%3A00%3A00&waktu_peminjaman_selesai=2026-09-23+09%3A00%3A00"
+-d "ruangan_reservasi=1&jumlah_peserta=30&waktu_peminjaman=2026-10-14+08%3A00%3A00&waktu_peminjaman_selesai=2026-10-14+09%3A00%3A00&alasan_peminjaman=Kuliah+pengganti"
 ```
 
 Field form:
 
 | Field | Wajib | Validasi |
 |---|---|---|
-| `ruangan_reservasi` | ya | integer, harus exist di `ruangan` (`CheckRuanganById`) |
-| `waktu_peminjaman` | ya | format `YYYY-MM-DD HH:MM:SS`, menit `00`/`30`, detik `00`, jam 07:00-20:00 |
-| `waktu_peminjaman_selesai` | ya | format `YYYY-MM-DD HH:MM:SS`, menit `00`/`30`, detik `00`, jam 07:00-20:00, harus setelah `waktu_peminjaman` |
+| `ruangan_reservasi` | ya | integer >0, harus exist di `ruangan` |
+| `jumlah_peserta` | ya (jika ada ruangan) | integer >0, ≤ kapasitas ruangan |
+| `waktu_peminjaman` | ya | `YYYY-MM-DD HH:MM:SS`, menit `00`/`30`, detik `00`, jam 07:00-20:00 |
+| `waktu_peminjaman_selesai` | ya | sama, harus setelah mulai |
+| `alasan_peminjaman` | ya | 1-255 char |
+| `alat_reservasi[]` | tidak | array id alat, integer >0, unik, stok cukup, status aktif |
+| `jumlah_peminjaman[]` | tidak | jika ada, panjang harus sama dengan `alat_reservasi[]`, integer >0 (default 1) |
 
-Jam operasional: `07:00 - 20:00` (`operasionalMulai = 7*60`, `operasionalSelesai = 20*60`). Slot valid hanya kelipatan 30 menit.
+Aturan bisnis (`services`): slot kelipatan 30 menit, jam operasional `07:00-20:00`, pengajuan minimal H+2, ruangan harus berstatus aktif, tidak boleh double-booking diri sendiri, tidak boleh menabrak reservasi `APPROVED` / stok global.
 
-Response sukses
+Response sukses (`201`): `{"message":"Reservasi berhasil dibuat!","success":true,"id":<int64>}`.
 
-```json
-HTTP/1.1 201 Created
-Content-Type: application/json
+#### - POST /reservasi/create_reservasi/alat
 
-{"message":"Reservasi berhasil dibuat!","success":true}
+Buat peminjaman alat saja (tanpa ruangan). Auth & aturan waktu/alasan sama seperti di atas. Minimal satu alat harus dipilih.
+
+```curl
+curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
+-X POST http://127.0.0.1:8080/reservasi/create_reservasi/alat \
+-H "Content-Type: application/x-www-form-urlencoded" \
+-H "Cookie: session_id=USER_SESSION_ID" \
+-d "alat_reservasi[]=2&jumlah_peminjaman[]=1&waktu_peminjaman=2026-10-14+08%3A00%3A00&waktu_peminjaman_selesai=2026-10-14+09%3A00%3A00&alasan_peminjaman=Praktikum"
 ```
 
-Response gagal
+Response sukses (`201`): sama, `{"message":"Reservasi berhasil dibuat!","success":true,"id":<int64>}`.
 
-```json
-HTTP/1.1 400 Bad Request
-Content-Type: application/json
+Response gagal (berlaku untuk kedua endpoint create):
 
-{"message":"Missing field!","success":false}
+`400`: `Ruangan wajib diisi untuk endpoint ini` (ruangan) / `Minimal satu alat harus dipilih` (alat), `ID ruangan tidak valid`, `ID alat tidak valid`, `Jumlah peminjaman tidak valid`, `Jumlah data alat dan jumlah peminjaman tidak cocok`, `Jumlah peserta tidak valid`, `Format waktu peminjaman tidak valid! Gunakan YYYY-MM-DD HH:MM:SS`, `Format waktu selesai tidak valid! Gunakan YYYY-MM-DD HH:MM:SS`, `Reservasi harus memuat minimal satu ruangan atau alat`, `Alasan peminjaman wajib diisi`, `Alasan peminjaman maksimal 255 karakter`, `Waktu selesai harus setelah waktu mulai`, `Waktu reservasi harus menggunakan slot 30 menit`, `Reservasi hanya dapat dilakukan pada jam 07:00 - 20:00`, `Reservasi paling cepat diajukan untuk 2 hari ke depan`, `Jumlah peserta wajib diisi untuk reservasi ruangan`, `Jumlah peserta harus lebih dari nol`, `Jumlah peserta melebihi kapasitas ruangan (...)`, `Alat yang sama tidak boleh diminta dua kali`, `Jumlah alat ... harus lebih dari nol`, `Jumlah ... melebihi stok (...)`.
+
+`404`: `Ruangan tidak ditemukan`, `Alat dengan id ... tidak ditemukan`.
+
+`409`: `Ruangan sedang tidak dapat dipakai`, `Alat ... sedang tidak dapat dipakai`, `Kamu sudah punya reservasi di ruangan ini pada slot waktu tersebut`, `Kamu sudah punya reservasi untuk alat ini pada slot waktu tersebut`, `Ruangan sudah dipakai pada waktu tersebut`, `Stok ... tidak cukup pada slot waktu tersebut`.
+
+`401 Unauthorized`, `500 Internal server error`.
+
+#### - GET /reservasi (& /reservasi/ruangan, /reservasi/alat, alias /reservations)
+
+Riwayat reservasi. Auth: login. `pengguna` hanya melihat milik sendiri; `petugas`/`admin` melihat semua. Alias `GET /reservations` identik dengan `GET /reservasi`.
+
+```curl
+curl -i -X GET "http://127.0.0.1:8080/reservasi?status=menunggu&limit=20&page=1" \
+-H "Cookie: session_id=USER_SESSION_ID"
 ```
 
-```json
-HTTP/1.1 401 Unauthorized
-Content-Type: application/json
+Query:
 
-{"message":"ID Ruangan tidak Valid!!","success":false}
+| Parameter | Keterangan |
+|---|---|
+| `status` | opsional: `menunggu`/`disetujui`/`ditolak`/`dibatalkan`/`selesai` (case-insensitive) → `400 Status reservasi tidak valid` |
+| `limit` | opsional, default `20`, max 100 → `400 Limit harus angka positif` |
+| `page` | opsional, default `1` → `400 Page harus angka positif` |
+
+Response sukses: `200 {"data":[...],"limit":20,"page":1,"success":true}`. Response gagal: `401 Unauthorized`, `403 Forbidden`, `500 Gagal menyinkronkan status reservasi` / `Gagal mengambil daftar reservasi`.
+
+#### - GET /reservasi/{id} (alias /reservations/{id})
+
+Detail satu reservasi (+ riwayat status). Auth: login; `pengguna` hanya boleh milik sendiri (milik orang lain disamarkan jadi `404`).
+
+```curl
+curl -i -X GET http://127.0.0.1:8080/reservasi/1 \
+-H "Cookie: session_id=USER_SESSION_ID"
 ```
 
-```json
-HTTP/1.1 400 Bad Request
-Content-Type: application/json
+Response sukses: `200 {"data":{...},"success":true}`. Response gagal: `400 ID reservasi tidak valid`, `404 Reservasi tidak ditemukan`, `500 Gagal mengambil reservasi`.
 
-{"message":"Format waktu peminjaman tidak valid! Gunakan YYYY-MM-DD HH:MM:SS","success":false}
+#### - PATCH /reservasi/{id}/cancel (alias PATCH /reservations/{id})
+
+Pembatalan mandiri oleh pengguna pemilik reservasi. Auth: login. `Content-Type: application/json` dengan body `{"alasan_pembatalan":"..."}` (wajib). Hanya status `PENDING`/`APPROVED` yang bisa dibatalkan, paling lambat 2 jam sebelum mulai.
+
+```curl
+curl -i -X PATCH http://127.0.0.1:8080/reservasi/1/cancel \
+-H "Content-Type: application/json" \
+-H "Cookie: session_id=USER_SESSION_ID" \
+-d '{"alasan_pembatalan":"Jadwal kuliah digeser"}'
 ```
 
-```json
-HTTP/1.1 400 Bad Request
-Content-Type: application/json
+Response sukses: `200 {"message":"Reservasi berhasil dibatalkan","success":true}`. Response gagal: `400 ID reservasi tidak valid` / `Body request tidak valid` / `Alasan pembatalan wajib diisi`, `404 Reservasi tidak ditemukan`, `409 Reservasi sudah tidak bisa dibatalkan` / `Pembatalan paling lambat 2 jam sebelum waktu mulai`.
 
-{"message":"Format waktu selesai tidak valid! Gunakan YYYY-MM-DD HH:MM:SS","success":false}
+#### - GET /petugas/reservasi
+
+Antrean seluruh pengajuan untuk ditinjau. Auth: login + role `petugas`/`admin`.
+
+```curl
+curl -i -X GET "http://127.0.0.1:8080/petugas/reservasi?tipe=ruangan&status=menunggu&limit=20&page=1" \
+-H "Cookie: session_id=PETUGAS_SESSION_ID"
 ```
 
-```json
-HTTP/1.1 400 Bad Request
-Content-Type: application/json
+Query: `tipe` (`ruangan`/`alat` → `400 Tipe harus ruangan atau alat`), `status`, `limit`, `page` (aturan sama seperti list pengguna). Response sukses: `200 {"data":[...],"success":true}` (tanpa `limit`/`page`).
 
-{"message":"Reservasi hanya dapat dilakukan pada jam 07:00 - 20:00!","success":false}
+#### - PATCH /petugas/reservasi/{id}
+
+Setujui (`disetujui`) atau tolak (`ditolak`) reservasi. Auth: login + role **`petugas` saja (admin ditolak)**. Body JSON `{"status":"disetujui|ditolak","alasan_penolakan":"..."}` (alasan wajib saat menolak). Hanya reservasi `menunggu` yang bisa diproses; approve mengecek ketersediaan ruangan/stok slot.
+
+```curl
+curl -i -X PATCH http://127.0.0.1:8080/petugas/reservasi/1 \
+-H "Content-Type: application/json" \
+-H "Cookie: session_id=PETUGAS_SESSION_ID" \
+-d '{"status":"disetujui"}'
 ```
 
-```json
-HTTP/1.1 400 Bad Request
-Content-Type: application/json
+Response sukses: `200 {"message":"Reservasi disetujui","success":true}` / `{"message":"Reservasi ditolak","success":true}`. Response gagal: `400 Status harus disetujui atau ditolak` / `Alasan penolakan wajib diisi`, `404 Reservasi tidak ditemukan`, `409 Hanya reservasi berstatus menunggu yang bisa disetujui/ditolak` + varian konflik slot (`Ruangan sudah dipakai pada slot tersebut, tidak bisa disetujui`, `Stok ... tidak cukup pada slot tersebut, tidak bisa disetujui`, `Ruangan/alat sudah tidak tersedia...`).
 
-{"message":"Waktu reservasi harus menggunakan slot 30 menit!","success":false}
+#### - PATCH /petugas/reservasi/{id}/cancel
+
+Pembatalan oleh petugas (semua reservasi, tanpa cek kepemilikan). Auth: `petugas` saja. Body `{"alasan_pembatalan":"..."}` wajib; aturan status & batas 2 jam sama seperti pembatalan pengguna.
+
+```curl
+curl -i -X PATCH http://127.0.0.1:8080/petugas/reservasi/1/cancel \
+-H "Content-Type: application/json" \
+-H "Cookie: session_id=PETUGAS_SESSION_ID" \
+-d '{"alasan_pembatalan":"Ruangan dipakai acara fakultas"}'
 ```
 
-```json
-HTTP/1.1 400 Bad Request
-Content-Type: application/json
+#### - GET /petugas/dashboard/count
 
-{"message":"Waktu selesai harus setelah waktu mulai!","success":false}
+Hitungan badge dashboard petugas. Auth: `petugas` saja. Tanpa parameter.
+
+```curl
+curl -i -X GET http://127.0.0.1:8080/petugas/dashboard/count \
+-H "Cookie: session_id=PETUGAS_SESSION_ID"
 ```
 
-```json
-HTTP/1.1 404 Not Found
-Content-Type: application/json
-
-{"message":"Ruangan tidak ditemukan!","success":false}
-```
+Response sukses:
 
 ```json
-HTTP/1.1 404 Not Found
+HTTP/1.1 200 OK
 Content-Type: application/json
 
-{"message":"User tidak ditemukan!","success":false}
+{"data":{"laporan_baru":5,"reservasi_menunggu":8},"success":true}
 ```
 
-```json
-HTTP/1.1 409 Conflict
-Content-Type: application/json
+Response gagal: `500 Gagal menyinkronkan status reservasi` / `Gagal menghitung reservasi` / `Gagal menghitung laporan`.
 
-{"message":"Ruangan sudah digunakan pada waktu tersebut!","success":false}
-```
-
-```json
-HTTP/1.1 401 Unauthorized
-Content-Type: application/json
-
-{"message":"Unauthorized","success":false}
-```
-
-```json
-HTTP/1.1 500 Internal Server Error
-Content-Type: application/json
-
-{"message":"Internal server error","success":false}
-```
+Response sukses: `200 {"message":"Reservasi berhasil dibatalkan","success":true}`. Response gagal: `400 ID reservasi tidak valid` / `Body request tidak valid` / `Alasan pembatalan wajib diisi`, `404 Reservasi tidak ditemukan`, `409 Reservasi sudah tidak bisa dibatalkan` / `Pembatalan paling lambat 2 jam sebelum waktu mulai`.
 
 #### REPORTS
 
@@ -1478,27 +1864,30 @@ Content-Type: application/json
 
 #### - POST /reports
 
-Buat laporan kerusakan. Auth: login semua role (`middleware.Auth`). `Content-Type: multipart/form-data` (max total 5MB). Foto disimpan di `uploads/reports/`.
+Buat laporan kerusakan. Auth: login semua role (`middleware.Auth`). Foto **tidak lagi disimpan sebagai file di `uploads/`** — melainkan data-URL base64 (`data:image/jpeg;base64,...` / `data:image/png;base64,...`) yang disimpan langsung di kolom `report.foto` (`MEDIUMTEXT`).
+
+`Content-Type` yang diterima (`controller/report/create.go` → `parseLaporanInput`):
+
+1. `application/json` (disarankan, dipakai frontend): `{"alasan","kategori","ruangan_id","alat_id","foto"}` (body max 6MB).
+2. `multipart/form-data` (backward-compatible): field teks `alasan`, `kategori`, `ruangan_id`, `alat_id`, `foto` (base64/data-URL), **atau** field file `foto` (`jpg`/`jpeg`/`png` ≤2MB, dikonversi ke base64 di server).
+3. `application/x-www-form-urlencoded` (fallback).
 
 ```curl
 curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
 -X POST http://127.0.0.1:8080/reports \
+-H "Content-Type: application/json" \
 -H "Cookie: session_id=USER_SESSION_ID" \
--F "alasan=AC tidak dingin" \
--F "kategori=AC/Pendingin" \
--F "ruangan_id=1" \
--F "foto=@/tmp/foto.jpg;type=image/jpeg"
+-d '{"alasan":"AC tidak dingin","kategori":"AC/Pendingin","ruangan_id":1,"foto":"data:image/jpeg;base64,/9j/4AAQ..."}'
 ```
 
-Atau untuk alat:
+Atau untuk alat (tanpa foto):
 
 ```curl
 curl -i -w "\n\n[INFO] Waktu Total Respons: %{time_total} detik\n" \
 -X POST http://127.0.0.1:8080/reports \
+-H "Content-Type: application/json" \
 -H "Cookie: session_id=USER_SESSION_ID" \
--F "alasan=Proyektor mati" \
--F "kategori=Elektronik" \
--F "alat_id=2"
+-d '{"alasan":"Proyektor mati","kategori":"Elektronik","alat_id":2}'
 ```
 
 Field:
@@ -1509,7 +1898,9 @@ Field:
 | `kategori` | ya | `Kebersihan` / `AC/Pendingin` / `Elektronik` / `Lainnya` |
 | `ruangan_id` | salah satu | integer >0, harus exist; isi tepat satu dari `ruangan_id` / `alat_id` |
 | `alat_id` | salah satu | integer >0, harus exist |
-| `foto` | tidak | `jpg`/`jpeg`/`png`, max 2MB |
+| `foto` | tidak | data-URL/base64 `jpeg`/`png`, binary hasil decode max 2MB (base64 max ~4MB char). Mime dikanonisasi dari byte aktual, bukan klaim header |
+
+> Kompatibilitas baca: `GET` laporan mengembalikan `foto` sebagai data-URL apa adanya; path legacy `uploads/...` yang masih tersisa di DB lama dibaca dari disk lalu di-inline sebagai data-URL (best-effort, `repositories/report.go` → `resolveFotoValue`). File statis legacy tetap dilayani `GET /uploads/` (wajib login).
 
 Status awal selalu `baru`.
 
@@ -1529,6 +1920,41 @@ HTTP/1.1 400 Bad Request
 Content-Type: application/json
 
 {"message":"Alasan wajib diisi","success":false}
+```
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"Alasan maksimal 255 karakter","success":false}
+```
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"ID ruangan tidak valid","success":false}
+```
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"ID alat tidak valid","success":false}
+```
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"Gagal membaca body JSON","success":false}
+```
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"Gagal membaca form","success":false}
 ```
 
 ```json
@@ -1571,6 +1997,24 @@ HTTP/1.1 400 Bad Request
 Content-Type: application/json
 
 {"message":"Format foto harus jpg, jpeg, atau png","success":false}
+```
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"Format foto harus base64 jpg, jpeg, atau png","success":false}
+```
+
+> `Format foto harus jpg, jpeg, atau png` untuk file multipart yang mime-nya terdeteksi bukan gambar; `... base64 ...` untuk string base64/data-URL yang tidak valid.
+
+#### - GET /uploads/{path}
+
+Melayani file statis legacy di folder `uploads/` (mis. bukti laporan lama sebelum migrasi base64). Auth: login (`middleware.Auth`, `<img>` same-origin otomatis mengirim cookie `session_id`). Bukan JSON: `401 Unauthorized` (plain-text) bila belum login, `404` bila file tidak ada.
+
+```curl
+curl -i -X GET http://127.0.0.1:8080/uploads/reports/aabcfe78-1205-487b-a52e-04e319c5f9d6.jpeg \
+-H "Cookie: session_id=USER_SESSION_ID"
 ```
 
 #### - GET /reports
@@ -1831,9 +2275,53 @@ Content-Type: application/json
 
 Response gagal: `401 Unauthorized`.
 
+#### - GET /reservasi/export
+
+Mengekspor rekap pengajuan reservasi ke PDF/Excel/CSV. Auth: **admin** (`middleware.AdminAuth`).
+
+Query:
+
+| Parameter | Default | Keterangan |
+|---|---|---|
+| `format` | `pdf` | `pdf`, `excel`/`xls`/`xlsx`, atau `csv` |
+| `status` | semua | filter status pengajuan |
+| `tipe` | semua | `ruangan` / `alat` (selain itu → `400 Tipe fasilitas harus ruangan atau alat`) |
+| `dari` | - | filter tanggal pengajuan awal |
+| `sampai` | - | filter tanggal pengajuan akhir |
+| `fasilitas` | - | filter id fasilitas |
+| `q` | - | kata kunci pencarian |
+
+```curl
+curl -i -X GET "http://127.0.0.1:8080/reservasi/export?format=excel&tipe=ruangan" \
+-b "session_id=ADMIN_SESSION_ID" \
+-o rekap-reservasi.xls
+```
+
+Response sukses (`200`, file unduhan): `application/pdf` (`rekap-reservasi.pdf`) / `application/vnd.ms-excel` (`rekap-reservasi.xls`) / `text/csv` (`rekap-reservasi.csv`). Response gagal: `500 Gagal mengambil data reservasi untuk ekspor`.
+
+#### - GET /users/export
+
+Mengekspor rekap akun pengguna ke PDF/Excel/CSV. Auth: **admin** (`middleware.AdminAuth`).
+
+Query:
+
+| Parameter | Default | Keterangan |
+|---|---|---|
+| `format` | `pdf` | `pdf`, `excel`/`xls`/`xlsx`, atau `csv` |
+| `role` | semua | filter peran |
+| `q` | - | kata kunci pencarian |
+
+```curl
+curl -i -X GET "http://127.0.0.1:8080/users/export?format=csv" \
+-b "session_id=ADMIN_SESSION_ID" \
+-o rekap-akun.csv
+```
+
+Response sukses (`200`, file unduhan): `application/pdf` (`rekap-akun.pdf`) / `application/vnd.ms-excel` (`rekap-akun.xls`) / `text/csv` (`rekap-akun.csv`). Response gagal: `500 Gagal mengambil data akun untuk ekspor`.
+
 #### - GET /dashboard/occupancy/export
 
-Mengekspor rekap okupansi dan utilisasi fasilitas beserta jumlah pengaduan kerusakan ke file dokumen resmi (asli **PDF binary**, **Excel**, atau **CSV**). Menghasilkan file unduhan langsung (`Content-Disposition: attachment`), bukan mencetak tampilan halaman browser (`window.print()`).
+Mengekspor rekap okupansi dan utilisasi fasilitas beserta jumlah pengaduan kerusakan ke file dokumen resmi (asli **PDF binary**, **Excel**, atau **CSV**). **Tanpa auth (publik)**. Menghasilkan file unduhan langsung (`Content-Disposition: attachment`), bukan mencetak tampilan halaman browser (`window.print()`).
 
 Query parameters:
 
@@ -1871,15 +2359,15 @@ Content-Disposition: attachment; filename="rekap-okupansi.pdf"
 [PDF Binary Data]
 ```
 
-#### - GET /reports/export
+#### - GET /reports/export (& /petugas/reports/export)
 
-Mengekspor daftar laporan kerusakan fasilitas ke file PDF dokumen resmi atau CSV. Auth: login (`middleware.Auth`), juga tersedia di `/petugas/reports/export`.
+Mengekspor daftar laporan kerusakan fasilitas ke file PDF dokumen resmi, Excel, atau CSV. `GET /reports/export` **tanpa auth (publik)**; alias `GET /petugas/reports/export` wajib login role `petugas`/`admin`. Handler dan query sama.
 
 Query parameters:
 
 | Parameter | Tipe | Default | Keterangan |
 |---|---|---|---|
-| `format` | string | `pdf` | Format: `pdf` atau `csv` |
+| `format` | string | `pdf` | Format: `pdf`, `excel` / `xls`, atau `csv` |
 | `status` | string | `semua` | Filter status: `baru`, `diproses`, `selesai`, `ditolak` |
 | `kategori` | string | `semua` | Filter kategori |
 | `q` | string | - | Kata kunci pencarian nama fasilitas / pelapor / keluhan |
