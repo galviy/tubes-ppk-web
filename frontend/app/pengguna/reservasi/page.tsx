@@ -11,6 +11,7 @@ import {
   getEarliestReservableDate,
   getSlotBooking,
   hasRangeConflict,
+  sisaStokAlatPadaRange,
   formatDateIndo,
 } from '@/lib/slots';
 import { TimeSlot } from '@/models/facility';
@@ -578,7 +579,11 @@ function AjukanReservasiContent() {
     const targetTool = availableTools.find((t) => t.id === toolToPickId);
     if (!targetTool || typeof targetTool.refId !== 'number') return;
 
-    // Cek konflik slot alat terhadap jam yang sudah dipilih
+    const maxStock = Math.max(1, targetTool.tersedia ?? targetTool.cap ?? 1);
+    const qtyWanted = Math.min(Math.max(1, toolToPickQty || 1), maxStock);
+
+    // Cek konflik slot alat berbasis sisa stok (quantity-aware):
+    // tolak hanya jika sisa < diminta, bukan saat ada peminjaman apa pun.
     if (startTime && endTime && tanggal) {
       const conflict = hasRangeConflict(
         reservations,
@@ -587,13 +592,16 @@ function AjukanReservasiContent() {
         startTime,
         endTime,
         undefined,
-        currentUserIdent
+        currentUserIdent,
+        qtyWanted,
+        maxStock
       );
       if (conflict) {
+        const sisa = sisaStokAlatPadaRange(reservations, targetTool.id, tanggal, startTime, endTime, maxStock);
         setBannerNotice({
           type: 'error',
           title: 'Alat Tidak Tersedia',
-          message: `${targetTool.name} sudah terpakai atau disetujui untuk jam ${startTime} - ${endTime} WIB pada ${formatDateIndo(tanggal)}. Pilih alat lain atau ubah jam peminjaman.`,
+          message: `${targetTool.name} stok tersisa ${Math.max(0, sisa)} unit untuk jam ${startTime} - ${endTime} WIB pada ${formatDateIndo(tanggal)} (minta ${qtyWanted}). Kurangi jumlah atau ubah jam peminjaman.`,
         });
         return;
       }
@@ -612,16 +620,13 @@ function AjukanReservasiContent() {
       }
     }
 
-    const maxStock = Math.max(1, targetTool.tersedia ?? targetTool.cap ?? 1);
-    const qty = Math.min(Math.max(1, toolToPickQty || 1), maxStock);
-
     setSelectedTools((prev) => [
       ...prev,
       {
         facilityId: targetTool.id,
         refId: targetTool.refId!,
         nama: targetTool.name,
-        jumlah: qty,
+        jumlah: qtyWanted,
         stokTersedia: maxStock,
         lokasi: targetTool.loc,
       },
@@ -791,11 +796,23 @@ function AjukanReservasiContent() {
     return SLOTS.filter((s) => s.start >= startTime && s.start < endTime).map((s) => s.start);
   }, [startTime, endTime]);
 
-  // Cek bentrok terhadap slot yang dipilih untuk tanggal dan user spesifik
+  // Cek bentrok terhadap slot yang dipilih untuk tanggal dan user spesifik.
+  // Alat quantity-aware: konflik hanya jika minta N > sisa (bukan per-slot existence).
   const conflictSlots = useMemo(() => {
     if (!facility || pickedSlots.length === 0) return [];
+    if (isAlat) {
+      const stok = facility.tersedia ?? facility.cap ?? 0;
+      const diminta = Math.max(1, parseInt(peserta, 10) || 1);
+      const rangeConflict = startTime && endTime
+        ? hasRangeConflict(reservations, facility.id, tanggal, startTime, endTime, undefined, currentUserIdent, diminta, stok)
+        : undefined;
+      const pubMap = publicUnavailable[facility.id];
+      const pubConflict = pubMap && SLOTS.some((s) => s.start >= startTime && s.start < endTime && pubMap.has(s.start));
+      if (rangeConflict || pubConflict) return pickedSlots;
+      return [];
+    }
     return pickedSlots.filter((slotStart) => isSlotOccupied(facility.id, slotStart));
-  }, [facility, pickedSlots, isSlotOccupied]);
+  }, [facility, pickedSlots, isSlotOccupied, isAlat, peserta, reservations, tanggal, startTime, endTime, currentUserIdent, publicUnavailable]);
 
   const hasConflict = conflictSlots.length > 0;
 
@@ -925,26 +942,57 @@ function AjukanReservasiContent() {
   async function doSubmit() {
     if (!facility || isSubmitting) return;
 
-    const isConflictNow = pickedSlots.some((slotStart) => isSlotOccupied(facility.id, slotStart));
-    if (isConflictNow) {
-      setBannerNotice({
-        type: 'error',
-        title: 'Rentang Jadwal Bentrok',
-        message: `Rentang jam yang dipilih (${startTime} - ${endTime} WIB) pada tanggal ${formatDateIndo(tanggal)} sudah terpakai atau disetujui untuk peminjaman lain. Silakan pilih slot yang tersedia.`,
-      });
-      setModalConfig({
-        isOpen: true,
-        title: 'Rentang Jadwal Bentrok',
-        subtitle: `Rentang jam yang dipilih (${startTime} - ${endTime} WIB) pada tanggal ${formatDateIndo(tanggal)} bentrok dengan jadwal reservasi lain yang sudah terpakai atau disetujui. Silakan pilih rentang yang berstatus tersedia.`,
-        confirmText: 'Pilih Jam Lain',
-        confirmVariant: 'danger',
-        showInput: false,
-        onConfirm: () => {},
-      });
-      return;
+    // Fasilitas utama alat: cek quantity-aware (minta N vs sisa).
+    // Ruangan: cek existence seperti sebelumnya via isSlotOccupied.
+    if (isAlat) {
+      const stokUtama = unitTersedia || 0;
+      const dimintaUtama = Math.max(1, pesertaNum || 1);
+      const conflictUtama = hasRangeConflict(
+        reservations, facility.id, tanggal, startTime, endTime,
+        undefined, currentUserIdent, dimintaUtama, stokUtama
+      );
+      const pubMapUtama = publicUnavailable[facility.id];
+      const pubConflictUtama = pubMapUtama && SLOTS.some((s) => s.start >= startTime && s.start < endTime && pubMapUtama.has(s.start));
+      if (conflictUtama || pubConflictUtama) {
+        const sisa = sisaStokAlatPadaRange(reservations, facility.id, tanggal, startTime, endTime, stokUtama);
+        setBannerNotice({
+          type: 'error',
+          title: 'Stok Alat Tidak Cukup',
+          message: `${facility.name} stok tersisa ${Math.max(0, sisa)} unit untuk jam ${startTime} - ${endTime} WIB (minta ${dimintaUtama}). Kurangi jumlah atau ubah jam.`,
+        });
+        setModalConfig({
+          isOpen: true,
+          title: 'Stok Alat Tidak Cukup',
+          subtitle: `${facility.name} stok tersisa ${Math.max(0, sisa)} unit pada jam ${startTime} - ${endTime} WIB tanggal ${formatDateIndo(tanggal)}. Kurangi jumlah atau ubah jadwal.`,
+          confirmText: 'Pilih Jam Lain',
+          confirmVariant: 'danger',
+          showInput: false,
+          onConfirm: () => {},
+        });
+        return;
+      }
+    } else {
+      const isConflictNow = pickedSlots.some((slotStart) => isSlotOccupied(facility.id, slotStart));
+      if (isConflictNow) {
+        setBannerNotice({
+          type: 'error',
+          title: 'Rentang Jadwal Bentrok',
+          message: `Rentang jam yang dipilih (${startTime} - ${endTime} WIB) pada tanggal ${formatDateIndo(tanggal)} sudah terpakai atau disetujui untuk peminjaman lain. Silakan pilih slot yang tersedia.`,
+        });
+        setModalConfig({
+          isOpen: true,
+          title: 'Rentang Jadwal Bentrok',
+          subtitle: `Rentang jam yang dipilih (${startTime} - ${endTime} WIB) pada tanggal ${formatDateIndo(tanggal)} bentrok dengan jadwal reservasi lain yang sudah terpakai atau disetujui. Silakan pilih rentang yang berstatus tersedia.`,
+          confirmText: 'Pilih Jam Lain',
+          confirmVariant: 'danger',
+          showInput: false,
+          onConfirm: () => {},
+        });
+        return;
+      }
     }
 
-    // Cek bentrok pada alat pendukung yang dipilih
+    // Cek bentrok pada alat pendukung yang dipilih (quantity-aware)
     if (activeTab === 'ruangan' && selectedTools.length > 0) {
       for (const tool of selectedTools) {
         const toolConflict = hasRangeConflict(
@@ -954,20 +1002,23 @@ function AjukanReservasiContent() {
           startTime,
           endTime,
           undefined,
-          currentUserIdent
+          currentUserIdent,
+          tool.jumlah,
+          tool.stokTersedia
         );
         const pubMap = publicUnavailable[tool.facilityId];
         const pubConflict = pubMap && SLOTS.some((s) => s.start >= startTime && s.start < endTime && pubMap.has(s.start));
         if (toolConflict || pubConflict) {
+          const sisa = sisaStokAlatPadaRange(reservations, tool.facilityId, tanggal, startTime, endTime, tool.stokTersedia);
           setBannerNotice({
             type: 'error',
             title: 'Alat Pendukung Bentrok',
-            message: `Alat "${tool.nama}" sudah terpakai pada rentang jam ${startTime} - ${endTime} WIB. Silakan hapus atau ganti alat tersebut.`,
+            message: `Alat "${tool.nama}" stok tersisa ${Math.max(0, sisa)} unit pada jam ${startTime} - ${endTime} WIB (minta ${tool.jumlah}). Kurangi jumlah atau ganti alat.`,
           });
           setModalConfig({
             isOpen: true,
             title: 'Alat Pendukung Bentrok',
-            subtitle: `Alat "${tool.nama}" tidak tersedia pada jam ${startTime} - ${endTime} WIB tanggal ${formatDateIndo(tanggal)}. Hapus alat atau ubah jadwal.`,
+            subtitle: `Alat "${tool.nama}" stok tersisa ${Math.max(0, sisa)} unit pada jam ${startTime} - ${endTime} WIB tanggal ${formatDateIndo(tanggal)} (minta ${tool.jumlah}). Hapus alat atau ubah jadwal.`,
             confirmText: 'Sesuaikan Jadwal/Alat',
             confirmVariant: 'danger',
             showInput: false,
@@ -1426,13 +1477,16 @@ function AjukanReservasiContent() {
                     <div className="sched-period-head">{period.label}</div>
                     <div className="slot-grid-lg">
                       {periodSlots.map((slot) => {
+                        const stokSlot = isAlatFacility(facility) ? (facility.tersedia ?? facility.cap) : undefined;
                         const booking = getSlotBooking(
                           reservations,
                           facility.id,
                           slot.start,
                           undefined,
                           tanggal,
-                          currentUserIdent
+                          currentUserIdent,
+                          undefined,
+                          stokSlot
                         );
                         const isTaken = isSlotOccupied(facility.id, slot.start) || booking === 'booked';
                         const isPending = booking === 'pending';
@@ -1693,22 +1747,21 @@ function AjukanReservasiContent() {
                     {unselectedTools.map((t) => {
                       const stock = t.tersedia ?? t.cap ?? 0;
                       const isTimeSet = !!(startTime && endTime && tanggal);
-                      const isConflict = isTimeSet && !!hasRangeConflict(
-                        reservations,
-                        t.id,
-                        tanggal,
-                        startTime,
-                        endTime,
-                        undefined,
-                        currentUserIdent
-                      );
+                      // Quantity-aware: hitung sisa untuk 1 unit (preview).
+                      // Opsi hanya disabled jika sisa habis, bukan saat ada peminjaman.
+                      const sisaPreview = isTimeSet
+                        ? sisaStokAlatPadaRange(reservations, t.id, tanggal, startTime, endTime, stock)
+                        : stock;
+                      const isConflict = isTimeSet && sisaPreview <= 0;
                       const pubMap = publicUnavailable[t.id];
                       const hasPubConflict = isTimeSet && !!pubMap &&
                         SLOTS.some((s) => s.start >= startTime && s.start < endTime && pubMap.has(s.start));
                       const unavailable = stock <= 0 || isConflict || hasPubConflict;
-                      const suffix = isConflict || hasPubConflict
-                        ? ' - Terpakai pada jam ini'
-                        : ` - Stok: ${stock} unit`;
+                      const suffix = hasPubConflict || sisaPreview <= 0
+                        ? (isTimeSet ? ` - Terpakai (sisa 0 dari ${stock})` : ' - Stok habis')
+                        : isTimeSet
+                          ? ` - Sisa: ${sisaPreview} dari ${stock} unit`
+                          : ` - Stok: ${stock} unit`;
                       return (
                         <option key={t.id} value={t.id} disabled={unavailable}>
                           {t.name}{suffix}

@@ -7,6 +7,24 @@ export default function Hero() {
     <section className="ochoco-hero-wrap" id="home">
       {/* Panoramic Scenic Undip Background */}
       <div className="ochoco-hero-bg">
+        <img
+          src="/undip-hero.png"
+          alt="Universitas Diponegoro"
+          onError={(e) => {
+            const target = e.currentTarget;
+            if (!target.src.endsWith('/undip-hero.jpg')) {
+              target.src = '/undip-hero.jpg';
+            }
+          }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center 30%',
+          }}
+        />
         <div className="ochoco-hero-overlay" />
       </div>
 

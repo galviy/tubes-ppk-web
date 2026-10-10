@@ -16,7 +16,9 @@ export interface ActionModalConfig {
   showInput?: boolean;
   requireInput?: boolean;
   showStatusPill?: boolean;
-  onConfirm: (val: string) => void;
+  // Return `false` untuk menahan auto-close (misal: onConfirm membuka
+  // modal error lain, jangan langsung ditutup).
+  onConfirm: (val: string) => void | boolean | Promise<void | boolean>;
 }
 
 interface ActionPromptModalProps {
@@ -27,31 +29,48 @@ interface ActionPromptModalProps {
 export default function ActionPromptModal({ config, onClose }: ActionPromptModalProps) {
   const [value, setValue] = useState('');
   const [error, setError] = useState('');
+  const [isBusy, setIsBusy] = useState(false);
 
   useEffect(() => {
     if (config.isOpen) {
       setValue(config.defaultValue || '');
       setError('');
+      setIsBusy(false);
     }
   }, [config.isOpen, config.defaultValue]);
 
   if (!config.isOpen) return null;
 
-  function handleConfirm() {
+  // Tahan modal + tampilkan loading sampai onConfirm (async) selesai.
+  // Sebelumnya onClose() dipanggil langsung sehingga modal ketutup instan.
+  async function handleConfirm() {
+    if (isBusy) return;
     if (config.showInput && config.requireInput && !value.trim()) {
       setError(`Mohon isi ${config.label?.toLowerCase() || 'bidang ini'} terlebih dahulu.`);
       return;
     }
-    config.onConfirm(value.trim());
+    setIsBusy(true);
+    try {
+      const result = await config.onConfirm(value.trim());
+      // onConfirm yang me-return false sudah menangani UI sendiri
+      // (misal membuka modal error) — jangan auto-close.
+      if (result !== false) onClose();
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  function handleOverlayClose() {
+    if (isBusy) return;
     onClose();
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Escape') {
-      onClose();
+      if (!isBusy) onClose();
     } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey || !config.showInput)) {
       e.preventDefault();
-      handleConfirm();
+      void handleConfirm();
     }
   }
 
@@ -61,7 +80,7 @@ export default function ActionPromptModal({ config, onClose }: ActionPromptModal
   const isBadgeWarning = effectiveBadge === 'warning';
 
   return (
-    <div className="modal-overlay" onClick={onClose} onKeyDown={handleKeyDown}>
+    <div className="modal-overlay" onClick={handleOverlayClose} onKeyDown={handleKeyDown}>
       <div
         className="action-dialog-card"
         onClick={(e) => e.stopPropagation()}
@@ -123,8 +142,9 @@ export default function ActionPromptModal({ config, onClose }: ActionPromptModal
           <button
             type="button"
             className="action-dialog-close"
-            onClick={onClose}
+            onClick={handleOverlayClose}
             aria-label="Tutup"
+            disabled={isBusy}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
@@ -152,6 +172,7 @@ export default function ActionPromptModal({ config, onClose }: ActionPromptModal
               }}
               rows={3}
               autoFocus
+              disabled={isBusy}
             />
 
             {error && (
@@ -172,7 +193,8 @@ export default function ActionPromptModal({ config, onClose }: ActionPromptModal
           <button
             type="button"
             className="action-dialog-btn-cancel"
-            onClick={onClose}
+            onClick={handleOverlayClose}
+            disabled={isBusy}
           >
             {config.cancelText || 'Batal'}
           </button>
@@ -180,9 +202,17 @@ export default function ActionPromptModal({ config, onClose }: ActionPromptModal
           <button
             type="button"
             className={`action-dialog-btn-confirm ${config.confirmVariant || 'primary'}`}
-            onClick={handleConfirm}
+            onClick={() => void handleConfirm()}
+            disabled={isBusy}
           >
-            {config.confirmText || 'Konfirmasi'}
+            {isBusy ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <span className="action-dialog-spinner" aria-hidden="true" />
+                Memproses...
+              </span>
+            ) : (
+              config.confirmText || 'Konfirmasi'
+            )}
           </button>
         </div>
       </div>

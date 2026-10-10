@@ -958,6 +958,29 @@ tr:hover td { background: #FAF8F5; }
 .action-dialog-btn-confirm.warning:hover {
   background: #B45309;
 }
+.action-dialog-btn-confirm:disabled {
+  opacity: 0.75;
+  cursor: wait;
+}
+.action-dialog-btn-cancel:disabled,
+.action-dialog-close:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.action-dialog-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #FFFFFF;
+  animation: actionSpin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes actionSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 /* ================= Floating Toast Notification Banners ================= */
 .status-banner {
@@ -1829,16 +1852,18 @@ button.slot-lg:disabled {
   background-size: cover;
   background-position: center 30%;
   z-index: 1;
+  overflow: hidden;
 }
 .ochoco-hero-overlay {
   position: absolute;
   inset: 0;
   background: linear-gradient(
     to bottom,
-    rgba(15, 18, 22, 0.65) 0%,
-    rgba(15, 18, 22, 0.35) 45%,
-    rgba(15, 18, 22, 0.8) 100%
+    rgba(15, 18, 22, 0.45) 0%,
+    rgba(15, 18, 22, 0.2) 45%,
+    rgba(15, 18, 22, 0.65) 100%
   );
+  z-index: 2;
 }
 
 .ochoco-hero-badge {

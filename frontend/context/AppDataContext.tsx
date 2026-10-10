@@ -374,11 +374,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         rows.sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
 
         // Jika ada permohonan 'menunggu' yang bertabrakan dengan permohonan 'disetujui' di fasilitas & tanggal sama,
-        // otomatis batalkan pada backend karena jadwal sudah terpakai
+        // otomatis batalkan pada backend karena jadwal sudah terpakai.
+        // Khusus ruangan (eksklusif). Alat berbasis sisa stok (backend yang
+        // menentukan saat approve), jadi tidak di-auto-cancel di sini.
         if (isOfficer) {
-          const approved = rows.filter((r) => r.status === 'disetujui');
+          const approved = rows.filter((r) => r.status === 'disetujui' && !r.facilityId.startsWith('alat-'));
           const conflictsToCancel = rows.filter((r) => {
             if (r.status !== 'menunggu') return false;
+            if (r.facilityId.startsWith('alat-')) return false;
             return approved.some(
               (a) =>
                 a.id !== r.id &&
@@ -432,36 +435,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return true;
   }, [sessionUser]);
 
-  const refreshReportsMine = useCallback(async (): Promise<boolean> => {
-    if (!sessionUser) return false;
-    const res = await backendListLaporanSaya();
-    if (!res.ok) return false;
-    const rawRows = Array.isArray(res.data) ? res.data : [];
-    const mappedReports = rawRows.map(mapBackendReport).filter(Boolean) as NonNullable<
-      ReturnType<typeof mapBackendReport>
-    >[];
-    if (rawRows.length > 0 && mappedReports.length === 0) {
-      console.warn('[sync] laporan diterima dari backend tetapi tidak ada baris yang dapat dipetakan', rawRows[0]);
-      return false;
-    }
-    setReports(
-      mappedReports.map((m) => ({
-        id: m.backendId,
-        backendId: m.backendId,
-        sumber: 'backend' as const,
-        facilityId: m.facilityId,
-        pelapor: sessionUser.nama,
-        kategori: m.kategori,
-        deskripsi: m.deskripsi,
-        foto: m.foto,
-        status: m.status,
-        catatan: m.catatan,
-        createdAt: m.createdAt,
-      })),
-    );
-    return true;
-  }, [sessionUser]);
-
   const refreshPetugasReports = useCallback(async (): Promise<boolean> => {
     if (!sessionUser || (sessionUser.role !== 'petugas' && sessionUser.role !== 'admin')) {
       return false;
@@ -498,6 +471,39 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setReports(mapped);
     return true;
   }, [sessionUser]);
+
+  const refreshReportsMine = useCallback(async (): Promise<boolean> => {
+    if (!sessionUser) return false;
+    if (sessionUser.role === 'petugas' || sessionUser.role === 'admin') {
+      return refreshPetugasReports();
+    }
+    const res = await backendListLaporanSaya();
+    if (!res.ok) return false;
+    const rawRows = Array.isArray(res.data) ? res.data : [];
+    const mappedReports = rawRows.map(mapBackendReport).filter(Boolean) as NonNullable<
+      ReturnType<typeof mapBackendReport>
+    >[];
+    if (rawRows.length > 0 && mappedReports.length === 0) {
+      console.warn('[sync] laporan diterima dari backend tetapi tidak ada baris yang dapat dipetakan', rawRows[0]);
+      return false;
+    }
+    setReports(
+      mappedReports.map((m) => ({
+        id: m.backendId,
+        backendId: m.backendId,
+        sumber: 'backend' as const,
+        facilityId: m.facilityId,
+        pelapor: sessionUser.nama,
+        kategori: m.kategori,
+        deskripsi: m.deskripsi,
+        foto: m.foto,
+        status: m.status,
+        catatan: m.catatan,
+        createdAt: m.createdAt,
+      })),
+    );
+    return true;
+  }, [sessionUser, refreshPetugasReports]);
 
   const refreshPendingAccounts = useCallback(async (): Promise<boolean> => {
     if (!sessionUser || sessionUser.role !== 'admin') return false;
@@ -588,7 +594,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       };
 
       const r1 = retryRefresh(refreshReservations, 'reservasi');
-      const r2 = retryRefresh(refreshReportsMine, 'laporan pengguna');
+      const r2 = sessionUser.role === 'petugas' || sessionUser.role === 'admin'
+        ? Promise.resolve(true)
+        : retryRefresh(refreshReportsMine, 'laporan pengguna');
       const r3 = sessionUser.role === 'petugas' || sessionUser.role === 'admin'
         ? retryRefresh(refreshPetugasReports, 'daftar laporan petugas')
         : Promise.resolve(true);
@@ -601,8 +609,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       const results = await Promise.all([r1, r2, r3, r4, r5]);
       if (cancelled) return;
       // Data parsial tetap dapat dipakai. Error total hanya jika kedua sumber
-      // utama, reservasi dan laporan milik pengguna, sama-sama gagal.
-      const berhasil = Number(results[0]) + Number(results[1]);
+      // utama, reservasi dan laporan milik pengguna/petugas, sama-sama gagal.
+      const laporanSuccess = sessionUser.role === 'petugas' || sessionUser.role === 'admin' ? results[2] : results[1];
+      const berhasil = Number(results[0]) + Number(laporanSuccess);
       setSyncStatus(berhasil === 2 ? 'ok' : berhasil === 1 ? 'partial' : 'error');
 
       if (berhasil === 0) {
@@ -638,13 +647,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           const fac = facilities.find((f) => f.id === facilityId);
           if (fac?.refId && fac?.tipe && dateMap[`${fac.tipe}-${fac.refId}`]?.has(slotStart)) return true;
         }
+        // Alat quantity-aware: slot dianggap penuh hanya jika sisa stok habis.
+        const fac = facilities.find((f) => f.id === facilityId);
+        const stokTotal = fac && isAlatFacility(fac) ? (fac.tersedia ?? fac.cap) : undefined;
         return isSlotBooked(
           reservations,
           facilityId,
           slotStart,
           excludeId,
           tanggal,
-          currentUserIdentifier || currentUser?.nama || currentUser?.email
+          currentUserIdentifier || currentUser?.nama || currentUser?.email,
+          undefined,
+          stokTotal
         );
       },
       fetchSlotAvailability,
@@ -845,11 +859,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
         // Jika disetujui, batalkan otomatis semua permohonan lain yang statusnya masih 'menunggu'
         // pada fasilitas dan tanggal yang sama dengan rentang waktu yang bertabrakan (jadwal terpakai).
-        if (status === 'disetujui' && target) {
+        // Khusus ruangan (eksklusif); alat berbasis sisa stok via backend.
+        if (status === 'disetujui' && target && !target.facilityId.startsWith('alat-')) {
           const conflicting = reservations.filter(
             (r) =>
               r.id !== target.id &&
               r.status === 'menunggu' &&
+              !r.facilityId.startsWith('alat-') &&
               r.facilityId === target.facilityId &&
               r.tanggal === target.tanggal &&
               r.start < target.end &&
@@ -954,9 +970,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (!res.ok) {
           return { ok: false, message: res.message };
         }
-        await refreshReportsMine();
         if (sessionUser?.role === 'petugas' || sessionUser?.role === 'admin') {
           await refreshPetugasReports();
+        } else {
+          await refreshReportsMine();
         }
         return { ok: true };
       },
@@ -973,7 +990,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           const res = await backendUpdateLaporan(row.backendId, status, catatan ?? '');
           if (!res.ok) return { ok: false, message: res.message };
           await refreshPetugasReports();
-          await refreshReportsMine();
           return { ok: true };
         }
         setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status, catatan: catatan ?? r.catatan } : r)));

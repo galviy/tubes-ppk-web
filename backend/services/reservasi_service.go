@@ -154,7 +154,11 @@ func BuatReservasi(userID int, in BuatReservasiInput) (int64, error) {
 		}
 	}
 
-	// Aturan per akun: satu akun tidak boleh mengunci fasilitas & slot yang sama dua kali.
+	// Aturan per akun: ruangan bersifat eksklusif, satu akun tidak boleh
+	// double-booking ruangan & slot yang sama. Untuk alat tidak ada batasan
+	// per-akun berbasis existence — hanya cek stok global berbasis availability
+	// (TotalAlatTerpakai) supaya sisa stok tetap bisa dipinjam.
+	// Contoh: stok 5, sudah dipinjam 2, sisa 3 masih boleh dipinjam.
 	if in.RuanganID != nil {
 		bentrok, err := repositories.IsRuanganDipesanUser(userID, *in.RuanganID, in.WaktuMulai, in.WaktuSelesai, 0)
 		if err != nil {
@@ -162,15 +166,6 @@ func BuatReservasi(userID int, in BuatReservasiInput) (int64, error) {
 		}
 		if bentrok {
 			return 0, errReservasi(http.StatusConflict, "Kamu sudah punya reservasi di ruangan ini pada slot waktu tersebut")
-		}
-	}
-	for _, a := range in.Alat {
-		bentrok, err := repositories.IsAlatDipesanUser(userID, a.AlatId, in.WaktuMulai, in.WaktuSelesai, 0)
-		if err != nil {
-			return 0, err
-		}
-		if bentrok {
-			return 0, errReservasi(http.StatusConflict, "Kamu sudah punya reservasi untuk alat ini pada slot waktu tersebut")
 		}
 	}
 
