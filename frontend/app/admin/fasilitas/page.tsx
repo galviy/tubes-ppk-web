@@ -301,8 +301,8 @@ function KelolaFasilitasContent() {
     }
   }
 
-  function handleDelete(f: Facility) {
-    // Hapus = nonaktifkan via backend (soft delete, FK reservasi/laporan aman).
+  function handleNonaktifkan(f: Facility) {
+    // Nonaktifkan via backend (soft delete, FK reservasi/laporan aman).
     if (f.refId === undefined || !f.tipe) {
       setModalConfig({
         isOpen: true,
@@ -322,20 +322,23 @@ function KelolaFasilitasContent() {
       confirmText: 'Nonaktifkan',
       confirmVariant: 'danger',
       showInput: false,
-      onConfirm: () => {
-        void deleteFacility(f.id).then((res) => {
-          if (!res.ok) {
-            setModalConfig({
-              isOpen: true,
-              title: 'Gagal Menonaktifkan',
-              subtitle: res.message || 'Data fasilitas tidak dapat diproses.',
-              confirmText: 'Mengerti',
-              confirmVariant: 'danger',
-              showInput: false,
-              onConfirm: () => {},
-            });
-          }
-        });
+      // Async + await: modal menampilkan spinner "Memproses..." sampai
+      // backend selesai, baru ketutup. Return false saat gagal supaya
+      // modal error di bawah tidak langsung ke-close.
+      onConfirm: async () => {
+        const res = await deleteFacility(f.id);
+        if (!res.ok) {
+          setModalConfig({
+            isOpen: true,
+            title: 'Gagal Menonaktifkan',
+            subtitle: res.message || 'Data fasilitas tidak dapat diproses.',
+            confirmText: 'Mengerti',
+            confirmVariant: 'danger',
+            showInput: false,
+            onConfirm: () => {},
+          });
+          return false;
+        }
       },
     });
   }
@@ -952,7 +955,7 @@ function KelolaFasilitasContent() {
                         <button
                           type="button"
                           title="Nonaktifkan fasilitas"
-                          onClick={() => handleDelete(f)}
+                          onClick={() => handleNonaktifkan(f)}
                           style={{
                             padding: '5px 10px',
                             fontSize: 13.5,
@@ -964,7 +967,7 @@ function KelolaFasilitasContent() {
                             color: '#DC2626',
                           }}
                         >
-                          Hapus
+                          Nonaktifkan
                         </button>
                       </div>
                     </td>
