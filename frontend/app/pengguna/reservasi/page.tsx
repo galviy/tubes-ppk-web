@@ -1188,19 +1188,18 @@ function AjukanReservasiContent() {
       return;
     }
     if (overCapacity) {
+      // Blok keras: backend menolak jumlah melebihi stok/kapasitas dengan 400,
+      // jadi frontend tidak menawarkan tombol tetap mengajukan yang mustahil lolos.
       setModalConfig({
         isOpen: true,
-        title: isAlat ? 'Jumlah Melebihi Stok Tersedia' : 'Kapasitas Melebihi Standar',
+        title: isAlat ? 'Jumlah Alat Melebihi Stok' : 'Kapasitas Melebihi Standar',
         subtitle: isAlat
-          ? `Permintaan (${pesertaNum} unit) melebihi jumlah unit yang tersedia (${unitTersedia} unit). Apakah Anda ingin tetap melanjutkan pengajuan?`
-          : `Estimasi peserta (${pesertaNum} orang) melebihi kapasitas standar ruangan (${unitTersedia} orang). Apakah Anda ingin tetap melanjutkan pengajuan?`,
-        confirmText: 'Tetap Ajukan',
-        cancelText: 'Sesuaikan Data',
+          ? `Permintaan ${pesertaNum} unit melebihi stok yang tersedia (${unitTersedia} unit). Sesuaikan jumlah sebelum mengajukan.`
+          : `Estimasi peserta ${pesertaNum} orang melebihi kapasitas standar ruangan (${unitTersedia} orang). Sesuaikan jumlah sebelum mengajukan.`,
+        confirmText: 'Sesuaikan Data',
         confirmVariant: 'warning',
         showInput: false,
-        onConfirm: () => {
-          void doSubmit();
-        },
+        onConfirm: () => {},
       });
       return;
     }
