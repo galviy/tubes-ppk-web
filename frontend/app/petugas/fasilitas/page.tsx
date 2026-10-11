@@ -23,12 +23,13 @@ export default function PetugasFasilitasPage() {
   const { facilities, setFacilityStatus } = useAppData();
   const [tabType, setTabType] = useState<'semua' | 'ruangan' | 'alat'>('semua');
   const [filterCategory, setFilterCategory] = useState<string>('semua');
+  const [searchFasilitas, setSearchFasilitas] = useState('');
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
 
   useEffect(() => {
     setPage(1);
-  }, [tabType, filterCategory]);
+  }, [tabType, filterCategory, searchFasilitas]);
   const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
     isOpen: false,
     title: '',
@@ -59,9 +60,10 @@ export default function PetugasFasilitasPage() {
       if (tabType === 'ruangan' && isAlat) return false;
       if (tabType === 'alat' && !isAlat) return false;
       if (filterCategory !== 'semua' && f.type !== filterCategory) return false;
+      if (searchFasilitas.trim() && !f.name.toLowerCase().includes(searchFasilitas.trim().toLowerCase())) return false;
       return true;
     });
-  }, [facilities, tabType, filterCategory]);
+  }, [facilities, tabType, filterCategory, searchFasilitas]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = useMemo(() => {
@@ -171,6 +173,30 @@ export default function PetugasFasilitasPage() {
         </div>
       )}
 
+      {/* Pencarian nama fasilitas */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#4B5563' }}>
+          Nama fasilitas
+          <input
+            type="text"
+            value={searchFasilitas}
+            onChange={(e) => setSearchFasilitas(e.target.value)}
+            placeholder="Ketik ruangan / alat..."
+            aria-label="Cari fasilitas berdasarkan nama"
+            style={{
+              padding: '7px 12px',
+              width: 220,
+              borderRadius: 6,
+              border: '1px solid #D5D0C7',
+              fontFamily: 'inherit',
+              fontSize: 13,
+              color: '#181D24',
+              background: '#FFFFFF',
+            }}
+          />
+        </label>
+      </div>
+
       <div className="panel table-scroll" style={{ padding: 0, overflow: 'hidden', marginTop: 16 }}>
         <table>
           <thead>
@@ -187,7 +213,9 @@ export default function PetugasFasilitasPage() {
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#6B7280' }}>
-                  Tidak ada data fasilitas dalam kategori ini.
+                  {searchFasilitas.trim()
+                    ? `Tidak ada fasilitas bernama "${searchFasilitas.trim()}" dalam kategori ini.`
+                    : 'Tidak ada data fasilitas dalam kategori ini.'}
                 </td>
               </tr>
             ) : (

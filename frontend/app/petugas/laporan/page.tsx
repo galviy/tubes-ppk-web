@@ -25,6 +25,7 @@ export default function PetugasLaporanPage() {
   }, [refreshPetugasReports]);
 
   const [filterStatus, setFilterStatus] = useState<string>('semua');
+  const [searchFasilitas, setSearchFasilitas] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
@@ -111,6 +112,8 @@ export default function PetugasLaporanPage() {
 
   const filtered = sorted.filter((r) => {
     if (filterStatus !== 'semua' && r.status !== filterStatus) return false;
+    const fasilitasName = facilityById(r.facilityId)?.name || '';
+    if (searchFasilitas.trim() && !fasilitasName.toLowerCase().includes(searchFasilitas.trim().toLowerCase())) return false;
     const reportDate = dateKeyInJakarta(r.createdAt);
     if (dateFrom && reportDate < dateFrom) return false;
     if (dateTo && reportDate > dateTo) return false;
@@ -123,7 +126,7 @@ export default function PetugasLaporanPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterStatus, dateFrom, dateTo]);
+  }, [filterStatus, searchFasilitas, dateFrom, dateTo]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
   const paginatedReports = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -236,6 +239,9 @@ export default function PetugasLaporanPage() {
           setDateFrom(from);
           setDateTo(to);
         }}
+        searchValue={searchFasilitas}
+        onSearchChange={setSearchFasilitas}
+        searchPlaceholder="Ketik nama fasilitas..."
       />
 
       {/* Table matching Reference Image 4 */}
