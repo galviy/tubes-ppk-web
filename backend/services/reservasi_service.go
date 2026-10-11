@@ -82,6 +82,11 @@ func validasiBatasPengajuan(mulai, sekarang time.Time) bool {
 
 // BuatReservasi memvalidasi seluruh aturan lalu menyimpan reservasi baru.
 func BuatReservasi(userID int, in BuatReservasiInput) (int64, error) {
+	// Sinkronkan status terlambat (APPROVED yang waktunya lewat menjadi DONE)
+	// agar perhitungan stok global tidak mengunci unit yang sudah kembali.
+	if err := repositories.SinkronisasiStatusReservasi(); err != nil {
+		return 0, err
+	}
 	if in.RuanganID == nil && len(in.Alat) == 0 {
 		return 0, errReservasi(http.StatusBadRequest, "Reservasi harus memuat minimal satu ruangan atau alat")
 	}
@@ -184,12 +189,17 @@ func BuatReservasi(userID int, in BuatReservasiInput) (int64, error) {
 		if err != nil {
 			return 0, err
 		}
-		terpakai, err := repositories.TotalAlatTerpakai(a.AlatId, in.WaktuMulai, in.WaktuSelesai, 0)
+		terpakai, err := repositories.TotalAlatDipinjamAktif(a.AlatId, 0)
 		if err != nil {
 			return 0, err
 		}
+		if a.Jumlah > alat.BanyakAlat {
+			return 0, errReservasi(http.StatusConflict, "Jumlah %s melebihi stok (%d)", alat.Nama, alat.BanyakAlat)
+		}
+		// Kap stok global: unit APPROVED mana pun (apa pun tanggalnya) tetap
+		// dinilai dipinjam sampai statusnya berubah DONE/dibatalkan.
 		if terpakai+a.Jumlah > alat.BanyakAlat {
-			return 0, errReservasi(http.StatusConflict, "Stok %s tidak cukup pada slot waktu tersebut", alat.Nama)
+			return 0, errReservasi(http.StatusConflict, "Stok %s tidak cukup: tersedia %d unit, diminta %d unit", alat.Nama, alat.BanyakAlat-terpakai, a.Jumlah)
 		}
 	}
 
@@ -238,12 +248,14 @@ func ApproveReservasi(id, petugasID int) error {
 		if err != nil {
 			return err
 		}
-		terpakai, err := repositories.TotalAlatTerpakai(a.Id, mulai, selesai, id)
+		dipinjam, err := repositories.TotalAlatDipinjamAktif(a.Id, id)
 		if err != nil {
 			return err
 		}
-		if terpakai+a.Jumlah > alat.BanyakAlat {
-			return errReservasi(http.StatusConflict, "Stok %s tidak cukup pada slot tersebut, tidak bisa disetujui", alat.Nama)
+		// Kap stok global saat menyetujui, supaya approval ganda pada rentang
+		// berbeda tidak melebihi banyak_alat.
+		if dipinjam+a.Jumlah > alat.BanyakAlat {
+			return errReservasi(http.StatusConflict, "Stok %s tidak cukup: tersedia %d unit, diminta %d unit", alat.Nama, alat.BanyakAlat-dipinjam, a.Jumlah)
 		}
 	}
 

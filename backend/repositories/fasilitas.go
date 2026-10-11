@@ -69,5 +69,68 @@ func ListAlat() ([]models.Alat, error) {
 		a.Foto = foto
 		list = append(list, a)
 	}
-	return list, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Stok tampilan bersumber dari backend: banyak_alat dikurangi unit yang
+	// dikunci reservasi berstatus APPROVED, tanpa memandang tanggalnya.
+	// Alat nonaktif tetap 0. Kolom jumlah_tersedia hanya baseline admin.
+	dipinjam, err := TotalAlatDipinjamAktifPerAlat()
+	if err != nil {
+		return nil, err
+	}
+	for i := range list {
+		if list[i].Status == 0 {
+			list[i].JumlahTersedia = 0
+			continue
+		}
+		list[i].JumlahTersedia = list[i].BanyakAlat - dipinjam[list[i].Id]
+		if list[i].JumlahTersedia < 0 {
+			list[i].JumlahTersedia = 0
+		}
+	}
+	return list, nil
+}
+
+// TotalAlatDipinjamAktifPerAlat menghitung unit yang sedang dikunci reservasi
+// APPROVED untuk tiap alat (tanpa memandang tanggal), sebagai pengurang stok.
+func TotalAlatDipinjamAktifPerAlat() (map[int]int, error) {
+	rows, err := config.Query(`
+		SELECT ar.id_alat, COALESCE(SUM(ar.jumlah), 0)
+		FROM alat_reservasi ar
+		JOIN reservasi r ON r.id = ar.id_reservasi
+		WHERE r.status_reservasi = 'APPROVED'
+		GROUP BY ar.id_alat`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[int]int)
+	for rows.Next() {
+		var (
+			idAlat int
+			unit   int
+		)
+		if err := rows.Scan(&idAlat, &unit); err != nil {
+			return nil, err
+		}
+		result[idAlat] = unit
+	}
+	return result, rows.Err()
+}
+
+// TotalAlatDipinjamAktif menghitung unit yang dikunci reservasi APPROVED
+// untuk satu alat, dengan opsi mengecualikan satu reservasi.
+func TotalAlatDipinjamAktif(alatID, kecualiReservasiID int) (int, error) {
+	var total int
+	err := config.QueryRow(`
+		SELECT COALESCE(SUM(ar.jumlah), 0)
+		FROM alat_reservasi ar
+		JOIN reservasi r ON r.id = ar.id_reservasi
+		WHERE ar.id_alat = ?
+		  AND r.status_reservasi = 'APPROVED'
+		  AND r.id <> ?`, alatID, kecualiReservasiID).Scan(&total)
+	return total, err
 }

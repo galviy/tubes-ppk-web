@@ -581,7 +581,15 @@ function AjukanReservasiContent() {
     const targetTool = availableTools.find((t) => t.id === toolToPickId);
     if (!targetTool || typeof targetTool.refId !== 'number') return;
 
-    const maxStock = Math.max(1, targetTool.tersedia ?? targetTool.cap ?? 1);
+    const maxStock = unitTersediaAlat(targetTool.id);
+    if (maxStock <= 0) {
+      setBannerNotice({
+        type: 'error',
+        title: 'Alat Tidak Tersedia',
+        message: `${targetTool.name} tidak memiliki stok yang tersedia.`,
+      });
+      return;
+    }
     const qtyWanted = Math.min(Math.max(1, toolToPickQty || 1), maxStock);
 
     // Cek konflik slot alat berbasis sisa stok (quantity-aware):
@@ -646,8 +654,9 @@ function AjukanReservasiContent() {
     setSelectedTools((prev) =>
       prev.map((t) => {
         if (t.facilityId !== fId) return t;
+        const maxNow = unitTersediaAlat(t.facilityId);
         const next = t.jumlah + delta;
-        if (next < 1 || next > t.stokTersedia) return t;
+        if (next < 1 || next > maxNow) return t;
         return { ...t, jumlah: next };
       })
     );
@@ -764,6 +773,13 @@ function AjukanReservasiContent() {
     facilities[0];
   const isAlat = activeTab === 'alat' || isAlatFacility(facility);
   const currentUserIdent = currentUser?.nama || currentUser?.email || '';
+
+  // Stok alat tampil persis dari backend: banyak_alat dikurangi unit yang
+  // dikunci reservasi APPROVED, tanpa memandang rentang jam.
+  const unitTersediaAlat = (alatId: string): number => {
+    const fas = availableTools.find((t) => t.id === alatId);
+    return fas ? Math.max(0, fas.tersedia ?? fas.cap ?? 0) : 0;
+  };
 
   // Muat ketersediaan slot backend secara real-time setiap kali tanggal berubah
   useEffect(() => {
@@ -942,8 +958,9 @@ function AjukanReservasiContent() {
   }
 
   const pesertaNum = parseInt(peserta, 10) || 0;
-  // Alat: batasnya unit siap pakai (jumlah_tersedia); ruangan: kapasitas orang.
-  const unitTersedia = facility ? (isAlat ? facility.tersedia ?? facility.cap : facility.cap) : 0;
+  // Alat: batasnya persisted stok dari backend (banyak_alat dikurangi unit
+  // yang dikunci reservasi APPROVED). Ruangan: kapasitas orang.
+  const unitTersedia = facility ? (isAlat ? unitTersediaAlat(facility.id) : facility.cap) : 0;
   const overCapacity = !!facility && pesertaNum > unitTersedia;
 
   async function doSubmit() {
@@ -1175,7 +1192,11 @@ function AjukanReservasiContent() {
       });
       return;
     }
-    if (activeTab === 'ruangan' && selectedTools.some((t) => t.jumlah > t.stokTersedia)) {
+    if (activeTab === 'ruangan' && selectedTools.some((t) => {
+      const maxNow = unitTersediaAlat(t.facilityId);
+      if (maxNow <= 0) return true;
+      return t.jumlah > maxNow;
+    })) {
       setModalConfig({
         isOpen: true,
         title: 'Jumlah Alat Melebihi Stok',
@@ -1751,23 +1772,18 @@ function AjukanReservasiContent() {
                   >
                     <option value="">-- Pilih Alat Pendukung Kampus --</option>
                     {unselectedTools.map((t) => {
-                      const stock = t.tersedia ?? t.cap ?? 0;
-                      const isTimeSet = !!(startTime && endTime && tanggal);
-                      // Quantity-aware: hitung sisa untuk 1 unit (preview).
-                      // Opsi hanya disabled jika sisa habis, bukan saat ada peminjaman.
-                      const sisaPreview = isTimeSet
-                        ? sisaStokAlatPadaRange(reservations, t.id, tanggal, startTime, endTime, stock)
-                        : stock;
-                      const isConflict = isTimeSet && sisaPreview <= 0;
+                      const stock = unitTersediaAlat(t.id);
+                      // Opsi hanya disabled jika stok backend yang tersisa habis.
+                      const sisaPreview = stock;
                       const pubMap = publicUnavailable[t.id];
-                      const hasPubConflict = isTimeSet && !!pubMap &&
+                      const hasPubConflict = !!pubMap &&
                         SLOTS.some((s) => s.start >= startTime && s.start < endTime && pubMap.has(s.start));
-                      const unavailable = stock <= 0 || isConflict || hasPubConflict;
-                      const suffix = hasPubConflict || sisaPreview <= 0
-                        ? (isTimeSet ? ` - Terpakai (sisa 0 dari ${stock})` : ' - Stok habis')
-                        : isTimeSet
-                          ? ` - Sisa: ${sisaPreview} dari ${stock} unit`
-                          : ` - Stok: ${stock} unit`;
+                      const unavailable = stock <= 0 || hasPubConflict;
+                      const suffix = hasPubConflict
+                        ? ` - Terpakai pada jam ini`
+                        : sisaPreview <= 0
+                        ? ' - Stok habis'
+                        : ` - Stok: ${sisaPreview} unit`;
                       return (
                         <option key={t.id} value={t.id} disabled={unavailable}>
                           {t.name}{suffix}
@@ -1838,7 +1854,9 @@ function AjukanReservasiContent() {
               {/* Daftar Alat Pendukung Terpilih */}
               {selectedTools.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {selectedTools.map((tool) => (
+                  {selectedTools.map((tool) => {
+                    const maxSekarang = unitTersediaAlat(tool.facilityId);
+                    return (
                     <div
                       key={tool.facilityId}
                       style={{
@@ -1858,7 +1876,7 @@ function AjukanReservasiContent() {
                           {tool.nama}
                         </div>
                         <div style={{ fontSize: 13, color: '#6B7280', marginTop: 3 }}>
-                          Lokasi: {tool.lokasi} • Maks. ketersediaan: {tool.stokTersedia} unit
+                          Lokasi: {tool.lokasi} • Maks. ketersediaan: {maxSekarang} unit
                         </div>
                       </div>
 
@@ -1907,7 +1925,7 @@ function AjukanReservasiContent() {
                           <button
                             type="button"
                             onClick={() => handleUpdateToolQty(tool.facilityId, 1)}
-                            disabled={tool.jumlah >= tool.stokTersedia}
+                            disabled={tool.jumlah >= maxSekarang}
                             style={{
                               width: 38,
                               height: 38,
@@ -1916,8 +1934,8 @@ function AjukanReservasiContent() {
                               justifyContent: 'center',
                               background: 'transparent',
                               border: 'none',
-                              cursor: tool.jumlah >= tool.stokTersedia ? 'not-allowed' : 'pointer',
-                              color: tool.jumlah >= tool.stokTersedia ? '#D1D5DB' : '#181D24',
+                              cursor: tool.jumlah >= maxSekarang ? 'not-allowed' : 'pointer',
+                              color: tool.jumlah >= maxSekarang ? '#D1D5DB' : '#181D24',
                               fontWeight: 700,
                               fontSize: 16,
                             }}
@@ -1954,7 +1972,8 @@ function AjukanReservasiContent() {
                         </button>
                       </div>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               ) : (
                 <div
