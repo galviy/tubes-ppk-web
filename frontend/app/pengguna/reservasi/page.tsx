@@ -553,7 +553,9 @@ interface SelectedToolItem {
 function AjukanReservasiContent() {
   const searchParams = useSearchParams();
   const { facilities, isSlotTaken, fetchSlotAvailability, submitReservation, currentUser, reservations } = useAppData();
-  const availableFacilities = facilities.filter((f) => f.status !== 'repair');
+  // Fasilitas nonaktif tidak hanya dalam perbaikan: backend menolak peminjamannya,
+  // jadi tidak masuk akal tetap bisa dipilih di dropdown.
+  const availableFacilities = facilities.filter((f) => f.status !== 'repair' && f.status !== 'nonaktif');
 
   const preselect = searchParams.get('facility');
   const tipeParam = searchParams.get('tipe');
@@ -742,8 +744,13 @@ function AjukanReservasiContent() {
   const [peserta, setPeserta] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Status ketersediaan slot aktual dari backend untuk seluruh pengguna
-  const [publicUnavailable, setPublicUnavailable] = useState<Record<string, Set<string>>>({});
+  // Status ketersediaan slot aktual dari backend untuk seluruh pengguna,
+  // dikunci per tanggal supaya data tanggal lama tidak dipakai untuk tanggal
+  // baru sebelum fetch selesai.
+  const [publicUnavailableByDate, setPublicUnavailableByDate] = useState<
+    Record<string, Record<string, Set<string>>>
+  >({});
+  const publicUnavailable = publicUnavailableByDate[tanggal] ?? {};
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
 
   // Jam Mulai dan Jam Selesai yang independen dan presisi
@@ -766,8 +773,8 @@ function AjukanReservasiContent() {
       setIsLoadingSlots(true);
       try {
         const map = await fetchSlotAvailability(tanggal);
-        if (!cancelled && map) {
-          setPublicUnavailable(map);
+        if (!cancelled) {
+          setPublicUnavailableByDate((prev) => ({ ...prev, [tanggal]: map }));
         }
       } finally {
         if (!cancelled) setIsLoadingSlots(false);
@@ -1088,7 +1095,7 @@ function AjukanReservasiContent() {
     setToolToPickQty(1);
 
     void fetchSlotAvailability(tanggal).then((map) => {
-      if (map) setPublicUnavailable(map);
+      setPublicUnavailableByDate((prev) => ({ ...prev, [tanggal]: map }));
     });
 
     setBannerNotice({

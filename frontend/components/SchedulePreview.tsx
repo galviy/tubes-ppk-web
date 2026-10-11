@@ -414,8 +414,10 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
     return current && isAlatFacility(current) ? 'alat' : 'ruangan';
   });
   const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
-  const [backendSlots, setBackendSlots] = useState<
-    Record<string, Record<string, { status: SlotStatusBackend; tersedia: boolean }>>
+  // Status slot backend dikunci per tanggal: saat berganti tanggal, data
+  // tanggal lama tidak boleh dipakai untuk tanggal baru sebelum fetch selesai.
+  const [backendSlotsByDate, setBackendSlotsByDate] = useState<
+    Record<string, Record<string, Record<string, { status: SlotStatusBackend; tersedia: boolean }>>>
   >({});
   const [isFacDropdownOpen, setIsFacDropdownOpen] = useState(false);
   const facDropdownRef = useRef<HTMLDivElement>(null);
@@ -458,7 +460,7 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
           next[String(item.ref_id)] = perSlot;
         }
       }
-      setBackendSlots(next);
+      setBackendSlotsByDate((prev) => ({ ...prev, [selectedDate]: next }));
     })();
     return () => {
       cancelled = true;
@@ -499,10 +501,13 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
 
   const slotStates = useMemo(() => {
     if (!now || !facility) return SLOTS.map(() => 'passed' as SlotState);
+    // Null bila data tanggal terpilih belum masuk, bukan menggunakan sisa data
+    // lamanya dari milik tanggal lain.
+    const backendSlots = backendSlotsByDate[selectedDate];
     const perSlot =
-      backendSlots[facility.id] ||
-      (facility.refId && facility.tipe ? backendSlots[`${facility.tipe}-${facility.refId}`] : undefined) ||
-      (facility.refId ? backendSlots[String(facility.refId)] : undefined);
+      backendSlots?.[facility.id] ||
+      (facility.refId && facility.tipe ? backendSlots?.[`${facility.tipe}-${facility.refId}`] : undefined) ||
+      (facility.refId ? backendSlots?.[String(facility.refId)] : undefined);
     return SLOTS.map((slot) =>
       getSlotState(
         facility,
@@ -514,7 +519,7 @@ export default function SchedulePreview({ activeFacilityId, onSelectFacility }: 
         currentUser?.role
       )
     );
-  }, [facility, reservations, now, backendSlots, selectedDate, currentUser]);
+  }, [facility, reservations, now, backendSlotsByDate, selectedDate, currentUser]);
 
   const availableCount = slotStates.filter((s) => s === 'avail').length;
   const availablePct = Math.round((availableCount / SLOTS.length) * 100);
