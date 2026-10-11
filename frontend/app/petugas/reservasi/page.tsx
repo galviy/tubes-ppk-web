@@ -49,6 +49,7 @@ function PetugasReservasiContent() {
   const [filterStatus, setFilterStatus] = useState<string>('semua');
   const [filterCategory, setFilterCategory] = useState<string>('semua');
   const [filterTanggal, setFilterTanggal] = useState<string>('');
+  const [searchFasilitas, setSearchFasilitas] = useState('');
   const [sortMode, setSortMode] = useState<'antrean' | 'terbaru'>('antrean');
   const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
     isOpen: false,
@@ -140,6 +141,8 @@ function PetugasReservasiContent() {
       if (filterStatus !== 'semua' && r.status !== filterStatus) return false;
       if (filterCategory !== 'semua' && fac?.type !== filterCategory) return false;
       if (filterTanggal && r.tanggal !== filterTanggal) return false;
+      const fasilitasName = fac?.name || r.ruanganNama || '';
+      if (searchFasilitas.trim() && !fasilitasName.toLowerCase().includes(searchFasilitas.trim().toLowerCase())) return false;
       return true;
     });
 
@@ -154,7 +157,7 @@ function PetugasReservasiContent() {
       const byCreated = a.createdAt.localeCompare(b.createdAt);
       return byCreated !== 0 ? byCreated : (a.backendId ?? a.id) - (b.backendId ?? b.id);
     });
-  }, [reservations, facilityById, tabType, filterStatus, filterCategory, filterTanggal, sortMode]);
+  }, [reservations, facilityById, tabType, filterStatus, filterCategory, filterTanggal, searchFasilitas, sortMode]);
 
   // Paginasi: 10 data per halaman
   const ITEMS_PER_PAGE = 10;
@@ -163,7 +166,7 @@ function PetugasReservasiContent() {
   // Reset ke halaman 1 saat filter atau urutan berganti
   useEffect(() => {
     setCurrentPage(1);
-  }, [tabType, filterStatus, filterCategory, filterTanggal, sortMode]);
+  }, [tabType, filterStatus, filterCategory, filterTanggal, searchFasilitas, sortMode]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
   const paginatedList = useMemo(() => {
@@ -442,8 +445,30 @@ function PetugasReservasiContent() {
         )}
       </div>
 
-      {/* Filter tanggal kegiatan + pilihan urutan */}
+      {/* Filter tanggal kegiatan + pencarian fasilitas + pilihan urutan */}
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 18 }}>
+        <label
+          style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#4B5563' }}
+        >
+          Nama fasilitas
+          <input
+            type="text"
+            value={searchFasilitas}
+            onChange={(e) => setSearchFasilitas(e.target.value)}
+            placeholder="Ketik ruangan / alat..."
+            aria-label="Cari nama fasilitas di antrian"
+            style={{
+              padding: '7px 12px',
+              width: 200,
+              borderRadius: 6,
+              border: '1px solid #D5D0C7',
+              fontFamily: 'inherit',
+              fontSize: 13,
+              color: '#181D24',
+              background: '#FFFFFF',
+            }}
+          />
+        </label>
         <label
           style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#4B5563' }}
         >

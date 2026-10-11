@@ -25,6 +25,7 @@ export default function PetugasLaporanPage() {
   }, [refreshPetugasReports]);
 
   const [filterStatus, setFilterStatus] = useState<string>('semua');
+  const [searchFasilitas, setSearchFasilitas] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
@@ -111,6 +112,8 @@ export default function PetugasLaporanPage() {
 
   const filtered = sorted.filter((r) => {
     if (filterStatus !== 'semua' && r.status !== filterStatus) return false;
+    const fasilitasName = facilityById(r.facilityId)?.name || '';
+    if (searchFasilitas.trim() && !fasilitasName.toLowerCase().includes(searchFasilitas.trim().toLowerCase())) return false;
     const reportDate = dateKeyInJakarta(r.createdAt);
     if (dateFrom && reportDate < dateFrom) return false;
     if (dateTo && reportDate > dateTo) return false;
@@ -123,7 +126,7 @@ export default function PetugasLaporanPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterStatus, dateFrom, dateTo]);
+  }, [filterStatus, searchFasilitas, dateFrom, dateTo]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
   const paginatedReports = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -198,34 +201,54 @@ export default function PetugasLaporanPage() {
         </div>
       </div>
 
-      {/* Filter Chips */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
-        {[
-          { key: 'semua', label: `Semua (${reports.length})` },
-          { key: 'baru', label: `Baru (${reports.filter((r) => r.status === 'baru').length})` },
-          { key: 'diproses', label: `Diproses (${reports.filter((r) => r.status === 'diproses').length})` },
-          { key: 'selesai', label: `Selesai (${reports.filter((r) => r.status === 'selesai').length})` },
-          { key: 'ditolak', label: `Ditolak (${reports.filter((r) => r.status === 'ditolak').length})` },
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setFilterStatus(tab.key)}
-            style={{
-              padding: '6px 14px',
-              borderRadius: 4,
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: 'pointer',
-              border: filterStatus === tab.key ? '1px solid #b59876' : '1px solid #E5E0D8',
-              background: filterStatus === tab.key ? '#15171a' : '#FFFFFF',
-              color: filterStatus === tab.key ? '#b59876' : '#6B7280',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Filter Chips + pencarian fasilitas */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 18, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {[
+            { key: 'semua', label: `Semua (${reports.length})` },
+            { key: 'baru', label: `Baru (${reports.filter((r) => r.status === 'baru').length})` },
+            { key: 'diproses', label: `Diproses (${reports.filter((r) => r.status === 'diproses').length})` },
+            { key: 'selesai', label: `Selesai (${reports.filter((r) => r.status === 'selesai').length})` },
+            { key: 'ditolak', label: `Ditolak (${reports.filter((r) => r.status === 'ditolak').length})` },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setFilterStatus(tab.key)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 4,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: 'pointer',
+                border: filterStatus === tab.key ? '1px solid #b59876' : '1px solid #E5E0D8',
+                background: filterStatus === tab.key ? '#15171a' : '#FFFFFF',
+                color: filterStatus === tab.key ? '#b59876' : '#6B7280',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <input
+          type="text"
+          value={searchFasilitas}
+          onChange={(e) => setSearchFasilitas(e.target.value)}
+          placeholder="Ketik nama fasilitas..."
+          aria-label="Cari laporan berdasarkan nama fasilitas"
+          style={{
+            padding: '7px 12px',
+            minWidth: 220,
+            borderRadius: 6,
+            border: '1px solid #D5D0C7',
+            fontFamily: 'inherit',
+            fontSize: 13,
+            color: '#181D24',
+            background: '#FFFFFF',
+          }}
+        />
       </div>
 
       <DateRangeFilter
