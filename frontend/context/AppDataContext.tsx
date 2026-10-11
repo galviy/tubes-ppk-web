@@ -824,6 +824,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         // Sinkronkan data dari server agar id backend, status, dan riwayat presisi
         setAvailabilityMap({});
         await refreshReservations();
+        // Stok alat berkurang: muat ulang daftar fasilitas supaya unit tersedia ikut segar.
+        await refreshFacilities();
         return { ok: true };
       },
 
@@ -839,6 +841,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         }
         setAvailabilityMap({});
         await refreshReservations();
+        // Pembatalan mengembalikan unit; segarkan stok yang tampil.
+        await refreshFacilities();
         return { ok: true };
       },
 
@@ -883,6 +887,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
         setAvailabilityMap({});
         await refreshReservations();
+        // Approve mengunci unit alat; segarkan stok yang tampil di form.
+        await refreshFacilities();
         return { ok: true };
       },
 
@@ -898,6 +904,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         }
         setAvailabilityMap({});
         await refreshReservations();
+        // Pembatalan oleh petugas mengembalikan unit alat; segarkan stok.
+        await refreshFacilities();
         return { ok: true };
       },
       submitReport: async (input) => {
