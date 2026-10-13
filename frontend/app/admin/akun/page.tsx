@@ -773,7 +773,7 @@ export default function KelolaAkunPage() {
 
                 {/* Email Resmi */}
                 <div className="fgroup">
-                  <label>Email Resmi Undip <span className="required-asterisk">*</span></label>
+                  <label>Email Aktif <span className="required-asterisk">*</span></label>
                   <input
                     type="email"
                     placeholder={
