@@ -44,6 +44,40 @@ func Create_MHS(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseJSONMessage(w, "Angkatan harus berupa angka!", http.StatusUnauthorized, false)
 		return
 	}
+	nilaiAngkatan, _ := strconv.Atoi(angkatan)
+	if nilaiAngkatan <= 0 {
+		utils.ResponseJSONMessage(w, "Angkatan tidak boleh negatif!", http.StatusBadRequest, false)
+		return
+	}
+	if nilaiAngkatan > 2030 {
+		utils.ResponseJSONMessage(w, "Angkatan maksimal tahun 2030!", http.StatusBadRequest, false)
+		return
+	}
+	if nilaiAngkatan < 2015 {
+		utils.ResponseJSONMessage(w, "Angkatan minimal tahun 2015!", http.StatusBadRequest, false)
+		return
+	}
+	// NIM harus 14 digit angka dan nilainya lebih dari 0.
+	hanyaAngkaNIM := true
+	for _, c := range nim {
+		if c < '0' || c > '9' {
+			hanyaAngkaNIM = false
+			break
+		}
+	}
+	if !hanyaAngkaNIM {
+		utils.ResponseJSONMessage(w, "NIM hanya boleh berisi angka!", http.StatusBadRequest, false)
+		return
+	}
+	if len(nim) != 14 {
+		utils.ResponseJSONMessage(w, "NIM harus tepat 14 digit angka!", http.StatusBadRequest, false)
+		return
+	}
+	nilaiNIM, err_nilai := strconv.ParseInt(nim, 10, 64)
+	if err_nilai != nil || nilaiNIM <= 0 {
+		utils.ResponseJSONMessage(w, "NIM tidak boleh negatif!", http.StatusBadRequest, false)
+		return
+	}
 	if !utils.IsPasswordValid(password) {
 		utils.ResponseJSONMessage(w, "Password tidak valid! Harus minimal 5 karakter, mengandung 1 huruf besar, dan 1 simbol!", http.StatusUnauthorized, false)
 		return

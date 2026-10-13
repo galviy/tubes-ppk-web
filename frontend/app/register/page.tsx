@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAppData } from '@/context/AppDataContext';
 import { FAKULTAS_UNDIP, PRODI_UNDIP } from '@/config/site';
 import { backendListProdi } from '@/lib/api';
+import { pesanNomorInduk, pesanAngkatan } from '@/lib/validation';
 
 function DownwardUnderlineSelect({
   label,
@@ -221,37 +222,11 @@ export default function RegisterPage() {
         ? 'Username dosen maksimal 30 karakter.'
         : 'Username maksimal 100 karakter.'
       : '';
-  // Minus di depan dikenali sebagai angka negatif, bukan "bukan angka".
-  const pesanNomorInduk = (value: string, label: string, minDigit: number, maxDigit?: number): string => {
-    const v = value.trim();
-    if (v.length === 0) return '';
-    if (v.startsWith('-')) return `${label} tidak boleh negatif.`;
-    if (!/^\d+$/.test(v)) return `${label} hanya boleh berisi angka.`;
-    if (maxDigit !== undefined) {
-      if (v.length < minDigit || v.length > maxDigit) {
-        return `${label} harus ${minDigit} sampai ${maxDigit} digit angka.`;
-      }
-    } else if (v.length !== minDigit) {
-      return `${label} harus tepat ${minDigit} digit angka.`;
-    }
-    if (Number(v) <= 0) return `${label} tidak boleh negatif.`;
-    return '';
-  };
+  // Minus di depan dikenali sebagai angka negatif via lib/validation.
   const nimError = pesanNomorInduk(regNim, 'NIM', 14);
   const nidnError = pesanNomorInduk(regNidn, 'NIDN', 10);
   const nipError = pesanNomorInduk(regNip, 'NIP', 12, 18);
-  const angkatanError =
-    regAngkatan.length === 0
-      ? ''
-      : regAngkatan.trim().startsWith('-')
-      ? 'Tahun angkatan tidak boleh negatif.'
-      : !/^\d+$/.test(regAngkatan)
-      ? 'Tahun angkatan harus berupa angka.'
-      : Number(regAngkatan) > 2030
-      ? 'Tahun angkatan maksimal 2030.'
-      : Number(regAngkatan) < 2015
-      ? 'Tahun angkatan minimal 2015.'
-      : '';
+  const angkatanError = pesanAngkatan(regAngkatan);
 
   async function handleRegisterSubmit(e: React.FormEvent) {
     e.preventDefault();

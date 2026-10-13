@@ -15,6 +15,7 @@ import {
   backendCreateLaporan,
   backendCreateReservasiAlat,
   backendCreateReservasiRuangan,
+  backendDeleteUser,
   backendJadwalFasilitas,
   backendListFasilitas,
   backendListLaporanSaya,
@@ -33,6 +34,7 @@ import {
   backendRegisterStaff,
   backendUpdateFasilitasStatus,
   backendUpdateLaporan,
+  backendUpdateUser,
   mapBackendReport,
   mapBackendReservasi,
   mapPendingDosen,
@@ -217,6 +219,10 @@ interface AppDataValue {
   ) => Promise<{ ok: boolean; message?: string; account?: BackendAccount }>;
   toggleAccountStatus: (id: number) => Promise<{ ok: boolean; message?: string }>;
   verifyPendingAccount: (id: number, approve: boolean) => Promise<{ ok: boolean; message?: string }>;
+  updateAccount: (
+    id: number,
+    data: { nama_lengkap?: string; email?: string; password?: string; angkatan?: number }
+  ) => Promise<{ ok: boolean; message?: string }>;
   deleteAccount: (id: number) => Promise<{ ok: boolean; message?: string }>;
 
   // Sinkronisasi dari backend (server menang, seed dibuang).
@@ -567,8 +573,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (!sessionUser || sessionUser.role !== 'admin') return false;
     const res = await backendAdminList('/admin/show_user', 100);
     if (!res.ok) return false;
+    // Daftar akun tampil terbaru dulu: ID naik mengikuti urutan dibuat di
+    // database, jadi urut turun berdasarkan ID.
     setRegisteredAccounts(
-      (res.data ?? []).map(mapBackendAccount).filter((a): a is BackendAccount => a !== null),
+      (res.data ?? [])
+        .map(mapBackendAccount)
+        .filter((a): a is BackendAccount => a !== null)
+        .sort((a, b) => (b.id ?? 0) - (a.id ?? 0)),
     );
     return true;
   }, [sessionUser]);
@@ -1154,7 +1165,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (peranLower.includes('admin')) {
           res = await backendAdminPostForm('/admin/create_user/admin', { username, email, password });
         } else if (peranLower.includes('petugas')) {
-          res = await backendAdminPostForm('/admin/create_user/petugas', { username, email, password });
+          res = await backendAdminPostForm('/admin/create_user/petugas', {
+            username,
+            email,
+            password,
+            nip: input.nip?.trim(),
+          });
         } else if (peranLower.includes('dosen')) {
           res = await backendAdminPostForm('/admin/create_user/dosen', {
             username,
@@ -1230,19 +1246,33 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         );
         return { ok: true };
       },
+      updateAccount: async (
+        id: number,
+        data: { nama_lengkap?: string; email?: string; password?: string; angkatan?: number }
+      ) => {
+        const res = await backendUpdateUser(id, data);
+        if (!res.ok) {
+          return { ok: false, message: res.message || 'Perubahan akun tidak dapat diproses.' };
+        }
+        // Server menang: daftar akun diambil ulang agar tampilan langsung segar.
+        await refreshAccounts();
+        return { ok: true };
+      },
+
       deleteAccount: async (id: number) => {
         const target = registeredAccounts.find((a) => a.id === id);
         if (!target) return { ok: false, message: 'Akun tidak ditemukan.' };
-        // Backend Go menggunakan mekanisme penonaktifan (is_verified = 0) untuk akun terdaftar
-        // guna mempertahankan integritas relasi foreign key (riwayat reservasi, log laporan, dll.)
-        await backendAdminPostForm('/admin/users/status', {
-          id,
-          is_verified: 0,
-        });
-        setRegisteredAccounts((prev) => prev.filter((a) => a.id !== id));
+        // Hapus permanen: backend membersihkan seluruh baris yang terikat FK
+        // (profil, reservasi beserta riwayat/alatnya, laporan, pending).
+        const res = await backendDeleteUser(id);
+        if (!res.ok) {
+          return { ok: false, message: res.message || 'Akun tidak dapat dihapus.' };
+        }
+        // Server menang: daftar akun diambil ulang setelah penghapusan.
+        await refreshAccounts();
         return {
           ok: true,
-          message: `Akun @${target.username} (${target.role}) berhasil dinonaktifkan dan dihapus dari sistem.`,
+          message: `Akun @${target.username} (${target.role}) dihapus permanen dari sistem beserta riwayat reservasi dan laporannya.`,
         };
       },
 

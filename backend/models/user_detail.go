@@ -14,6 +14,7 @@ type UserDetail struct {
 }
 
 type UpdateUserRequest struct {
+	Username    string `json:"username"`
 	NamaLengkap string `json:"nama_lengkap"`
 	Email       string `json:"email"`
 	Password    string `json:"password"`

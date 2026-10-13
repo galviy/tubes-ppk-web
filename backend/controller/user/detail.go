@@ -93,6 +93,7 @@ func Update(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		_ = r.ParseForm()
+		req.Username = strings.TrimSpace(r.FormValue("username"))
 		req.NamaLengkap = strings.TrimSpace(r.FormValue("nama_lengkap"))
 		req.Email = strings.TrimSpace(r.FormValue("email"))
 		req.Password = strings.TrimSpace(r.FormValue("password"))

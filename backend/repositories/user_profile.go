@@ -40,7 +40,7 @@ func GetUserProfileByID(id int) (*models.UserDetail, error) {
 		errMhs := config.QueryRow(`
 			SELECT m.nama_lengkap, m.nim, m.angkatan, p.nama_prodi
 			FROM mahasiswa m
-			LEFT JOIN prodi p ON p.id = m.mhs_prodi
+			LEFT JOIN prodi p ON p.id = m.prodi
 			WHERE m.mhs_user = ?`, id).Scan(&nama, &nim, &angkatan, &prodi)
 		if errMhs == nil {
 			u.NamaLengkap = nama
@@ -72,7 +72,7 @@ func GetUserProfileByID(id int) (*models.UserDetail, error) {
 		errStaff := config.QueryRow(`
 			SELECT s.nama_lengkap, s.nip
 			FROM staff s
-			WHERE s.staff_user = ?`, id).Scan(&nama, &nip)
+			WHERE s.user_staff = ?`, id).Scan(&nama, &nip)
 		if errStaff == nil {
 			u.NamaLengkap = nama
 			u.Identifier = nip
@@ -93,6 +93,26 @@ func UpdateUserProfile(id int, req models.UpdateUserRequest) error {
 		return err
 	}
 	defer tx.Rollback()
+
+	if req.Username != "" && req.Username != user.Username {
+		// Batas 5-30 char: aman untuk kolom username varchar(32) dan
+		// konsisten dengan aturan dosen saat pendaftaran.
+		if len(req.Username) < 5 || len(req.Username) > 30 {
+			return errors.New("Username harus 5 sampai 30 karakter")
+		}
+		var ada int
+		if err := config.QueryRow(`
+			SELECT COUNT(*) FROM user WHERE username = ? AND id <> ?`, req.Username, id).Scan(&ada); err != nil {
+			return err
+		}
+		if ada > 0 {
+			return errors.New("Username sudah terdaftar di database kita!")
+		}
+		_, err = tx.Exec(`UPDATE user SET username = ? WHERE id = ?`, req.Username, id)
+		if err != nil {
+			return err
+		}
+	}
 
 	if req.Email != "" && req.Email != user.Email {
 		if !utils.IsEmailValid(req.Email) {
@@ -134,7 +154,7 @@ func UpdateUserProfile(id int, req models.UpdateUserRequest) error {
 			}
 		case "staff":
 			if req.NamaLengkap != "" {
-				_, err = tx.Exec(`UPDATE staff SET nama_lengkap = ? WHERE staff_user = ?`, req.NamaLengkap, id)
+				_, err = tx.Exec(`UPDATE staff SET nama_lengkap = ? WHERE user_staff = ?`, req.NamaLengkap, id)
 			}
 		}
 		if err != nil {

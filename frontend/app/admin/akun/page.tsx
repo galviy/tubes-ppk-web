@@ -3,9 +3,12 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useAppData } from '@/context/AppDataContext';
 import ActionPromptModal, { ActionModalConfig } from '@/components/ActionPromptModal';
+import EditUserModal from '@/components/EditUserModal';
+import { BackendAccount } from '@/models/user';
 import Pagination from '@/components/Pagination';
 import { UNIT_PETUGAS, FAKULTAS_UNDIP, PRODI_UNDIP } from '@/config/site';
 import { backendListProdi, backendDownloadAkunExport } from '@/lib/api';
+import { pesanNomorInduk, pesanAngkatan } from '@/lib/validation';
 
 function DownwardSelect({
   label,
@@ -145,6 +148,16 @@ function DownwardSelect({
   );
 }
 
+// Pesan validasi live merah di bawah field formulir admin.
+function FieldErrorNote({ pesan }: { pesan: string }) {
+  if (!pesan) return null;
+  return (
+    <div style={{ color: '#DC2626', fontSize: 12.5, fontWeight: 600, marginTop: 4 }} role="alert">
+      {pesan}
+    </div>
+  );
+}
+
 export default function KelolaAkunPage() {
   const {
     pendingAccounts,
@@ -228,12 +241,35 @@ export default function KelolaAkunPage() {
     }
   }
 
+  // Validasi live formulir pendaftaran (sama aturannya dengan /register).
+  // Petugas: NIP opsional tapi bila diisi harus sah (12-18 digit, > 0).
+  const identifierLabel = targetTipe === 'petugas'
+    ? 'NIP'
+    : peran === 'Mahasiswa' ? 'NIM' : peran === 'Dosen' ? 'NIDN' : 'NIP';
+  const identifierMinDigit = targetTipe === 'petugas'
+    ? 12
+    : peran === 'Mahasiswa' ? 14 : peran === 'Dosen' ? 10 : 12;
+  const identifierMaxDigit = targetTipe === 'petugas'
+    ? 18
+    : peran === 'Staf' ? 18 : undefined;
+  const identifierError = pesanNomorInduk(nip, identifierLabel, identifierMinDigit, identifierMaxDigit);
+  const angkatanError =
+    targetTipe !== 'petugas' && peran === 'Mahasiswa' && angkatan.length > 0
+      ? pesanAngkatan(angkatan)
+      : '';
+  const usernameError =
+    username.trim() !== '' && username.trim().length < 5 ? 'Username minimal 5 karakter.' : '';
+
   // Modal State
   const [modalConfig, setModalConfig] = useState<ActionModalConfig>({
     isOpen: false,
     title: '',
     onConfirm: () => {},
   });
+
+  // Edit akun: mengubah nama, email, angkatan, atau reset kata sandi pengguna.
+  const [editFor, setEditFor] = useState<BackendAccount | null>(null);
+
 
   function handleDeleteAccount(id: number, username: string, role: string) {
     const isSelf = Boolean(
@@ -386,34 +422,10 @@ export default function KelolaAkunPage() {
       return;
     }
 
-    if (targetTipe === 'pengguna') {
-      if (peran === 'Dosen' && nip.trim().length !== 10) {
-        setModalConfig({
-          isOpen: true,
-          title: 'NIDN Dosen Tidak Valid',
-          subtitle: 'NIDN Dosen wajib tepat 10 digit karakter angka (contoh: 0012058001).',
-          confirmText: 'Perbaiki',
-          confirmVariant: 'warning',
-          showInput: false,
-          onConfirm: () => {},
-        });
-        return;
-      }
-      if (peran === 'Mahasiswa') {
-        const yr = Number(angkatan.trim());
-        if (!yr || yr < 2000 || yr > 2030) {
-          setModalConfig({
-            isOpen: true,
-            title: 'Angkatan Mahasiswa Tidak Valid',
-            subtitle: 'Tahun angkatan harus berupa angka 4 digit yang valid (contoh: 2024).',
-            confirmText: 'Perbaiki',
-            confirmVariant: 'warning',
-            showInput: false,
-            onConfirm: () => {},
-          });
-          return;
-        }
-      }
+    // Catatan merah per-field sudah tampil lewat FieldErrorNote; cegah
+    // pengiriman saja tanpa modal berulang. Berlaku juga untuk NIP petugas.
+    if (identifierError || angkatanError) {
+      return;
     }
 
     setIsSubmitting(true);
@@ -747,6 +759,7 @@ export default function KelolaAkunPage() {
                     required
                     minLength={5}
                   />
+                  <FieldErrorNote pesan={usernameError} />
                   <span style={{ fontSize: 13.5, color: '#6B7280', marginTop: 3 }}>
                     Minimal 5 karakter alfanumerik.
                   </span>
@@ -824,28 +837,35 @@ export default function KelolaAkunPage() {
                       options={UNIT_PETUGAS as unknown as string[]}
                     />
 
-                    {/* NIP Petugas (Opsional) */}
+                    {/* NIP Petugas (Wajib) */}
                     <div className="fgroup">
-                      <label>NIP Petugas / Pegawai</label>
+                      <label>NIP Petugas / Pegawai <span className="required-asterisk">*</span></label>
                       <input
-                        placeholder="Contoh: 198604152010121002"
+                        placeholder="Contoh: 198604152010121002 (12-18 digit)"
                         value={nip}
                         onChange={(e) => setNip(e.target.value)}
+                        inputMode="numeric"
+                        maxLength={18}
+                        required
                       />
+                      <FieldErrorNote pesan={identifierError} />
                     </div>
                   </>
                 ) : peran === 'Mahasiswa' ? (
                   <>
                     {/* NIM */}
-                    <div className="fgroup">
-                      <label>NIM (Nomor Induk Mahasiswa) <span className="required-asterisk">*</span></label>
-                      <input
-                        placeholder="Contoh: 24060122140123"
-                        value={nip}
-                        onChange={(e) => setNip(e.target.value)}
-                        required
-                      />
-                    </div>
+                  <div className="fgroup">
+                    <label>NIM (Nomor Induk Mahasiswa) <span className="required-asterisk">*</span></label>
+                    <input
+                      placeholder="Contoh: 24060122140123 (14 digit)"
+                      value={nip}
+                      onChange={(e) => setNip(e.target.value)}
+                      inputMode="numeric"
+                      maxLength={14}
+                      required
+                    />
+                    <FieldErrorNote pesan={identifierError} />
+                  </div>
 
                     {/* Angkatan */}
                     <div className="fgroup">
@@ -857,6 +877,7 @@ export default function KelolaAkunPage() {
                         onChange={(e) => setAngkatan(e.target.value)}
                         required
                       />
+                      <FieldErrorNote pesan={angkatanError} />
                     </div>
 
                     {/* Program Studi */}
@@ -884,9 +905,11 @@ export default function KelolaAkunPage() {
                         placeholder="Contoh: 0012058001 (10 digit)"
                         value={nip}
                         onChange={(e) => setNip(e.target.value)}
+                        inputMode="numeric"
                         maxLength={10}
                         required
                       />
+                      <FieldErrorNote pesan={identifierError} />
                       <span style={{ fontSize: 13.5, color: '#6B7280', marginTop: 3 }}>
                         Tepat 10 digit angka NIDN dosen.
                       </span>
@@ -911,15 +934,18 @@ export default function KelolaAkunPage() {
                 ) : (
                   <>
                     {/* NIP Staf */}
-                    <div className="fgroup">
-                      <label>NIP (Nomor Induk Pegawai) <span className="required-asterisk">*</span></label>
-                      <input
-                        placeholder="Contoh: 198001012345"
-                        value={nip}
-                        onChange={(e) => setNip(e.target.value)}
-                        required
-                      />
-                    </div>
+                  <div className="fgroup">
+                    <label>NIP (Nomor Induk Pegawai) <span className="required-asterisk">*</span></label>
+                    <input
+                      placeholder="Contoh: 198001012345 (12-18 digit)"
+                      value={nip}
+                      onChange={(e) => setNip(e.target.value)}
+                      inputMode="numeric"
+                      maxLength={18}
+                      required
+                    />
+                    <FieldErrorNote pesan={identifierError} />
+                  </div>
 
                     {/* Unit / Fakultas Staf */}
                     <DownwardSelect
@@ -1127,7 +1153,25 @@ export default function KelolaAkunPage() {
                         </span>
                       </td>
                       <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
-                        {isSelf ? (
+                        <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => setEditFor(acc)}
+                            style={{
+                              padding: '5px 10px',
+                              fontSize: 13.5,
+                              fontWeight: 600,
+                              borderRadius: 4,
+                              cursor: 'pointer',
+                              border: '1px solid #b59876',
+                              background: '#15171a',
+                              color: '#FFFFFF',
+                            }}
+                            title="Ubah nama, email, angkatan, atau reset kata sandi akun ini"
+                          >
+                            Edit
+                          </button>
+                          {isSelf ? (
                           <span
                             style={{
                               display: 'inline-flex',
@@ -1141,7 +1185,7 @@ export default function KelolaAkunPage() {
                               background: '#F3F4F6',
                               border: '1px solid #E5E7EB',
                             }}
-                            title="Akun Anda sendiri yang sedang aktif digunakan, tidak dapat dinonaktifkan atau dihapus."
+                            title="Akun Anda sendiri. Nonaktifkan/hapus tidak berlaku, tetapi sandi tetap dapat direset lewat Edit."
                           >
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
@@ -1150,7 +1194,7 @@ export default function KelolaAkunPage() {
                             Akun Anda
                           </span>
                         ) : (
-                          <div style={{ display: 'inline-flex', gap: 6 }}>
+                          <>
                             <button
                               type="button"
                               onClick={() => handleToggleStatus(acc.id, acc.username, aktif ? 'aktif' : 'nonaktif')}
@@ -1183,8 +1227,9 @@ export default function KelolaAkunPage() {
                             >
                               Hapus
                             </button>
-                          </div>
+                          </>
                         )}
+                        </div>
                       </td>
                     </tr>
                     );
@@ -1324,6 +1369,14 @@ export default function KelolaAkunPage() {
         config={modalConfig}
         onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))}
       />
+
+      {editFor && (
+        <EditUserModal
+          account={editFor}
+          onClose={() => setEditFor(null)}
+          onNotify={(type, title, message) => setBannerNotice({ type, title, message })}
+        />
+      )}
     </div>
   );
 }

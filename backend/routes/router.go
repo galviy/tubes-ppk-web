@@ -179,6 +179,10 @@ func SetupRoutes() *http.ServeMux {
 		"PATCH /users/{id}/status",
 		middleware.AdminAuth(http.HandlerFunc(user.UpdateStatus)),
 	)
+	mux.Handle(
+		"DELETE /admin/users/{id}",
+		middleware.AdminAuth(http.HandlerFunc(admin.Delete_user)),
+	)
 
 	mux.Handle(
 		"POST /reports",
