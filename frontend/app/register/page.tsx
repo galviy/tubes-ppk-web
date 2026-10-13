@@ -146,6 +146,16 @@ function DownwardUnderlineSelect({
   );
 }
 
+// Pesan validasi live di bawah satu field, merah hanya bila pesan tidak kosong.
+function FieldErrorNote({ pesan }: { pesan: string }) {
+  if (!pesan) return null;
+  return (
+    <div style={{ color: '#DC2626', fontSize: 12.5, fontWeight: 600, marginTop: 4 }} role="alert">
+      {pesan}
+    </div>
+  );
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const { submitSelfRegistration } = useAppData();
@@ -199,6 +209,50 @@ export default function RegisterPage() {
     return null;
   }
 
+  // Validasi live per field (client-side): hanya tampil saat field sudah berisi
+  // tetapi isinya belum memenuhi aturan, supaya tidak menghukum sebelum mengetik.
+  const usernameError =
+    regUsername.trim().length === 0
+      ? ''
+      : regUsername.trim().length < 5
+      ? 'Username minimal 5 karakter.'
+      : regUsername.trim().length > (regPeran === 'Dosen' ? 30 : 100)
+      ? regPeran === 'Dosen'
+        ? 'Username dosen maksimal 30 karakter.'
+        : 'Username maksimal 100 karakter.'
+      : '';
+  // Minus di depan dikenali sebagai angka negatif, bukan "bukan angka".
+  const pesanNomorInduk = (value: string, label: string, minDigit: number, maxDigit?: number): string => {
+    const v = value.trim();
+    if (v.length === 0) return '';
+    if (v.startsWith('-')) return `${label} tidak boleh negatif.`;
+    if (!/^\d+$/.test(v)) return `${label} hanya boleh berisi angka.`;
+    if (maxDigit !== undefined) {
+      if (v.length < minDigit || v.length > maxDigit) {
+        return `${label} harus ${minDigit} sampai ${maxDigit} digit angka.`;
+      }
+    } else if (v.length !== minDigit) {
+      return `${label} harus tepat ${minDigit} digit angka.`;
+    }
+    if (Number(v) <= 0) return `${label} tidak boleh negatif.`;
+    return '';
+  };
+  const nimError = pesanNomorInduk(regNim, 'NIM', 14);
+  const nidnError = pesanNomorInduk(regNidn, 'NIDN', 10);
+  const nipError = pesanNomorInduk(regNip, 'NIP', 12, 18);
+  const angkatanError =
+    regAngkatan.length === 0
+      ? ''
+      : regAngkatan.trim().startsWith('-')
+      ? 'Tahun angkatan tidak boleh negatif.'
+      : !/^\d+$/.test(regAngkatan)
+      ? 'Tahun angkatan harus berupa angka.'
+      : Number(regAngkatan) > 2030
+      ? 'Tahun angkatan maksimal 2030.'
+      : Number(regAngkatan) < 2015
+      ? 'Tahun angkatan minimal 2015.'
+      : '';
+
   async function handleRegisterSubmit(e: React.FormEvent) {
     e.preventDefault();
     setRegError('');
@@ -223,8 +277,16 @@ export default function RegisterPage() {
         setRegError('NIM mahasiswa wajib diisi.');
         return;
       }
+      if (nimError) {
+        setRegError(nimError);
+        return;
+      }
       if (!regAngkatan.trim() || isNaN(Number(regAngkatan.trim()))) {
         setRegError('Angkatan mahasiswa harus berupa angka (contoh: 2024).');
+        return;
+      }
+      if (angkatanError) {
+        setRegError(angkatanError);
         return;
       }
       if (!regProdi.trim()) {
@@ -232,9 +294,12 @@ export default function RegisterPage() {
         return;
       }
     } else if (regPeran === 'Dosen') {
-      const nidnClean = regNidn.trim();
-      if (nidnClean.length !== 10 || !/^\d+$/.test(nidnClean)) {
-        setRegError('NIDN dosen harus tepat 10 digit angka.');
+      if (!regNidn.trim()) {
+        setRegError('NIDN dosen wajib diisi.');
+        return;
+      }
+      if (nidnError) {
+        setRegError(nidnError);
         return;
       }
       if (!regProdi.trim()) {
@@ -246,6 +311,15 @@ export default function RegisterPage() {
         setRegError('NIP pegawai staf wajib diisi.');
         return;
       }
+      if (nipError) {
+        setRegError(nipError);
+        return;
+      }
+    }
+
+    if (usernameError) {
+      setRegError(usernameError);
+      return;
     }
 
     // Password validation
@@ -381,6 +455,7 @@ export default function RegisterPage() {
                       onChange={(e) => setRegUsername(e.target.value.toLowerCase())}
                       required
                     />
+                    <FieldErrorNote pesan={usernameError} />
                   </div>
 
                   <div className="ochoco-underline-field">
@@ -406,15 +481,18 @@ export default function RegisterPage() {
                 {regPeran === 'Mahasiswa' && (
                   <div className="ochoco-field-grid">
                     <div className="ochoco-underline-field">
-                      <label htmlFor="reg-nim">NIM MAHASISWA</label>
+                      <label htmlFor="reg-nim">NIM MAHASISWA (14 DIGIT)</label>
                       <input
                         id="reg-nim"
                         type="text"
+                        inputMode="numeric"
+                        maxLength={14}
                         placeholder="Contoh: 24060122140123"
                         value={regNim}
                         onChange={(e) => setRegNim(e.target.value)}
                         required
                       />
+                      <FieldErrorNote pesan={nimError} />
                     </div>
                     <div className="ochoco-underline-field">
                       <label htmlFor="reg-angkatan">ANGKATAN (TAHUN)</label>
@@ -428,6 +506,7 @@ export default function RegisterPage() {
                         onChange={(e) => setRegAngkatan(e.target.value)}
                         required
                       />
+                      <FieldErrorNote pesan={angkatanError} />
                     </div>
                   </div>
                 )}
@@ -438,26 +517,31 @@ export default function RegisterPage() {
                     <input
                       id="reg-nidn"
                       type="text"
+                      inputMode="numeric"
                       maxLength={10}
                       placeholder="Contoh: 1234567890"
                       value={regNidn}
                       onChange={(e) => setRegNidn(e.target.value)}
                       required
                     />
+                    <FieldErrorNote pesan={nidnError} />
                   </div>
                 )}
 
                 {regPeran === 'Staf' && (
                   <div className="ochoco-underline-field">
-                    <label htmlFor="reg-nip">NIP PEGAWAI STAF</label>
+                    <label htmlFor="reg-nip">NIP PEGAWAI STAF (12-18 DIGIT)</label>
                     <input
                       id="reg-nip"
                       type="text"
+                      inputMode="numeric"
+                      maxLength={18}
                       placeholder="Contoh: 198001012345"
                       value={regNip}
                       onChange={(e) => setRegNip(e.target.value)}
                       required
                     />
+                    <FieldErrorNote pesan={nipError} />
                   </div>
                 )}
 
@@ -491,19 +575,13 @@ export default function RegisterPage() {
                   />
                 </div>
 
-                {/* Email Resmi Undip */}
+                {/* Email Aktif */}
                 <div className="ochoco-underline-field">
-                  <label htmlFor="reg-email">EMAIL KAMPUS UNDIP</label>
+                  <label htmlFor="reg-email">EMAIL AKTIF</label>
                   <input
                     id="reg-email"
                     type="email"
-                    placeholder={
-                      regPeran === 'Dosen'
-                        ? 'nama@lecturer.undip.ac.id'
-                        : regPeran === 'Staf'
-                        ? 'nama@staff.undip.ac.id'
-                        : 'nama@students.undip.ac.id'
-                    }
+                    placeholder="nama@email.com"
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
                     required

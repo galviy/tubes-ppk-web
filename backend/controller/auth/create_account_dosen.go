@@ -5,6 +5,7 @@ import (
 	utils "backend-ppk/utilities"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 func Create_Account_Dosen(w http.ResponseWriter, r *http.Request) {
@@ -42,6 +43,22 @@ func Create_Account_Dosen(w http.ResponseWriter, r *http.Request) {
 
 	if len(nidn) != 10 {
 		utils.ResponseJSONMessage(w, "NIDN must be exactly 10 characters", http.StatusBadRequest, false)
+		return
+	}
+	hanyaAngkaNIDN := true
+	for _, c := range nidn {
+		if c < '0' || c > '9' {
+			hanyaAngkaNIDN = false
+			break
+		}
+	}
+	if !hanyaAngkaNIDN {
+		utils.ResponseJSONMessage(w, "NIDN hanya boleh berisi angka!", http.StatusBadRequest, false)
+		return
+	}
+	nilaiNIDN, err_nidn := strconv.ParseInt(nidn, 10, 64)
+	if err_nidn != nil || nilaiNIDN <= 0 {
+		utils.ResponseJSONMessage(w, "NIDN tidak boleh negatif!", http.StatusBadRequest, false)
 		return
 	}
 
