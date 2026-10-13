@@ -1117,6 +1117,12 @@ export function backendUpdateUser(id: number, data: { nama_lengkap?: string; ema
   });
 }
 
+export function backendDeleteUser(id: number) {
+  return apiFetch<never>(`/admin/users/${id}`, {
+    method: 'DELETE',
+  });
+}
+
 export function backendUpdateUserStatus(id: number, isVerified: boolean) {
   return apiFetch<never>(`/users/${id}/status`, {
     method: 'PATCH',

@@ -5,6 +5,7 @@ import (
 	utils "backend-ppk/utilities"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 func Create_account_Staff(w http.ResponseWriter, r *http.Request) {
@@ -41,6 +42,28 @@ func Create_account_Staff(w http.ResponseWriter, r *http.Request) {
 
 	if len(username) < 5 || len(username) > 100 {
 		utils.ResponseJSONMessage(w, "Password must be between 8 and 100 characters", http.StatusBadRequest, false)
+		return
+	}
+
+	// NIP staff: 12-18 digit angka dan nilainya lebih dari 0.
+	hanyaAngkaNIP := true
+	for _, c := range nip {
+		if c < '0' || c > '9' {
+			hanyaAngkaNIP = false
+			break
+		}
+	}
+	if !hanyaAngkaNIP {
+		utils.ResponseJSONMessage(w, "NIP hanya boleh berisi angka!", http.StatusBadRequest, false)
+		return
+	}
+	if len(nip) < 12 || len(nip) > 18 {
+		utils.ResponseJSONMessage(w, "NIP staff harus 12 sampai 18 digit angka!", http.StatusBadRequest, false)
+		return
+	}
+	nilaiNIP, err_nip := strconv.ParseInt(nip, 10, 64)
+	if err_nip != nil || nilaiNIP <= 0 {
+		utils.ResponseJSONMessage(w, "NIP tidak boleh negatif!", http.StatusBadRequest, false)
 		return
 	}
 

@@ -961,6 +961,8 @@ function AjukanReservasiContent() {
   // Alat: batasnya persisted stok dari backend (banyak_alat dikurangi unit
   // yang dikunci reservasi APPROVED). Ruangan: kapasitas orang.
   const unitTersedia = facility ? (isAlat ? unitTersediaAlat(facility.id) : facility.cap) : 0;
+  // Nilai minus sama seperti overCapacity: ditolak live dan menghalangi submit.
+  const pesertaNegatif = /^\s*-\d+$/.test(peserta) || pesertaNum < 0;
   const overCapacity = !!facility && pesertaNum > unitTersedia;
 
   async function doSubmit() {
@@ -1208,6 +1210,20 @@ function AjukanReservasiContent() {
       });
       return;
     }
+    if (pesertaNegatif) {
+      // Sama seperti overCapacity: blok keras dengan modal, karena backend
+      // juga menolak nilai negatif dengan 400 "Jumlah peserta tidak boleh negatif".
+      setModalConfig({
+        isOpen: true,
+        title: 'Jumlah Peserta Tidak Valid',
+        subtitle: 'Jumlah peserta tidak boleh negatif. Isi angka 1 atau lebih, atau kosongkan bila tidak ada estimasi.',
+        confirmText: 'Perbaiki Data',
+        confirmVariant: 'warning',
+        showInput: false,
+        onConfirm: () => {},
+      });
+      return;
+    }
     if (overCapacity) {
       // Blok keras: backend menolak jumlah melebihi stok/kapasitas dengan 400,
       // jadi frontend tidak menawarkan tombol tetap mengajukan yang mustahil lolos.
@@ -1225,7 +1241,27 @@ function AjukanReservasiContent() {
       return;
     }
 
-    void doSubmit();
+    // Konfirmasi terakhir: ringkasan permohonan sebelum benar-benar dikirim.
+    const ringkasWaktu = `${formatDateIndo(tanggal)}, ${startTime} - ${endTime} WIB`;
+    const ringkasAlat = activeTab === 'ruangan' && selectedTools.length > 0
+      ? ` Serta ${selectedTools.length} alat pendukung: ${selectedTools
+          .map((t) => `${t.nama} x${t.jumlah}`)
+          .join(', ')}.`
+      : '';
+    setModalConfig({
+      isOpen: true,
+      title: 'Konfirmasi Pengajuan Reservasi',
+      subtitle: `Apakah Anda yakin ingin mengajukan reservasi ini? ${facility.name} untuk ${ringkasWaktu}${ringkasAlat} Permohonan yang sudah diajukan akan masuk antrean persetujuan petugas sarpras.`,
+      confirmText: 'Ya, Ajukan Sekarang',
+      cancelText: 'Batal',
+      confirmVariant: 'primary',
+      showInput: false,
+      onConfirm: () => {
+        void doSubmit();
+        // Modal konfirmasi boleh ditutup; doSubmit membuka modal hasilnya.
+        return true;
+      },
+    });
   }
 
   return (
@@ -1647,17 +1683,25 @@ function AjukanReservasiContent() {
               <span className="opt">(opsional)</span>
             </label>
             <input
-              type="number"
-              min={1}
+              type="text"
+              inputMode="numeric"
               value={peserta}
-              onChange={(e) => setPeserta(e.target.value)}
+              onChange={(e) => {
+                // Terima angka saja: huruf, spasi, dan simbol tidak masuk state.
+                setPeserta(e.target.value.replace(/[^0-9]/g, ''));
+              }}
               placeholder={
                 isAlat
                   ? 'Jumlah unit yang dipinjam (contoh: 2)'
                   : 'Perkiraan jumlah orang yang hadir (contoh: 30)'
               }
             />
-            {overCapacity && (
+            {pesertaNegatif && (
+              <span className="field-hint" style={{ color: '#DC2626', fontWeight: 600 }}>
+                Jumlah peserta tidak boleh negatif.
+              </span>
+            )}
+            {!pesertaNegatif && overCapacity && (
               <span className="field-hint" style={{ color: '#DC2626', fontWeight: 600 }}>
                 {isAlat
                   ? `Jumlah unit (${pesertaNum} unit) melebihi stok yang tersedia (${unitTersedia} unit).`
@@ -2000,7 +2044,7 @@ function AjukanReservasiContent() {
             type="button"
             className="btn primary"
             onClick={handleSubmit}
-            disabled={hasConflict || !startTime || !endTime || isSubmitting}
+            disabled={hasConflict || pesertaNegatif || !startTime || !endTime || isSubmitting}
           >
             {isSubmitting ? 'Mengirim…' : 'Ajukan Reservasi'}
           </button>

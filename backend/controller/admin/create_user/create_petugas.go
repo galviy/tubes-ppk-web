@@ -5,6 +5,8 @@ import (
 	utils "backend-ppk/utilities"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 )
 
 func Create_Petugas(w http.ResponseWriter, r *http.Request) {
@@ -22,14 +24,36 @@ func Create_Petugas(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	email := r.FormValue("email")
 	password := r.FormValue("password")
+	nip := strings.TrimSpace(r.FormValue("nip"))
 
-	if username == "" || email == "" || password == "" {
-		utils.ResponseJSONMessage(w, "Missing field!", http.StatusUnauthorized, false)
+	if username == "" || email == "" || password == "" || nip == "" {
+		utils.ResponseJSONMessage(w, "Missing field! (NIP petugas wajib diisi)", http.StatusUnauthorized, false)
 		return
 	}
 
 	if len(username) < 5 {
 		utils.ResponseJSONMessage(w, "Username minimal 5 Huruf!", http.StatusUnauthorized, false)
+		return
+	}
+	// NIP petugas: 12-18 digit angka dan nilainya lebih dari 0.
+	hanyaAngkaNIP := true
+	for _, c := range nip {
+		if c < '0' || c > '9' {
+			hanyaAngkaNIP = false
+			break
+		}
+	}
+	if !hanyaAngkaNIP {
+		utils.ResponseJSONMessage(w, "NIP hanya boleh berisi angka!", http.StatusBadRequest, false)
+		return
+	}
+	if len(nip) < 12 || len(nip) > 18 {
+		utils.ResponseJSONMessage(w, "NIP petugas harus 12 sampai 18 digit angka!", http.StatusBadRequest, false)
+		return
+	}
+	nilaiNIP, err_nip := strconv.ParseInt(nip, 10, 64)
+	if err_nip != nil || nilaiNIP <= 0 {
+		utils.ResponseJSONMessage(w, "NIP tidak boleh negatif!", http.StatusBadRequest, false)
 		return
 	}
 	if !utils.IsPasswordValid(password) {

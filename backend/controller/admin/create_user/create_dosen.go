@@ -5,6 +5,7 @@ import (
 	utils "backend-ppk/utilities"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 func Create_Dosen(w http.ResponseWriter, r *http.Request) {
@@ -32,6 +33,27 @@ func Create_Dosen(w http.ResponseWriter, r *http.Request) {
 
 	if len(username) < 5 {
 		utils.ResponseJSONMessage(w, "Username minimal 5 Huruf!", http.StatusUnauthorized, false)
+		return
+	}
+	// NIDN harus 10 digit angka dan nilainya lebih dari 0.
+	hanyaAngkaNIDN := true
+	for _, c := range nidn {
+		if c < '0' || c > '9' {
+			hanyaAngkaNIDN = false
+			break
+		}
+	}
+	if !hanyaAngkaNIDN {
+		utils.ResponseJSONMessage(w, "NIDN hanya boleh berisi angka!", http.StatusBadRequest, false)
+		return
+	}
+	if len(nidn) != 10 {
+		utils.ResponseJSONMessage(w, "NIDN harus tepat 10 digit angka!", http.StatusBadRequest, false)
+		return
+	}
+	nilaiNIDN, err_nidn := strconv.ParseInt(nidn, 10, 64)
+	if err_nidn != nil || nilaiNIDN <= 0 {
+		utils.ResponseJSONMessage(w, "NIDN tidak boleh negatif!", http.StatusBadRequest, false)
 		return
 	}
 	if !utils.IsPasswordValid(password) {

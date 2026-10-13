@@ -976,7 +976,7 @@ func GetUsers(limit int) ([]tampung, error) {
 	rows, err := config.Query(`
 		SELECT id, username, email, user_role, isVerified
 		FROM user
-		ORDER BY id, username
+		ORDER BY id DESC
 		LIMIT ?
 	`, limit)
 
