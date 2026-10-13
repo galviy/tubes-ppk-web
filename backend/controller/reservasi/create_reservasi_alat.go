@@ -24,6 +24,13 @@ func Create_reservasi_alat(w http.ResponseWriter, r *http.Request) {
 		respondErr(w, err)
 		return
 	}
+
+	// Reservasi alat tidak menyimpan jumlah peserta, tetapi tetap divalidasi
+	// agar nilai negatif ditolak sama seperti reservasi ruangan.
+	if _, err := parseJumlahPeserta(r); err != nil {
+		respondErr(w, err)
+		return
+	}
 	if len(alat) == 0 {
 		utils.ResponseJSONMessage(w, "Minimal satu alat harus dipilih", http.StatusBadRequest, false)
 		return

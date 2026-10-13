@@ -73,9 +73,18 @@ func parseJumlahPeserta(r *http.Request) (*int, error) {
 	if nilai == "" {
 		return nil, nil
 	}
+	// Hanya digit murni: Atoi masih menerima "+30" dan spasi, itu tidak boleh.
+	for _, c := range nilai {
+		if c < '0' || c > '9' {
+			return nil, services.ErrReservasi{Status: http.StatusBadRequest, Pesan: "Jumlah peserta hanya boleh berisi angka"}
+		}
+	}
 	n, err := strconv.Atoi(nilai)
 	if err != nil {
 		return nil, services.ErrReservasi{Status: http.StatusBadRequest, Pesan: "Jumlah peserta tidak valid"}
+	}
+	if n < 0 {
+		return nil, services.ErrReservasi{Status: http.StatusBadRequest, Pesan: "Jumlah peserta tidak boleh negatif"}
 	}
 	return &n, nil
 }
