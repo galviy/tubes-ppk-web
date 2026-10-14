@@ -237,7 +237,20 @@ export default function PetugasFasilitasPage() {
                     <td style={{ color: '#4B5563', fontSize: 13 }}>{f.type}</td>
                     <td style={{ color: '#4B5563', fontSize: 13 }}>{f.loc}</td>
                     <td style={{ color: '#4B5563', fontSize: 13 }}>
-                      {isAlat ? `${f.tersedia ?? f.cap} unit` : f.cap ? `${f.cap} orang` : '-'}
+                      {isAlat ? (
+                        <div>
+                          <span style={{ fontWeight: 600, color: '#181D24' }}>{f.cap} unit</span>
+                          {f.tersedia !== undefined && f.tersedia !== f.cap && (
+                            <span style={{ fontSize: 11.5, color: '#6B7280', display: 'block' }}>
+                              (Tersedia: {f.tersedia})
+                            </span>
+                          )}
+                        </div>
+                      ) : f.cap ? (
+                        `${f.cap} orang`
+                      ) : (
+                        '-'
+                      )}
                     </td>
                 <td>
                   <span

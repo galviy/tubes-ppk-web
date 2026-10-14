@@ -875,7 +875,20 @@ function KelolaFasilitasContent() {
                       <span style={{ fontWeight: 600, color: '#b59876', fontSize: 13 }}>{f.type}</span>
                     </td>
                     <td>{f.loc}</td>
-                    <td>{isAlat ? f.tersedia ?? f.cap : f.cap} {isAlat ? 'unit' : 'orang'}</td>
+                    <td>
+                      {isAlat ? (
+                        <div>
+                          <span style={{ fontWeight: 600 }}>{f.cap} unit</span>
+                          {f.tersedia !== undefined && f.tersedia !== f.cap && (
+                            <span style={{ fontSize: 12, color: '#6B7280', display: 'block' }}>
+                              (Tersedia: {f.tersedia})
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        `${f.cap} orang`
+                      )}
+                    </td>
                     <td>
                       <span
                         className={`pill ${
