@@ -45,8 +45,8 @@ func Update_ruangan(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseJSONMessage(w, "kapasitas has to be integer pak!", http.StatusBadGateway, false)
 		return
 	}
-	if len(kategori) < 5 || len(kategori) > 100 {
-		utils.ResponseJSONMessage(w, "Username minimal 5 Huruf dan tidak boleh lebih dari 100 huruf!", http.StatusUnauthorized, false)
+	if len(kategori) < 3 || len(kategori) > 100 {
+		utils.ResponseJSONMessage(w, "Jenis kategori minimal 3 huruf dan tidak boleh lebih dari 100 huruf!", http.StatusUnauthorized, false)
 		return
 	}
 	if !repositories.IsKategoriExist(kategori) {
@@ -121,8 +121,8 @@ func Update_alat(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseJSONMessage(w, "banyak_alat has to be integer pak!", http.StatusBadGateway, false)
 		return
 	}
-	if len(kategori) < 5 || len(kategori) > 100 {
-		utils.ResponseJSONMessage(w, "Username minimal 5 Huruf dan tidak boleh lebih dari 100 huruf!", http.StatusUnauthorized, false)
+	if len(kategori) < 3 || len(kategori) > 100 {
+		utils.ResponseJSONMessage(w, "Jenis kategori minimal 3 huruf dan tidak boleh lebih dari 100 huruf!", http.StatusUnauthorized, false)
 		return
 	}
 	if !repositories.IsKategoriExist(kategori) {
