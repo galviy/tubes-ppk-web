@@ -240,7 +240,7 @@ export default function PetugasFasilitasPage() {
                       {isAlat ? (
                         <div>
                           <span style={{ fontWeight: 600, color: '#181D24' }}>{f.cap} unit</span>
-                          {f.tersedia !== undefined && f.tersedia !== f.cap && (
+                          {f.tersedia !== undefined && (
                             <span style={{ fontSize: 11.5, color: '#6B7280', display: 'block' }}>
                               (Tersedia: {f.tersedia})
                             </span>

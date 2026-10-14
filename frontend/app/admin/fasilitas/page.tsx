@@ -879,7 +879,7 @@ function KelolaFasilitasContent() {
                       {isAlat ? (
                         <div>
                           <span style={{ fontWeight: 600 }}>{f.cap} unit</span>
-                          {f.tersedia !== undefined && f.tersedia !== f.cap && (
+                          {f.tersedia !== undefined && (
                             <span style={{ fontSize: 12, color: '#6B7280', display: 'block' }}>
                               (Tersedia: {f.tersedia})
                             </span>
