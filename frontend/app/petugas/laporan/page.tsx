@@ -56,6 +56,33 @@ export default function PetugasLaporanPage() {
     });
   }
 
+  // Semua perubahan status lewat kotak konfirmasi dulu untuk mencegah human
+  // error: dropdown keliru klik tidak langsung mengubah data.
+  const STATUS_LABEL: Record<string, string> = { baru: 'Baru', diproses: 'Diproses', selesai: 'Selesai', ditolak: 'Ditolak' };
+
+  function confirmStatusChange(id: number, dari: string, val: string) {
+    if (val === dari) return;
+    const target = val === 'proses' ? 'diproses' : val;
+    const targetLabel = STATUS_LABEL[target] || val;
+    const report = reports.find((r) => r.id === id);
+    const fasilitas = report ? facilityById(report.facilityId)?.name || '' : '';
+    setModalConfig({
+      isOpen: true,
+      title: 'Konfirmasi Perubahan Status',
+      subtitle: `Apakah Anda yakin ingin mengubah status laporan${fasilitas ? ` fasilitas ${fasilitas}` : ''} dari ${STATUS_LABEL[dari] || dari} menjadi ${targetLabel}? Tindakan ini akan tercatat pada riwayat laporan.`,
+      confirmText: 'Ya, Ubah Status',
+      cancelText: 'Batal',
+      confirmVariant: 'primary',
+      showInput: false,
+      onConfirm: () => {
+        if (val === 'proses') handleProses(id);
+        if (val === 'selesai') handleSelesai(id);
+        if (val === 'tolak') handleTolak(id);
+        return true;
+      },
+    });
+  }
+
   function handleProses(id: number) {
     void updateReportStatus(id, 'diproses').then((res) => {
       if (!res.ok) reportFailure(res.message);
@@ -369,9 +396,7 @@ export default function PetugasLaporanPage() {
                         value={r.status}
                         onChange={(e) => {
                           const val = e.target.value;
-                          if (val === 'proses') handleProses(r.id);
-                          if (val === 'selesai') handleSelesai(r.id);
-                          if (val === 'tolak') handleTolak(r.id);
+                          confirmStatusChange(r.id, r.status, val);
                         }}
                       >
                         {r.status === 'baru' && (
