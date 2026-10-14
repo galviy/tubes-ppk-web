@@ -104,6 +104,7 @@ function FasilitasContent() {
           >
             <button
               type="button"
+              suppressHydrationWarning
               onClick={() => {
                 setTabType('semua');
                 setFilters((prev) => ({
@@ -129,6 +130,7 @@ function FasilitasContent() {
             </button>
             <button
               type="button"
+              suppressHydrationWarning
               onClick={() => {
                 setTabType('ruangan');
                 setFilters((prev) => ({
@@ -157,6 +159,7 @@ function FasilitasContent() {
             </button>
             <button
               type="button"
+              suppressHydrationWarning
               onClick={() => {
                 setTabType('alat');
                 setFilters((prev) => ({
@@ -197,6 +200,7 @@ function FasilitasContent() {
               <span className="view-switcher-label">Tampilan Grid:</span>
               <button
                 type="button"
+                suppressHydrationWarning
                 className={`view-btn ${columns === 2 ? 'active' : ''}`}
                 onClick={() => setColumns(2)}
                 title="2 Kolom per baris (Besar)"
@@ -205,6 +209,7 @@ function FasilitasContent() {
               </button>
               <button
                 type="button"
+                suppressHydrationWarning
                 className={`view-btn ${columns === 3 ? 'active' : ''}`}
                 onClick={() => setColumns(3)}
                 title="3 Kolom per baris (Standar)"
@@ -213,6 +218,7 @@ function FasilitasContent() {
               </button>
               <button
                 type="button"
+                suppressHydrationWarning
                 className={`view-btn ${columns === 4 ? 'active' : ''}`}
                 onClick={() => setColumns(4)}
                 title="4 Kolom per baris (Kompak)"

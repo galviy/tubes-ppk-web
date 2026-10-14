@@ -58,6 +58,7 @@ export default function FacilityFilterBar({ filters, onChange, tabType = 'semua'
         <label>Cari Nama / Kata Kunci</label>
         <input
           type="text"
+          suppressHydrationWarning
           placeholder={tabType === 'ruangan' ? 'Cari nama ruangan...' : tabType === 'alat' ? 'Cari nama alat...' : 'Cari nama fasilitas...'}
           value={filters.search || ''}
           onChange={(e) => onChange({ ...filters, search: e.target.value })}
@@ -67,6 +68,7 @@ export default function FacilityFilterBar({ filters, onChange, tabType = 'semua'
       <div className="fgroup">
         <label>{tabType === 'alat' ? 'Kategori Alat' : tabType === 'ruangan' ? 'Kategori Ruangan' : 'Tipe Fasilitas'}</label>
         <select
+          suppressHydrationWarning
           value={typeOptions.includes(filters.category) ? filters.category : 'Semua Jenis'}
           onChange={(e) => {
             const nextCat = e.target.value;
@@ -89,6 +91,7 @@ export default function FacilityFilterBar({ filters, onChange, tabType = 'semua'
       <div className="fgroup">
         <label>{tabType === 'alat' ? 'Lokasi Penyimpanan' : 'Lokasi / Gedung'}</label>
         <select
+          suppressHydrationWarning
           value={buildingOptions.includes(filters.lokasi) ? filters.lokasi : 'Semua Gedung'}
           onChange={(e) => onChange({ ...filters, lokasi: e.target.value })}
         >
@@ -109,6 +112,7 @@ export default function FacilityFilterBar({ filters, onChange, tabType = 'semua'
             : 'Kapasitas / Jumlah'}
         </label>
         <select
+          suppressHydrationWarning
           value={filters.kapasitas}
           onChange={(e) => onChange({ ...filters, kapasitas: e.target.value })}
         >
@@ -142,7 +146,7 @@ export default function FacilityFilterBar({ filters, onChange, tabType = 'semua'
 
       <div className="fgroup">
         <label>Status</label>
-        <select value={filters.status} onChange={(e) => onChange({ ...filters, status: e.target.value })}>
+        <select suppressHydrationWarning value={filters.status} onChange={(e) => onChange({ ...filters, status: e.target.value })}>
           <option>Semua Status</option>
           <option>Tersedia</option>
           <option>Perbaikan</option>
